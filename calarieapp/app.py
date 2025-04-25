@@ -239,7 +239,7 @@ tab1, tab2, tab3 = st.tabs(["📷 Image Analysis", "📝 Text Input", "📊 Hist
 with tab1:
     st.subheader("Analyze Food Photos")
     img_file = st.file_uploader("Upload food image", type=["jpg", "jpeg", "png"])
-    context = st.text_area("Additional context", placeholder="E.g.Just click Analyze It Will Do everyThing Chill 😎 OR Give the good prompt!!")
+    context = st.text_area("Additional context", placeholder="E.g. Identify each and every item in my food  and give total calorie ")
     
     if st.button("Analyze Meal", disabled=not img_file):
         with st.spinner("Analyzing..."):
