@@ -47,15 +47,11 @@ def load_models():
         models['blip_model'] = BlipForConditionalGeneration.from_pretrained(
             "Salesforce/blip-image-captioning-base",
             torch_dtype=dtype,
-            low_cpu_mem_usage=True  # Optimize memory usage
+            low_cpu_mem_usage=True
         )
         
         # Move model to device after loading
-        if device == "cuda":
-            models['blip_model'] = models['blip_model'].to(device)
-        else:
-            models['blip_model'] = models['blip_model'].to(device)
-        
+        models['blip_model'] = models['blip_model'].to(device)
         models['blip_model'].eval()
     except Exception as e:
         st.error(f"Failed to load image captioner: {e}")
@@ -111,27 +107,68 @@ def describe_image(image: Image.Image) -> str:
     except Exception as e:
         return f"Image analysis error: {str(e)}"
 
-def extract_items_and_calories(text):
-    """Extract food items and calorie counts from text"""
-    pattern = r'(\b[\w\s]+\b)[^\d]*(\d{2,4})\s*cal'
+def extract_items_and_nutrients(text):
+    """Extract food items, calories, and macronutrients from text"""
+    items = []
+    # Capture food items and their nutritional data
+    pattern = r'Item:\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?'
     matches = re.findall(pattern, text, re.IGNORECASE)
-    return [(item.strip(), int(cal)) for item, cal in matches if cal.isdigit()]
+    
+    for match in matches:
+        item = match[0].strip()
+        calories = int(match[1]) if match[1] else 0
+        protein = float(match[2]) if match[2] else None
+        carbs = float(match[3]) if match[3] else None
+        fats = float(match[4]) if match[4] else None
+        items.append({
+            "item": item,
+            "calories": calories,
+            "protein": protein,
+            "carbs": carbs,
+            "fats": fats
+        })
+    
+    # Calculate totals
+    totals = {
+        "calories": sum(item["calories"] for item in items),
+        "protein": sum(item["protein"] for item in items if item["protein"] is not None),
+        "carbs": sum(item["carbs"] for item in items if item["carbs"] is not None),
+        "fats": sum(item["fats"] for item in items if item["fats"] is not None)
+    }
+    
+    return items, totals
 
 def plot_chart(food_data):
-    """Create horizontal bar chart of food calories"""
+    """Create a side-by-side bar chart for calories and macronutrients"""
     if not food_data:
         return None
     
-    items, calories = zip(*food_data)
-    fig, ax = plt.subplots(figsize=(8, len(items)*0.5))
-    ax.barh(items, calories, color='#4CAF50')
-    ax.set_xlabel("Calories", fontsize=10)
-    ax.set_title("Calorie Breakdown", fontsize=12)
+    items = [item["item"] for item in food_data]
+    calories = [item["calories"] for item in food_data]
+    proteins = [item["protein"] if item["protein"] is not None else 0 for item in food_data]
+    carbs = [item["carbs"] if item["carbs"] is not None else 0 for item in food_data]
+    fats = [item["fats"] if item["fats"] is not None else 0 for item in food_data]
+    
+    fig, ax = plt.subplots(figsize=(8, len(items) * 0.6))
+    bar_width = 0.2
+    indices = range(len(items))
+    
+    # Plot bars
+    ax.barh([i - bar_width*1.5 for i in indices], calories, bar_width, label="Calories (kcal)", color="#4CAF50")
+    ax.barh([i - bar_width*0.5 for i in indices], proteins, bar_width, label="Protein (g)", color="#2196F3")
+    ax.barh([i + bar_width*0.5 for i in indices], carbs, bar_width, label="Carbs (g)", color="#FF9800")
+    ax.barh([i + bar_width*1.5 for i in indices], fats, bar_width, label="Fats (g)", color="#F44336")
+    
+    ax.set_yticks(indices)
+    ax.set_yticklabels(items)
+    ax.set_xlabel("Amount")
+    ax.set_title("Nutritional Breakdown")
+    ax.legend()
     plt.tight_layout()
     return fig
 
-def generate_pdf_report(image, analysis, chart):
-    """Generate PDF report with image, analysis, and chart"""
+def generate_pdf_report(image, analysis, chart, nutrients):
+    """Generate PDF report with image, analysis, chart, and nutrient table"""
     try:
         pdf = FPDF()
         pdf.add_page()
@@ -139,7 +176,7 @@ def generate_pdf_report(image, analysis, chart):
         pdf.cell(0, 10, "AI Nutrition Report", ln=1, align="C")
         pdf.set_font("Arial", "", 12)
         
-        # Add image if available
+        # Add image
         if image:
             img_path = "temp_img.jpg"
             image.save(img_path, quality=90)
@@ -147,21 +184,42 @@ def generate_pdf_report(image, analysis, chart):
             os.remove(img_path)
             pdf.ln(10)
         
-        # Add analysis text
+        # Add nutrient table
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, "Nutritional Summary", ln=1)
+        pdf.set_font("Arial", "", 10)
+        pdf.cell(50, 8, "Food Item", border=1)
+        pdf.cell(30, 8, "Calories", border=1)
+        pdf.cell(30, 8, "Protein (g)", border=1)
+        pdf.cell(30, 8, "Carbs (g)", border=1)
+        pdf.cell(30, 8, "Fats (g)", border=1)
+        pdf.ln()
+        
+        for item in nutrients:
+            pdf.cell(50, 8, item["item"], border=1)
+            pdf.cell(30, 8, str(item["calories"]), border=1)
+            pdf.cell(30, 8, str(item["protein"] or "-"), border=1)
+            pdf.cell(30, 8, str(item["carbs"] or "-"), border=1)
+            pdf.cell(30, 8, str(item["fats"] or "-"), border=1)
+            pdf.ln()
+        
+        pdf.ln(10)
+        
+        # Add analysis
         pdf.multi_cell(0, 8, analysis)
         pdf.ln(10)
         
-        # Add chart if available
+        # Add chart
         if chart:
             chart_path = "temp_chart.png"
-            chart.savefig(chart_path, bbox_inches='tight', dpi=100)
+            chart.savefig(chart_path, bbox_inches="tight", dpi=100)
             pdf.image(chart_path, w=180)
             os.remove(chart_path)
         
         # Add footer
         pdf.set_y(-15)
         pdf.set_font("Arial", "I", 8)
-        pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, 'C')
+        pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, "C")
         
         pdf_path = "nutrition_report.pdf"
         pdf.output(pdf_path)
@@ -192,12 +250,12 @@ with tab1:
                 # Get image description
                 description = describe_image(image)
                 
-                # Get nutritional analysis
+                # Updated prompt to include macronutrients
                 prompt = f"""You are a nutrition expert analyzing a meal based on its description and additional context provided by the user. Provide a detailed analysis that incorporates the context (e.g., meal timing, dietary preferences, activity level) to tailor your response. Follow this exact format:
 
-**Food Items and Calories**:
-- Item: [Food Name], Calories: [X] cal
-- Item: [Food Name], Calories: [X] cal
+**Food Items and Nutrients**:
+- Item: [Food Name], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
+- Item: [Food Name], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
 **Total Calories**: [X] cal
 **Nutritional Assessment**: [Detailed assessment of macronutrients, vitamins, and suitability for the user's context]
 **Health Suggestions**: [2-3 tailored suggestions based on the meal and context]
@@ -205,7 +263,7 @@ with tab1:
 Meal description: {description}
 Additional context: {context or 'No additional context provided'}
 
-If the user provides specific context (e.g., dietary goals, meal timing, or health conditions), emphasize relevant nutritional aspects (e.g., protein for post-workout, low-carb for keto diet) and adjust suggestions accordingly."""
+If the user provides specific context (e.g., dietary goals, meal timing, or health conditions), emphasize relevant nutritional aspects (e.g., protein for post-workout, low-carb for keto diet) and adjust suggestions accordingly. If macronutrient data is unavailable, estimate based on typical values for the food items."""
                 
                 analysis = query_langchain(prompt)
                 
@@ -213,11 +271,14 @@ If the user provides specific context (e.g., dietary goals, meal timing, or heal
                 st.subheader("Nutritional Analysis")
                 st.markdown(analysis)
                 
-                # Extract and display calories
-                food_data = extract_items_and_calories(analysis)
+                # Extract and display nutrients
+                food_data, totals = extract_items_and_nutrients(analysis)
                 if food_data:
-                    total_calories = sum(cal for _, cal in food_data)
-                    st.metric("Total Estimated Calories", f"{total_calories} cal")
+                    col1, col2, col3, col4 = st.columns(4)
+                    col1.metric("Total Calories", f"{totals['calories']} cal")
+                    col2.metric("Total Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                    col3.metric("Total Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                    col4.metric("Total Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
                     
                     # Plot chart
                     chart = plot_chart(food_data)
@@ -228,11 +289,12 @@ If the user provides specific context (e.g., dietary goals, meal timing, or heal
                 st.session_state.last_results = {
                     "type": "image",
                     "image": image,
-                    "description": description,  # Store description for follow-up
-                    "context": context or "None",  # Store context for follow-up
+                    "description": description,
+                    "context": context or "None",
                     "analysis": analysis,
                     "chart": chart if 'chart' in locals() else None,
-                    "calories": total_calories if 'total_calories' in locals() else 0,
+                    "nutrients": food_data,
+                    "totals": totals,
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
                 }
                 
@@ -241,7 +303,7 @@ If the user provides specific context (e.g., dietary goals, meal timing, or heal
                 
                 # Update daily calories
                 today = date.today().isoformat()
-                st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + st.session_state.last_results.get("calories", 0)
+                st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
                 
             except Exception as e:
                 st.error(f"Analysis failed: {str(e)}")
@@ -273,16 +335,16 @@ with tab2:
             try:
                 prompt = f"""You are a nutrition expert analyzing a meal based on the user's description. If the description includes additional details (e.g., portion sizes, meal timing, dietary preferences, or activity level), incorporate them into your analysis and provide tailored advice. Follow this exact format:
 
-**Food Items and Calories**:
-- Item: [Food Name], Calories: [X] cal
-- Item: [Food Name], Calories: [X] cal
+**Food Items and Nutrients**:
+- Item: [Food Name], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
+- Item: [Food Name], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
 **Total Calories**: [X] cal
 **Nutritional Assessment**: [Detailed assessment of macronutrients, vitamins, and suitability for the user's context]
 **Health Suggestions**: [2-3 tailored suggestions based on the meal and any provided details]
 
 Meal description: {meal_desc}
 
-If the description includes specific details (e.g., 'post-workout meal' or 'large portion'), emphasize relevant nutritional aspects (e.g., protein for recovery, portion control) and adjust suggestions accordingly. If no specific details are provided, give a general but informative analysis."""
+If the description includes specific details (e.g., 'post-workout meal' or 'large portion'), emphasize relevant nutritional aspects (e.g., protein for recovery, portion control) and adjust suggestions accordingly. If no specific details are provided, give a general but informative analysis. Estimate macronutrients based on typical values if not specified."""
                 
                 analysis = query_langchain(prompt)
                 
@@ -290,11 +352,14 @@ If the description includes specific details (e.g., 'post-workout meal' or 'larg
                 st.subheader("Nutritional Analysis")
                 st.markdown(analysis)
                 
-                # Extract and display calories
-                food_data = extract_items_and_calories(analysis)
+                # Extract and display nutrients
+                food_data, totals = extract_items_and_nutrients(analysis)
                 if food_data:
-                    total_calories = sum(cal for _, cal in food_data)
-                    st.metric("Total Estimated Calories", f"{total_calories} cal")
+                    col1, col2, col3, col4 = st.columns(4)
+                    col1.metric("Total Calories", f"{totals['calories']} cal")
+                    col2.metric("Total Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                    col3.metric("Total Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                    col4.metric("Total Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
                     
                     # Plot chart
                     chart = plot_chart(food_data)
@@ -304,10 +369,11 @@ If the description includes specific details (e.g., 'post-workout meal' or 'larg
                 # Save results
                 st.session_state.last_results = {
                     "type": "text",
-                    "description": meal_desc,  # Store description for follow-up
+                    "description": meal_desc,
                     "analysis": analysis,
                     "chart": chart if 'chart' in locals() else None,
-                    "calories": total_calories if 'total_calories' in locals() else 0,
+                    "nutrients": food_data,
+                    "totals": totals,
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
                 }
                 
@@ -316,7 +382,7 @@ If the description includes specific details (e.g., 'post-workout meal' or 'larg
                 
                 # Update daily calories
                 today = date.today().isoformat()
-                st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + st.session_state.last_results.get("calories", 0)
+                st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
                 
             except Exception as e:
                 st.error(f"Analysis failed: {str(e)}")
@@ -352,7 +418,8 @@ with tab3:
             pdf_path = generate_pdf_report(
                 st.session_state.last_results.get("image"),
                 st.session_state.last_results.get("analysis"),
-                st.session_state.last_results.get("chart")
+                st.session_state.last_results.get("chart"),
+                st.session_state.last_results.get("nutrients", [])
             )
             if pdf_path:
                 with open(pdf_path, "rb") as f:
@@ -372,8 +439,12 @@ with tab3:
             
             st.markdown(entry["analysis"])
             
-            if entry.get("calories", 0) > 0:
-                st.metric("Estimated Calories", f"{entry['calories']} cal")
+            if entry.get("totals", {}):
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Calories", f"{entry['totals']['calories']} cal")
+                col2.metric("Protein", f"{entry['totals']['protein']:.1f} g" if entry['totals']['protein'] else "-")
+                col3.metric("Carbs", f"{entry['totals']['carbs']:.1f} g" if entry['totals']['carbs'] else "-")
+                col4.metric("Fats", f"{entry['totals']['fats']:.1f} g" if entry['totals']['fats'] else "-")
             
             if entry.get("chart"):
                 st.pyplot(entry["chart"])
@@ -383,15 +454,35 @@ with st.sidebar:
     st.header("Nutrition Dashboard")
     st.subheader("Weekly Summary")
     
-    # Weekly calories chart
+    # Weekly nutrients chart
     if st.session_state.daily_calories:
         dates = sorted(st.session_state.daily_calories.keys())[-7:]  # Last 7 days
-        cals = [st.session_state.daily_calories[d] for d in dates]
+        cals = [st.session_state.daily_calories.get(d, 0) for d in dates]
         
-        fig, ax = plt.subplots(figsize=(8, 3))
-        ax.bar(dates, cals, color='#4CAF50')
-        ax.set_title("Daily Calories")
+        # Aggregate macronutrients from history
+        daily_nutrients = {d: {"protein": 0, "carbs": 0, "fats": 0} for d in dates}
+        for entry in st.session_state.history:
+            entry_date = entry["timestamp"].split()[0]
+            if entry_date in dates and entry.get("totals"):
+                daily_nutrients[entry_date]["protein"] += entry["totals"].get("protein", 0)
+                daily_nutrients[entry_date]["carbs"] += entry["totals"].get("carbs", 0)
+                daily_nutrients[entry_date]["fats"] += entry["totals"].get("fats", 0)
+        
+        proteins = [daily_nutrients[d]["protein"] for d in dates]
+        carbs = [daily_nutrients[d]["carbs"] for d in dates]
+        fats = [daily_nutrients[d]["fats"] for d in dates]
+        
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.plot(dates, cals, label="Calories (kcal)", color="#4CAF50", marker="o")
+        ax.plot(dates, proteins, label="Protein (g)", color="#2196F3", marker="o")
+        ax.plot(dates, carbs, label="Carbs (g)", color="#FF9800", marker="o")
+        ax.plot(dates, fats, label="Fats (g)", color="#F44336", marker="o")
+        ax.set_title("Daily Nutrition Trends")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Amount")
+        ax.legend()
         plt.xticks(rotation=45)
+        plt.tight_layout()
         st.pyplot(fig)
     
     # Clear history button
