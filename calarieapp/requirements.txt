@@ -38,3 +38,5 @@ torchvision
 matplotlib 
 fpdf
 SpeechRecognition
+accelerate 
+peft
