@@ -236,10 +236,11 @@ st.caption("Upload food photos or describe meals to track your nutrition using A
 tab1, tab2, tab3 = st.tabs(["📷 Image Analysis", "📝 Text Input", "📊 History"])
 
 # Image Analysis Tab
+# Image Analysis Tab
 with tab1:
     st.subheader("Analyze Food Photos")
     img_file = st.file_uploader("Upload food image", type=["jpg", "jpeg", "png"])
-    context = st.text_area("Additional context", placeholder="E.g. Identify each and every item in my food  and give total calorie ")
+    context = st.text_area("Additional context", placeholder="E.g. Identify each and every item in my food and give total calorie")
     
     if st.button("Analyze Meal", disabled=not img_file):
         with st.spinner("Analyzing..."):
@@ -250,8 +251,8 @@ with tab1:
                 # Get image description
                 description = describe_image(image)
                 
-                # Updated prompt to include macronutrients
-                prompt = f"""You are a nutrition expert analyzing a meal based on its description and additional context provided by the user. Provide a detailed analysis that incorporates the context (e.g., meal timing, dietary preferences, activity level) to tailor your response. Follow this exact format:
+                # Updated prompt
+                prompt = f"""You are a nutrition expert analyzing a meal based on its description and additional context provided by the user. Provide a detailed analysis that incorporates the context (e.g., meal timing, dietary preferences, activity level, or specific requests like identifying all items). Follow this exact format:
 
 **Food Items and Nutrients**:
 - Item: [Food Name], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
@@ -263,16 +264,31 @@ with tab1:
 Meal description: {description}
 Additional context: {context or 'No additional context provided'}
 
-If the user provides specific context (e.g., dietary goals, meal timing, or health conditions), emphasize relevant nutritional aspects (e.g., protein for post-workout, low-carb for keto diet) and adjust suggestions accordingly. If macronutrient data is unavailable, estimate based on typical values for the food items."""
+Instructions:
+1. If the context includes a request to "identify each and every item," list all visible food items in the description individually, specifying estimated portion sizes (e.g., "Grilled Chicken Breast (200g)").
+2. For each food item, provide estimated calories, protein, carbs, and fats based on typical nutritional values, even if exact data is unavailable. Do not omit macronutrients.
+3. If the meal description is vague (e.g., "a plate of food"), make reasonable assumptions about common food items and their portions, and list them explicitly.
+4. Incorporate the context to emphasize relevant nutritional aspects (e.g., high protein for post-workout, low-carb for keto diet) and tailor health suggestions accordingly.
+5. Ensure the total calories match the sum of individual item calories.
+6. Strictly adhere to the specified format to ensure compatibility with parsing logic."""
                 
                 analysis = query_langchain(prompt)
+                
+                # Extract and validate nutrients
+                food_data, totals = extract_items_and_nutrients(analysis)
+                
+                # Fallback if no items or incomplete nutrients
+                if not food_data or any(item["protein"] is None or item["carbs"] is None or item["fats"] is None for item in food_data):
+                    st.warning("Incomplete or no food items detected. Retrying with stricter instructions...")
+                    prompt += "\nPlease strictly follow the format, listing all food items individually with estimated portion sizes and complete macronutrient data (calories, protein, carbs, fats)."
+                    analysis = query_langchain(prompt)
+                    food_data, totals = extract_items_and_nutrients(analysis)
                 
                 # Display results
                 st.subheader("Nutritional Analysis")
                 st.markdown(analysis)
                 
                 # Extract and display nutrients
-                food_data, totals = extract_items_and_nutrients(analysis)
                 if food_data:
                     col1, col2, col3, col4 = st.columns(4)
                     col1.metric("Total Calories", f"{totals['calories']} cal")
@@ -284,6 +300,8 @@ If the user provides specific context (e.g., dietary goals, meal timing, or heal
                     chart = plot_chart(food_data)
                     if chart:
                         st.pyplot(chart)
+                else:
+                    st.error("Failed to extract food items. Please try a different image or provide more specific context.")
                 
                 # Save results
                 st.session_state.last_results = {
