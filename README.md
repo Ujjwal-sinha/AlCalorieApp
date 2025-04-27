@@ -67,7 +67,8 @@ The BLIP model will be automatically downloaded from Hugging Face on the first r
 
 ---
 # Architecture
-![alt text](<ChatGPT Image Apr 26, 2025, 02_37_12 PM.png>)
+![ChatGPT Image Apr 26, 2025, 02_37_12 PM](https://github.com/user-attachments/assets/8015d396-9a3b-40a8-a135-468ef973a881)
+
 
 ## Usage
 
