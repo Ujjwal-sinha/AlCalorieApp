@@ -44,18 +44,19 @@ A Streamlit-based web application that leverages AI to analyze food images or te
 
 ## Installation
 
-1. **Clone the Repository:** git clone https://github.com/Ujjwal-sinha/ai-calorie-tracker.git
-cd ai-calorie-tracker
+1. **Clone the Repository:**
+git clone https://github.com/Ujjwal-sinha/AlCalorieApp.git
+cd AlCalorieApp.git
 
 
-2. **Create a Virtual Environment:**
+3. **Create a Virtual Environment:**
 python -m venv venv
 source venv/bin/activate # On Windows: venv\Scripts\activate
 
-3. **Install Dependencies:**
+4. **Install Dependencies:**
 pip install -r requirements.txt
 
-4. **Set Up Environment Variables:**
+5. **Set Up Environment Variables:**
 
 Create a `.env` file in the project root and add your Groq API key:
 
