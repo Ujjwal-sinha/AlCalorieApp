@@ -467,12 +467,11 @@ with tab3:
             if entry.get("chart"):
                 st.pyplot(entry["chart"])
 
-# Sidebar
 with st.sidebar:
     st.header("Nutrition Dashboard")
     st.subheader("Weekly Summary")
     
-    # Weekly nutrients chart
+    # Weekly nutrients bar graph
     if st.session_state.daily_calories:
         dates = sorted(st.session_state.daily_calories.keys())[-7:]  # Last 7 days
         cals = [st.session_state.daily_calories.get(d, 0) for d in dates]
@@ -490,18 +489,25 @@ with st.sidebar:
         carbs = [daily_nutrients[d]["carbs"] for d in dates]
         fats = [daily_nutrients[d]["fats"] for d in dates]
         
+        # Create bar graph
         fig, ax = plt.subplots(figsize=(8, 4))
-        ax.plot(dates, cals, label="Calories (kcal)", color="#4CAF50", marker="o")
-        ax.plot(dates, proteins, label="Protein (g)", color="#2196F3", marker="o")
-        ax.plot(dates, carbs, label="Carbs (g)", color="#FF9800", marker="o")
-        ax.plot(dates, fats, label="Fats (g)", color="#F44336", marker="o")
-        ax.set_title("Daily Nutrition Trends")
-        ax.set_xlabel("Date")
+        bar_width = 0.2
+        indices = range(len(dates))
+        
+        # Plot bars
+        ax.bar([i - bar_width*1.5 for i in indices], cals, bar_width, label="Calories (kcal)", color="#4CAF50")
+        ax.bar([i - bar_width*0.5 for i in indices], proteins, bar_width, label="Protein (g)", color="#2196F3")
+        ax.bar([i + bar_width*0.5 for i in indices], carbs, bar_width, label="Carbs (g)", color="#FF9800")
+        ax.bar([i + bar_width*1.5 for i in indices], fats, bar_width, label="Fats (g)", color="#F44336")
+        
+        ax.set_xticks(indices)
+        ax.set_xticklabels(dates, rotation=45)
         ax.set_ylabel("Amount")
+        ax.set_title("Daily Nutrition Trends")
         ax.legend()
-        plt.xticks(rotation=45)
         plt.tight_layout()
-        st.pyplot(fig)
+        st.pyplot(fig)  # Removed caption parameter
+        st.caption("Weekly nutrition summary (last 7 days)")  # Added caption separately
     
     # Clear history button
     if st.button("Clear All History"):
