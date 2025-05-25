@@ -19,6 +19,15 @@ st.set_page_config(page_title="🍱 AI Calorie Tracker", layout="centered")
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
 
+# Activity calorie burn rates (kcal/hour for average adult)
+ACTIVITY_BURN_RATES = {
+    "Brisk Walking": 300,  # 300 kcal/hour
+    "Running": 600,        # 600 kcal/hour
+    "Cycling": 500,        # 500 kcal/hour
+    "Swimming": 550,       # 550 kcal/hour
+    "Strength Training": 400  # 400 kcal/hour
+}
+
 # ------------------------ Model Initialization ------------------------ #
 @st.cache_resource
 def load_models():
@@ -103,7 +112,14 @@ def describe_image(image: Image.Image) -> str:
         with torch.no_grad():
             outputs = models['blip_model'].generate(**inputs, max_new_tokens=50)
         
-        return models['processor'].decode(outputs[0], skip_special_tokens=True)
+        caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+        
+        # Check for vague captions
+        vague_phrases = ["plate of food", "meal", "food item"]
+        if any(phrase in caption.lower() for phrase in vague_phrases):
+            return f"Vague caption detected: '{caption}'. Please provide more context or a clearer image."
+        
+        return caption
     except Exception as e:
         return f"Image analysis error: {str(e)}"
 
@@ -167,8 +183,56 @@ def plot_chart(food_data):
     plt.tight_layout()
     return fig
 
-def generate_pdf_report(image, analysis, chart, nutrients):
-    """Generate PDF report with image, analysis, chart, and nutrient table"""
+def generate_daily_summary(calorie_target, activity_preferences):
+    """Generate a daily nutritional summary with fitness advice"""
+    today = date.today().isoformat()
+    total_calories = st.session_state.daily_calories.get(today, 0)
+    
+    # Aggregate macronutrients from history
+    daily_nutrients = {"protein": 0, "carbs": 0, "fats": 0}
+    for entry in st.session_state.history:
+        entry_date = entry["timestamp"].split()[0]
+        if entry_date == today and entry.get("totals"):
+            daily_nutrients["protein"] += entry["totals"].get("protein", 0)
+            daily_nutrients["carbs"] += entry["totals"].get("carbs", 0)
+            daily_nutrients["fats"] += entry["totals"].get("fats", 0)
+    
+    # Calculate surplus or deficit
+    calorie_diff = total_calories - calorie_target
+    status = "surplus" if calorie_diff > 0 else "deficit" if calorie_diff < 0 else "balanced"
+    
+    # Initialize summary
+    summary = f"**Daily Nutritional Summary ({today})**\n"
+    summary += f"- Total Calories: {total_calories} kcal (Target: {calorie_target} kcal)\n"
+    summary += f"- Total Protein: {daily_nutrients['protein']:.1f} g\n"
+    summary += f"- Total Carbs: {daily_nutrients['carbs']:.1f} g\n"
+    summary += f"- Total Fats: {daily_nutrients['fats']:.1f} g\n"
+    summary += f"- Calorie Status: {'Surplus' if calorie_diff > 0 else 'Deficit' if calorie_diff < 0 else 'Balanced'} ({abs(calorie_diff)} kcal)\n\n"
+    
+    # Generate fitness advice
+    advice = "**Personalized Fitness Advice**\n"
+    if status == "surplus":
+        advice += f"You consumed {calorie_diff} kcal above your target. To balance this, consider the following activities:\n"
+        for activity in activity_preferences:
+            burn_rate = ACTIVITY_BURN_RATES.get(activity, 300)  # Default to 300 kcal/hour
+            duration = (calorie_diff / burn_rate) * 60  # Convert hours to minutes
+            advice += f"- {activity}: {duration:.0f} minutes\n"
+        advice += "\n**Motivation**: Great job tracking your intake! A short workout can help you stay on track and feel energized!"
+    elif status == "deficit":
+        advice += f"You consumed {abs(calorie_diff)} kcal below your target. To avoid excessive deficit:\n"
+        advice += "- Consider adding a nutrient-dense snack (e.g., a banana with peanut butter, ~200-300 kcal).\n"
+        advice += "- Ensure adequate hydration and rest to support recovery.\n"
+        advice += "\n**Motivation**: You're doing awesome! Listen to your body and fuel it for your goals!"
+    else:
+        advice += "Your calorie intake is perfectly balanced with your target! Keep up the great work:\n"
+        advice += "- Maintain a mix of activities to support overall health.\n"
+        advice += "- Stay consistent with your nutrition goals.\n"
+        advice += "\n**Motivation**: You're in the zone! Keep making mindful choices!"
+    
+    return summary + advice
+
+def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None):
+    """Generate PDF report with image, analysis, chart, nutrient table, and optional daily summary"""
     try:
         pdf = FPDF()
         pdf.add_page()
@@ -209,6 +273,14 @@ def generate_pdf_report(image, analysis, chart, nutrients):
         pdf.multi_cell(0, 8, analysis)
         pdf.ln(10)
         
+        # Add daily summary if provided
+        if daily_summary:
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "Daily Summary", ln=1)
+            pdf.set_font("Arial", "", 10)
+            pdf.multi_cell(0, 8, daily_summary)
+            pdf.ln(10)
+        
         # Add chart
         if chart:
             chart_path = "temp_chart.png"
@@ -236,7 +308,6 @@ st.caption("Upload food photos or describe meals to track your nutrition using A
 tab1, tab2, tab3 = st.tabs(["📷 Image Analysis", "📝 Text Input", "📊 History"])
 
 # Image Analysis Tab
-# Image Analysis Tab
 with tab1:
     st.subheader("Analyze Food Photos")
     img_file = st.file_uploader("Upload food image", type=["jpg", "jpeg", "png"])
@@ -250,6 +321,9 @@ with tab1:
                 
                 # Get image description
                 description = describe_image(image)
+                if "Vague caption detected" in description:
+                    st.warning(description)
+                    st.stop()
                 
                 # Updated prompt
                 prompt = f"""You are a nutrition expert analyzing a meal based on its description and additional context provided by the user. Provide a detailed analysis that incorporates the context (e.g., meal timing, dietary preferences, activity level, or specific requests like identifying all items). Follow this exact format:
@@ -425,6 +499,19 @@ User's question: {follow_up_question}"""
 with tab3:
     st.subheader("Your Nutrition History")
     
+    # Daily Summary Button
+    calorie_target = st.session_state.get("calorie_target", 2000)  # Default to 2000 if not set
+    activity_preference = st.session_state.get("activity_preference", ["Brisk Walking"])  # Default preference
+    if st.button("Generate Daily Summary"):
+        daily_summary = generate_daily_summary(calorie_target, activity_preference)
+        st.markdown(daily_summary)
+        
+        # Option to include in PDF report
+        if st.session_state.last_results:
+            include_summary_in_pdf = st.checkbox("Include Daily Summary in PDF Report")
+            if include_summary_in_pdf:
+                st.session_state.last_results["daily_summary"] = daily_summary
+    
     # Daily summary
     today = date.today().isoformat()
     today_cals = st.session_state.daily_calories.get(today, 0)
@@ -437,7 +524,8 @@ with tab3:
                 st.session_state.last_results.get("image"),
                 st.session_state.last_results.get("analysis"),
                 st.session_state.last_results.get("chart"),
-                st.session_state.last_results.get("nutrients", [])
+                st.session_state.last_results.get("nutrients", []),
+                st.session_state.last_results.get("daily_summary")
             )
             if pdf_path:
                 with open(pdf_path, "rb") as f:
@@ -469,6 +557,19 @@ with tab3:
 
 with st.sidebar:
     st.header("Nutrition Dashboard")
+    
+    # User Profile Input
+    st.subheader("User Profile")
+    calorie_target = st.number_input("Daily Calorie Target (kcal)", min_value=1000, max_value=5000, value=2000, step=100)
+    activity_preference = st.multiselect(
+        "Preferred Activities",
+        options=["Brisk Walking", "Running", "Cycling", "Swimming", "Strength Training"],
+        default=["Brisk Walking"]
+    )
+    # Save to session state
+    st.session_state.calorie_target = calorie_target
+    st.session_state.activity_preference = activity_preference
+    
     st.subheader("Weekly Summary")
     
     # Weekly nutrients bar graph
@@ -506,8 +607,8 @@ with st.sidebar:
         ax.set_title("Daily Nutrition Trends")
         ax.legend()
         plt.tight_layout()
-        st.pyplot(fig)  # Removed caption parameter
-        st.caption("Weekly nutrition summary (last 7 days)")  # Added caption separately
+        st.pyplot(fig)
+        st.caption("Weekly nutrition summary (last 7 days)")
     
     # Clear history button
     if st.button("Clear All History"):
