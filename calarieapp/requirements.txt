@@ -6,7 +6,7 @@ pypdf
 bs4
 arxiv
 pymupdf
-wikipedia
+wikipedia 
 langchain-text-splitters
 langchain-openai
 chromadb

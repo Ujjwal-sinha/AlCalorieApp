@@ -14,7 +14,7 @@ A Streamlit-based web application that leverages AI to analyze food images or te
 - **Follow-Up Questions:** Ask specific questions about meals for deeper insights.
 - **Responsive UI:** Intuitive tabs, charts, and metrics for a seamless user experience.
 
----
+--
 
 ## Tech Stack
 

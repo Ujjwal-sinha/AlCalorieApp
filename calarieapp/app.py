@@ -316,7 +316,15 @@ with tab1:
     if st.button("Analyze Meal", disabled=not img_file):
         with st.spinner("Analyzing..."):
             try:
-                image = Image.open(img_file)
+                # Check if file is still accessible and not empty
+                if img_file is None or getattr(img_file, 'size', 1) == 0:
+                    st.error("File upload failed or was interrupted (possible network error). Please refresh the page and re-upload your image.")
+                    st.stop()
+                try:
+                    image = Image.open(img_file)
+                except Exception as file_err:
+                    st.error(f"Failed to open uploaded file. It may have changed, been removed, or a network error occurred. Please refresh the page and re-upload your image.\nError: {file_err}")
+                    st.stop()
                 st.image(image, use_column_width=True)
                 
                 # Get image description
