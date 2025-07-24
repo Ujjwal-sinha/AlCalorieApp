@@ -159,7 +159,7 @@ def load_models():
 
 models = load_models()
 
-# ------------------------ Session State ------------------------ #
+# ------------------------ Session State Initialization ------------------------ #
 if "history" not in st.session_state:
     st.session_state.history = []
 if "daily_calories" not in st.session_state:
@@ -759,7 +759,7 @@ with st.sidebar:
     st.caption("Configure your profile and track progress")
     
     st.subheader("User Profile")
-    calorie_target = st.number_input(
+    st.number_input(
         "Daily Calorie Target (kcal)",
         min_value=1000,
         max_value=5000,
@@ -768,33 +768,30 @@ with st.sidebar:
         key="calorie_target",
         help="Set your daily calorie goal (e.g., 2000 kcal)"
     )
-    st.session_state.calorie_target = calorie_target
     
-    activity_preference = st.multiselect(
+    st.multiselect(
         "Preferred Activities",
         options=["Brisk Walking", "Running", "Cycling", "Swimming", "Strength Training"],
         default=st.session_state.activity_preference,
         key="activity_preference",
         help="Select activities you enjoy for personalized fitness advice"
     )
-    st.session_state.activity_preference = activity_preference
     
-    dietary_preferences = st.multiselect(
+    st.multiselect(
         "Dietary Preferences",
         options=["Vegan", "Vegetarian", "Keto", "Gluten-Free", "Low-Carb"],
         default=st.session_state.dietary_preferences,
         key="dietary_preferences",
         help="Select your dietary preferences for tailored analysis"
     )
-    st.session_state.dietary_preferences = dietary_preferences
     
     # Calorie Progress Bar
     today = date.today().isoformat()
     today_cals = st.session_state.daily_calories.get(today, 0)
-    progress = min(today_cals / calorie_target, 1.0) if calorie_target > 0 else 0
+    progress = min(today_cals / st.session_state.calorie_target, 1.0) if st.session_state.calorie_target > 0 else 0
     st.subheader("Today's Progress")
     st.progress(progress)
-    st.caption(f"Progress: {today_cals}/{calorie_target} kcal ({progress*100:.1f}%)")
+    st.caption(f"Progress: {today_cals}/{st.session_state.calorie_target} kcal ({progress*100:.1f}%)")
     
     st.subheader("📈 Weekly Summary")
     if st.session_state.daily_calories:
