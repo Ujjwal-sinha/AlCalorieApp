@@ -20,7 +20,7 @@ st.set_page_config(
     page_icon="🍽️"
 )
 
-# Custom CSS for enhanced styling
+# Custom CSS for enhanced, user-friendly UI
 st.markdown("""
 <style>
     body {
@@ -34,13 +34,15 @@ st.markdown("""
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
+        gap: 16px;
+        justify-content: center;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: #e9ecef;
         border-radius: 8px;
-        padding: 10px 20px;
+        padding: 12px 24px;
         font-weight: 500;
+        font-size: 16px;
         transition: all 0.3s ease;
     }
     .stTabs [data-baseweb="tab"]:hover {
@@ -50,6 +52,7 @@ st.markdown("""
     .stTabs [aria-selected="true"] {
         background-color: #4CAF50;
         color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     .stButton>button {
         background-color: #4CAF50;
@@ -58,6 +61,7 @@ st.markdown("""
         padding: 10px 20px;
         font-weight: 500;
         transition: all 0.3s ease;
+        border: none;
     }
     .stButton>button:hover {
         background-color: #45a049;
@@ -67,12 +71,14 @@ st.markdown("""
         border: 2px dashed #4CAF50;
         border-radius: 8px;
         padding: 10px;
+        background-color: #f8f9fa;
     }
     .stMetric {
         background-color: #f8f9fa;
         border-radius: 8px;
-        padding: 10px;
+        padding: 12px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
     }
     .sidebar .sidebar-content {
         background-color: #ffffff;
@@ -89,13 +95,25 @@ st.markdown("""
         background-color: #e9ecef;
         border-radius: 8px;
         margin-top: 20px;
+        font-size: 14px;
     }
     h1, h2, h3 {
         color: #2c3e50;
+        margin-bottom: 15px;
     }
-    .stTextInput input, .stTextArea textarea, .stNumberInput input {
+    .stTextInput input, .stTextArea textarea, .stNumberInput input, .stSelectbox, .stMultiselect {
         border-radius: 8px;
         border: 1px solid #ced4da;
+        padding: 10px;
+        background-color: #f8f9fa;
+    }
+    .stExpander {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .stAlert {
+        border-radius: 8px;
         padding: 10px;
     }
 </style>
@@ -220,7 +238,7 @@ def plot_chart(food_data):
     carbs = [item["carbs"] if item["carbs"] is not None else 0 for item in food_data]
     fats = [item["fats"] if item["fats"] is not None else 0 for item in food_data]
     
-    fig, ax = plt.subplots(figsize=(8, len(items) * 0.6))
+    fig, ax = plt.subplots(figsize=(8, max(len(items) * 0.6, 4)))
     bar_width = 0.2
     indices = range(len(items))
     
@@ -353,23 +371,36 @@ def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None):
 # ------------------------ Streamlit UI ------------------------ #
 with st.container():
     st.title("🍽️ AI-Powered Calorie Tracker")
-    st.caption("Track your nutrition with AI-powered image analysis or manual input")
+    st.caption("Track your nutrition with ease using AI-powered analysis")
 
-    # Tabs for different functionalities
-    tab1, tab2, tab3 = st.tabs(["📷 Image Analysis", "📝 Manual Input", "📊 History"])
+    # Tabs for key functionalities
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📷 Image Analysis",
+        "📝 Text Analysis",
+        "📊 History",
+        "📅 Daily Summary",
+        "⚖️ Portion Adjustment"
+    ])
 
     # Image Analysis Tab
     with tab1:
         st.subheader("📷 Analyze Food Photos")
+        st.write("Upload a meal image to identify all food items and their nutrients.")
         with st.container():
-            img_file = st.file_uploader("Upload a food image", type=["jpg", "jpeg", "png"], key="img_uploader")
+            img_file = st.file_uploader(
+                "Upload a food image",
+                type=["jpg", "jpeg", "png"],
+                key="img_uploader",
+                help="Upload a clear, well-lit image of your meal for best results."
+            )
             context = st.text_area(
                 "Additional Context (Optional)",
-                placeholder="E.g., Identify each item in my meal (e.g., chicken, rice, vegetables) or specify dietary preferences",
-                height=100
+                placeholder="E.g., 'Chicken, rice, broccoli, sauce' or specify meal timing",
+                height=100,
+                help="List specific food items or add details like 'post-workout meal' for tailored analysis."
             )
             
-            if st.button("🔍 Analyze Meal", disabled=not img_file, key="analyze_image"):
+            if st.button("🔍 Analyze Meal", disabled=not img_file, key="analyze_image", help="Click to analyze the uploaded meal image"):
                 with st.spinner("Analyzing your meal..."):
                     try:
                         if img_file is None or getattr(img_file, 'size', 1) == 0:
@@ -380,7 +411,7 @@ with st.container():
                         
                         description = describe_image(image)
                         if "Vague caption detected" in description:
-                            st.warning(f"{description}\n\n**Tip**: Upload a clearer, well-lit image or list specific food items in the context field (e.g., 'grilled chicken, mashed potatoes, broccoli').")
+                            st.warning(f"{description}\n\n**Tip**: Upload a clearer, well-lit image or list specific food items in the context field (e.g., 'chicken, rice, broccoli').")
                             st.stop()
                         
                         dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
@@ -448,7 +479,7 @@ Instructions:
                         st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
                         
                         if len(food_data) < 3 and ("multiple items" in description.lower() or "plate" in description.lower() or "meal" in description.lower()):
-                            st.info("The analysis may have missed some food items. Please specify items in the context field (e.g., 'chicken, rice, broccoli') or adjust portion sizes in the sidebar to refine the analysis.")
+                            st.info("The analysis may have missed some food items. Please specify items in the context field (e.g., 'chicken, rice, broccoli') or visit the Portion Adjustment tab to refine the analysis.")
                         
                     except Exception as e:
                         st.error(f"Analysis failed: {str(e)}\n\n**Tip**: Ensure the image is clear, well-lit, and shows all food items distinctly, or describe the meal in the context field.")
@@ -459,9 +490,10 @@ Instructions:
                 follow_up_question = st.text_input(
                     "Ask about this meal or refine the analysis",
                     placeholder="E.g., 'List all items in the meal' or 'How much protein is in this meal?'",
-                    key="image_follow_up"
+                    key="image_follow_up",
+                    help="Ask specific questions or request a detailed item list."
                 )
-                if st.button("🔎 Get Details", disabled=not follow_up_question, key="image_follow_up_button"):
+                if st.button("🔎 Get Details", disabled=not follow_up_question, key="image_follow_up_button", help="Click to get additional details or refine the analysis"):
                     with st.spinner("Fetching details..."):
                         dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
                         follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
@@ -481,17 +513,19 @@ Instructions:
                         follow_up_answer = query_langchain(follow_up_prompt)
                         st.markdown(f"**Additional Details**:\n{follow_up_answer}")
 
-    # Text Input Tab
+    # Text Analysis Tab
     with tab2:
         st.subheader("📝 Describe Your Meal")
+        st.write("Manually enter your meal details for nutritional analysis.")
         with st.container():
             meal_desc = st.text_area(
                 "Describe what you ate",
-                placeholder="E.g., A large pepperoni pizza and soda",
-                height=100
+                placeholder="E.g., Grilled chicken, mashed potatoes, broccoli, and a creamy sauce",
+                height=100,
+                help="List all food items, including sides and sauces, for accurate analysis."
             )
             
-            if st.button("🔍 Analyze Description", key="analyze_text"):
+            if st.button("🔍 Analyze Description", key="analyze_text", help="Click to analyze the meal description"):
                 with st.spinner("Analyzing your description..."):
                     try:
                         dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
@@ -552,7 +586,7 @@ Instructions:
                         st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
                         
                         if len(food_data) < 3 and ("and" in meal_desc.lower() or "with" in meal_desc.lower()):
-                            st.info("The analysis may have missed some food items. Please provide a more detailed description (e.g., 'pepperoni pizza with crust, cheese, sauce, and soda') or adjust portion sizes in the sidebar.")
+                            st.info("The analysis may have missed some food items. Please provide a more detailed description (e.g., 'pepperoni pizza with crust, cheese, sauce, and soda') or visit the Portion Adjustment tab.")
                         
                     except Exception as e:
                         st.error(f"Analysis failed: {str(e)}\n\n**Tip**: Provide a detailed description listing all food items (e.g., 'chicken, rice, broccoli, sauce').")
@@ -562,9 +596,10 @@ Instructions:
                 follow_up_question = st.text_input(
                     "Ask about this meal",
                     placeholder="E.g., 'List all items in the meal' or 'Is this meal good for weight loss?'",
-                    key="text_follow_up"
+                    key="text_follow_up",
+                    help="Ask specific questions or request a detailed item list."
                 )
-                if st.button("🔎 Get Details", disabled=not follow_up_question, key="text_follow_up_button"):
+                if st.button("🔎 Get Details", disabled=not follow_up_question, key="text_follow_up_button", help="Click to get additional details"):
                     with st.spinner("Fetching details..."):
                         dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
                         follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, toppings). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
@@ -586,24 +621,29 @@ Instructions:
     # History Tab
     with tab3:
         st.subheader("📊 Your Nutrition History")
+        st.write("View all your past meal analyses.")
         with st.container():
-            calorie_target = st.session_state.calorie_target
-            activity_preference = st.session_state.activity_preference
-            dietary_preferences = st.session_state.dietary_preferences
-            if st.button("📅 Generate Daily Summary", key="daily_summary"):
-                daily_summary = generate_daily_summary(calorie_target, activity_preference, dietary_preferences)
-                st.markdown(daily_summary, unsafe_allow_html=True)
-                if st.session_state.last_results:
-                    include_summary_in_pdf = st.checkbox("Include Daily Summary in PDF Report")
-                    if include_summary_in_pdf:
-                        st.session_state.last_results["daily_summary"] = daily_summary
+            if not st.session_state.history:
+                st.info("No meal analyses recorded yet. Try analyzing a meal in the Image or Text Analysis tabs!")
+            for i, entry in enumerate(reversed(st.session_state.history)):
+                with st.expander(f"📅 {entry['timestamp']} - {entry['type'].title()} Analysis"):
+                    if entry['type'] == "image" and entry.get("image"):
+                        st.image(entry["image"], caption="Meal Image", width=300)
+                    
+                    st.markdown(entry["analysis"], unsafe_allow_html=True)
+                    
+                    if entry.get("totals", {}):
+                        col1, col2, col3, col4 = st.columns(4)
+                        col1.metric("Calories", f"{entry['totals']['calories']} kcal")
+                        col2.metric("Protein", f"{entry['totals']['protein']:.1f} g" if entry['totals']['protein'] else "-")
+                        col3.metric("Carbs", f"{entry['totals']['carbs']:.1f} g" if entry['totals']['carbs'] else "-")
+                        col4.metric("Fats", f"{entry['totals']['fats']:.1f} g" if entry['totals']['fats'] else "-")
+                    
+                    if entry.get("chart"):
+                        st.pyplot(entry["chart"])
             
-            today = date.today().isoformat()
-            today_cals = st.session_state.daily_calories.get(today, 0)
-            st.metric("Today's Total Calories", f"{today_cals} kcal", delta=f"{today_cals - calorie_target} kcal")
-            
-            if st.session_state.last_results:
-                if st.button("📄 Export PDF Report", key="export_pdf"):
+            if st.session_state.last_results and st.session_state.history:
+                if st.button("📄 Export Latest PDF Report", key="export_pdf", help="Download a PDF of the latest meal analysis"):
                     pdf_path = generate_pdf_report(
                         st.session_state.last_results.get("image"),
                         st.session_state.last_results.get("analysis"),
@@ -621,27 +661,102 @@ Instructions:
                                 key="download_pdf"
                             )
                         os.remove(pdf_path)
+
+    # Daily Summary Tab
+    with tab4:
+        st.subheader("📅 Daily Nutrition Summary")
+        st.write("View your daily calorie and nutrient totals with personalized fitness advice.")
+        with st.container():
+            calorie_target = st.session_state.calorie_target
+            activity_preference = st.session_state.activity_preference
+            dietary_preferences = st.session_state.dietary_preferences
+            today = date.today().isoformat()
+            today_cals = st.session_state.daily_calories.get(today, 0)
+            st.metric("Today's Total Calories", f"{today_cals} kcal", delta=f"{today_cals - calorie_target} kcal")
             
-            for i, entry in enumerate(reversed(st.session_state.history)):
-                with st.expander(f"📅 {entry['timestamp']} - {entry['type'].title()} Analysis"):
-                    if entry['type'] == "image" and entry.get("image"):
-                        st.image(entry["image"], caption="Meal Image", width=300)
-                    
-                    st.markdown(entry["analysis"], unsafe_allow_html=True)
-                    
-                    if entry.get("totals", {}):
-                        col1, col2, col3, col4 = st.columns(4)
-                        col1.metric("Calories", f"{entry['totals']['calories']} kcal")
-                        col2.metric("Protein", f"{entry['totals']['protein']:.1f} g" if entry['totals']['protein'] else "-")
-                        col3.metric("Carbs", f"{entry['totals']['carbs']:.1f} g" if entry['totals']['carbs'] else "-")
-                        col4.metric("Fats", f"{entry['totals']['fats']:.1f} g" if entry['totals']['fats'] else "-")
-                    
-                    if entry.get("chart"):
-                        st.pyplot(entry["chart"])
+            if st.button("📅 Generate Daily Summary", key="daily_summary", help="Click to view your daily nutrition summary"):
+                daily_summary = generate_daily_summary(calorie_target, activity_preference, dietary_preferences)
+                st.markdown(daily_summary, unsafe_allow_html=True)
+                if st.session_state.last_results:
+                    include_summary_in_pdf = st.checkbox("Include Daily Summary in PDF Report", help="Check to include this summary in the PDF export")
+                    if include_summary_in_pdf:
+                        st.session_state.last_results["daily_summary"] = daily_summary
+
+    # Portion Adjustment Tab
+    with tab5:
+        st.subheader("⚖️ Adjust Portion Sizes")
+        st.write("Modify portion sizes for the latest meal analysis and recalculate nutrients.")
+        with st.container():
+            if not st.session_state.last_results.get("nutrients"):
+                st.info("No meal analysis available. Analyze a meal in the Image or Text Analysis tabs first.")
+            else:
+                st.write(f"**Latest Meal ({st.session_state.last_results['timestamp']})**")
+                if st.session_state.last_results.get("type") == "image" and st.session_state.last_results.get("image"):
+                    st.image(st.session_state.last_results["image"], caption="Meal Image", width=300)
+                st.markdown(st.session_state.last_results["analysis"], unsafe_allow_html=True)
+                
+                st.subheader("Adjust Portions")
+                for item in st.session_state.last_results["nutrients"]:
+                    item_name = item["item"]
+                    portion = st.number_input(
+                        f"Portion size for {item_name} (g)",
+                        min_value=10, max_value=1000, value=100, step=10, key=f"portion_{item_name}",
+                        help=f"Enter the portion size for {item_name} in grams"
+                    )
+                if st.button("🔄 Re-analyze with Adjusted Portions", key="reanalyze_portions", help="Click to re-analyze the meal with new portion sizes"):
+                    with st.spinner("Re-analyzing with adjusted portions..."):
+                        dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
+                        prompt = f"""You are an expert in food identification and nutrition analysis. Re-analyze the meal with the following items and user-specified portion sizes, ensuring **every single food item** is included with complete nutritional data, respecting dietary preferences: {dietary_prefs}.
+                        Items and portions:
+                        {', '.join([f'{item['item']} ({st.session_state[f'portion_{item['item']}']}g)' for item in st.session_state.last_results['nutrients']])}.
+                        Provide nutritional data in the format:
+                        **Food Items and Nutrients**:
+                        - Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
+                        **Total Calories**: [X] cal
+                        **Nutritional Assessment**: [Assessment tailored to dietary preferences]
+                        **Health Suggestions**: [2-3 suggestions aligned with dietary preferences]
+                        
+                        Instructions:
+                        1. Use the user-specified portion sizes for each item.
+                        2. Include **all** items from the previous analysis, adding any minor components (e.g., sauces, garnishes) if applicable.
+                        3. Provide complete nutritional data (calories, protein, carbs, fats) for each item.
+                        4. Ensure suggestions align with dietary preferences."""
+                        analysis = query_langchain(prompt)
+                        food_data, totals = extract_items_and_nutrients(analysis)
+                        
+                        st.subheader("🍴 Updated Nutritional Analysis")
+                        st.markdown(analysis, unsafe_allow_html=True)
+                        
+                        if food_data:
+                            col1, col2, col3, col4 = st.columns(4)
+                            col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
+                            col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                            col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                            col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                            
+                            chart = plot_chart(food_data)
+                            if chart:
+                                st.pyplot(chart)
+                        
+                        st.session_state.last_results = {
+                            "type": st.session_state.last_results.get("type", "image"),
+                            "image": st.session_state.last_results.get("image"),
+                            "description": st.session_state.last_results.get("description"),
+                            "context": st.session_state.last_results.get("context", "None"),
+                            "analysis": analysis,
+                            "chart": chart if 'chart' in locals() else None,
+                            "nutrients": food_data,
+                            "totals": totals,
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        }
+                        st.session_state.history.append(st.session_state.last_results)
+                        today = date.today().isoformat()
+                        st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
 
 # Sidebar
 with st.sidebar:
     st.header("🍎 Nutrition Dashboard")
+    st.caption("Configure your profile and track progress")
     
     st.subheader("User Profile")
     calorie_target = st.number_input(
@@ -650,84 +765,34 @@ with st.sidebar:
         max_value=5000,
         value=st.session_state.calorie_target,
         step=100,
-        key="calorie_target"
+        key="calorie_target",
+        help="Set your daily calorie goal (e.g., 2000 kcal)"
     )
+    st.session_state.calorie_target = calorie_target
+    
     activity_preference = st.multiselect(
         "Preferred Activities",
         options=["Brisk Walking", "Running", "Cycling", "Swimming", "Strength Training"],
         default=st.session_state.activity_preference,
-        key="activity_preference"
+        key="activity_preference",
+        help="Select activities you enjoy for personalized fitness advice"
     )
+    st.session_state.activity_preference = activity_preference
+    
     dietary_preferences = st.multiselect(
         "Dietary Preferences",
         options=["Vegan", "Vegetarian", "Keto", "Gluten-Free", "Low-Carb"],
         default=st.session_state.dietary_preferences,
-        key="dietary_preferences"
+        key="dietary_preferences",
+        help="Select your dietary preferences for tailored analysis"
     )
-    
-    # Portion Size Adjustment
-    st.subheader("Adjust Portion Sizes")
-    if st.session_state.last_results.get("nutrients"):
-        for item in st.session_state.last_results["nutrients"]:
-            item_name = item["item"]
-            portion = st.number_input(
-                f"Portion size for {item_name} (g)",
-                min_value=10, max_value=1000, value=100, step=10, key=f"portion_{item_name}"
-            )
-        if st.button("🔄 Re-analyze with Adjusted Portions", key="reanalyze_portions"):
-            with st.spinner("Re-analyzing with adjusted portions..."):
-                dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                prompt = f"""You are an expert in food identification and nutrition analysis. Re-analyze the meal with the following items and user-specified portion sizes, ensuring **every single food item** is included with complete nutritional data, respecting dietary preferences: {dietary_prefs}.
-                Items and portions:
-                {', '.join([f'{item['item']} ({st.session_state[f'portion_{item['item']}']}g)' for item in st.session_state.last_results['nutrients']])}.
-                Provide nutritional data in the format:
-                **Food Items and Nutrients**:
-                - Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
-                **Total Calories**: [X] cal
-                **Nutritional Assessment**: [Assessment tailored to dietary preferences]
-                **Health Suggestions**: [2-3 suggestions aligned with dietary preferences]
-                
-                Instructions:
-                1. Use the user-specified portion sizes for each item.
-                2. Include **all** items from the previous analysis, adding any minor components (e.g., sauces, garnishes) if applicable.
-                3. Provide complete nutritional data (calories, protein, carbs, fats) for each item.
-                4. Ensure suggestions align with dietary preferences."""
-                analysis = query_langchain(prompt)
-                food_data, totals = extract_items_and_nutrients(analysis)
-                
-                st.subheader("🍴 Updated Nutritional Analysis")
-                st.markdown(analysis, unsafe_allow_html=True)
-                
-                if food_data:
-                    col1, col2, col3, col4 = st.columns(4)
-                    col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
-                    col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
-                    col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
-                    col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
-                    
-                    chart = plot_chart(food_data)
-                    if chart:
-                        st.pyplot(chart)
-                
-                st.session_state.last_results = {
-                    "type": st.session_state.last_results.get("type", "image"),
-                    "image": st.session_state.last_results.get("image"),
-                    "description": st.session_state.last_results.get("description"),
-                    "context": st.session_state.last_results.get("context", "None"),
-                    "analysis": analysis,
-                    "chart": chart if 'chart' in locals() else None,
-                    "nutrients": food_data,
-                    "totals": totals,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
-                }
-                st.session_state.history.append(st.session_state.last_results)
-                today = date.today().isoformat()
-                st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
+    st.session_state.dietary_preferences = dietary_preferences
     
     # Calorie Progress Bar
     today = date.today().isoformat()
     today_cals = st.session_state.daily_calories.get(today, 0)
     progress = min(today_cals / calorie_target, 1.0) if calorie_target > 0 else 0
+    st.subheader("Today's Progress")
     st.progress(progress)
     st.caption(f"Progress: {today_cals}/{calorie_target} kcal ({progress*100:.1f}%)")
     
@@ -769,7 +834,7 @@ with st.sidebar:
         st.pyplot(fig)
         st.caption("Last 7 days' nutrition trends")
     
-    if st.button("🗑️ Clear History", key="clear_history"):
+    if st.button("🗑️ Clear History", key="clear_history", help="Clear all meal history and reset progress"):
         st.session_state.history.clear()
         st.session_state.daily_calories.clear()
         st.session_state.last_results = {}
