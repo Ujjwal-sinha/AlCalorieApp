@@ -432,7 +432,7 @@ def generate_daily_summary(calorie_target, activity_preferences, dietary_prefere
     return summary + advice
 
 # Generate PDF report with analysis and visualizations
-def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None, edge_path=None, gradcam_path=None, shap_path=None, lime_path=None):
+def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None, edge_path=None, gradcam_path=None, shap_path=None, lime_path=None, cnn_confidence=None):
     try:
         pdf = FPDF()
         pdf.add_page()
@@ -468,6 +468,11 @@ def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None, e
         pdf.ln(10)
         pdf.multi_cell(0, 8, analysis)
         pdf.ln(10)
+        
+        if cnn_confidence is not None:
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, f"Confidence: {cnn_confidence*100:.1f}%", ln=1)
+            pdf.ln(10)
         
         if daily_summary:
             pdf.set_font("Arial", "B", 12)
@@ -710,8 +715,8 @@ Instructions:
                     if st.session_state.last_results.get("lime_path") and os.path.exists(st.session_state.last_results["lime_path"]):
                         st.image(st.session_state.last_results["lime_path"], caption="🔬 LIME - Local feature importance", use_column_width=True)
                 
-                if st.session_state.last_results.get("cnn_prediction"):
-                    st.markdown(f"**CNN Prediction**: {st.session_state.last_results['cnn_prediction']} (Confidence: {st.session_state.last_results['cnn_confidence']*100:.1f}%)")
+                if st.session_state.last_results.get("cnn_confidence"):
+                    st.markdown(f"**Confidence**: {st.session_state.last_results['cnn_confidence']*100:.1f}%")
 
     # Text Analysis Tab
     with tab2:
@@ -856,8 +861,8 @@ Instructions:
                                 st.image(entry["gradcam_path"], caption="Grad-CAM Visualization", width=300)
                             if entry.get("lime_path") and os.path.exists(entry["lime_path"]):
                                 st.image(entry["lime_path"], caption="LIME Interpretation", width=300)
-                            if entry.get("cnn_prediction"):
-                                st.markdown(f"**CNN Prediction**: {entry['cnn_prediction']} (Confidence: {entry['cnn_confidence']*100:.1f}%)")
+                            if entry.get("cnn_confidence"):
+                                st.markdown(f"**Confidence**: {entry['cnn_confidence']*100:.1f}%")
             
             if st.session_state.last_results and st.session_state.history:
                 if st.button("📄 Export Latest PDF Report", key="export_pdf", help="Download a PDF of the latest meal analysis"):
@@ -870,7 +875,8 @@ Instructions:
                         st.session_state.last_results.get("edge_path"),
                         st.session_state.last_results.get("gradcam_path"),
                         st.session_state.last_results.get("shap_path"),
-                        st.session_state.last_results.get("lime_path")
+                        st.session_state.last_results.get("lime_path"),
+                        st.session_state.last_results.get("cnn_confidence")
                     )
                     if pdf_path:
                         with open(pdf_path, "rb") as f:
@@ -1046,7 +1052,7 @@ st.markdown("""
 <div class='footer'>
     <p>Built with ❤️ by <b>Ujjwal Sinha</b> • 
     <a href='https://github.com/Ujjwal-sinha' target='_blank'>GitHub</a> • 
-   
+    Powered by <a href='https://x.ai' target='_blank'>xAI</a></p>
 </div>
 """, unsafe_allow_html=True)
 
