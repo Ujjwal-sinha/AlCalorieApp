@@ -114,7 +114,7 @@ def load_models():
                 logger.warning(f"Failed to load custom CNN weights: {e}")
                 st.warning(f"Using default ImageNet weights for CNN model: {e}")
         else:
-            logger.warning("Custom CNN weights not found. Using ImageNet weights.")  # Warning only in logs, not frontend
+            logger.warning("Custom CNN weights not found. Using ImageNet weights.")  # Warning only in logs
     except Exception as e:
         logger.error(f"Failed to load CNN model: {e}")
         st.error(f"Failed to load CNN model: {e}. Visualizations will be unavailable.")
@@ -692,7 +692,6 @@ Instructions:
         
         with subtab2:
             st.markdown("### Explainability Visualizations")
-            st.info("These visualizations highlight the regions of the image the AI model focused on to identify food items.")
             
             if not st.session_state.last_results.get("image"):
                 st.info("No meal image analyzed yet. Upload and analyze an image in the Analysis tab to view visualizations.")
@@ -1047,7 +1046,7 @@ st.markdown("""
 <div class='footer'>
     <p>Built with ❤️ by <b>Ujjwal Sinha</b> • 
     <a href='https://github.com/Ujjwal-sinha' target='_blank'>GitHub</a> • 
-
+   
 </div>
 """, unsafe_allow_html=True)
 
