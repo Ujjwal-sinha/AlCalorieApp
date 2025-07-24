@@ -11,8 +11,22 @@ from fpdf import FPDF
 import io
 import re
 import torch
+import torchvision.models as models
+from torchvision import transforms
+import cv2
+import numpy as np
+from captum.attr import GradientShap
+from lime.lime_image import LimeImageExplainer
+import torch.nn.functional as F
+import uuid
+import glob
+import logging
 
-# ------------------------ Setup ------------------------ #
+# ------------------------ Setup Logging ------------------------ #
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ------------------------ Setup Streamlit ------------------------ #
 st.set_page_config(
     page_title="🍱 AI Calorie Tracker",
     layout="wide",
@@ -20,7 +34,7 @@ st.set_page_config(
     page_icon="🍽️"
 )
 
-# Custom CSS for enhanced, user-friendly UI
+# Custom CSS (unchanged)
 st.markdown("""
 <style>
     body {
@@ -122,8 +136,11 @@ st.markdown("""
 # Load environment variables
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
+if not groq_api_key:
+    st.error("GROQ_API_KEY not found in .env file. Please set it to use the AI Calorie Tracker.")
+    st.stop()
 
-# Activity calorie burn rates (kcal/hour for average adult)
+# Activity calorie burn rates
 ACTIVITY_BURN_RATES = {
     "Brisk Walking": 300,
     "Running": 600,
@@ -132,32 +149,71 @@ ACTIVITY_BURN_RATES = {
     "Strength Training": 400
 }
 
+# Food classes for surrogate CNN model
+FOOD_CLASSES = ["chicken", "rice", "broccoli", "pizza", "salad", "sauce", "bread", "fruit"]
+
+# Device configuration
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # ------------------------ Model Initialization ------------------------ #
 @st.cache_resource
 def load_models():
-    """Initialize all AI models with proper device handling"""
+    """Initialize BLIP and surrogate CNN models with enhanced error handling"""
     models = {}
     try:
+        logger.info("Loading ChatGroq LLM...")
         models['llm'] = ChatGroq(model_name="llama3-8b-8192", api_key=groq_api_key)
+        logger.info("ChatGroq LLM loaded successfully")
     except Exception as e:
-        st.error(f"Failed to load LLM: {e}")
+        logger.error(f"Failed to load LLM: {e}")
+        st.error(f"Failed to load language model: {e}. Please check GROQ_API_KEY and network connection.")
         models['llm'] = None
     try:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        dtype = torch.float16 if device == "cuda" else torch.float32
+        logger.info("Loading BLIP models...")
+        dtype = torch.float16 if device.type == "cuda" else torch.float32
         models['processor'] = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
         models['blip_model'] = BlipForConditionalGeneration.from_pretrained(
             "Salesforce/blip-image-captioning-base",
             torch_dtype=dtype,
             low_cpu_mem_usage=True
         ).to(device).eval()
+        logger.info("BLIP models loaded successfully")
     except Exception as e:
-        st.error(f"Failed to load image captioner: {e}")
+        logger.error(f"Failed to load BLIP model: {e}")
+        st.error(f"Failed to load BLIP model: {e}. Image analysis will be unavailable.")
         models['processor'] = None
         models['blip_model'] = None
+    try:
+        logger.info("Loading DenseNet121 CNN model...")
+        models['cnn_model'] = models.densenet121(weights="IMAGENET1K_V1")
+        models['cnn_model'].classifier = torch.nn.Linear(models['cnn_model'].classifier.in_features, len(FOOD_CLASSES))
+        models['cnn_model'] = models['cnn_model'].to(device).eval()
+        weights_path = "trained_food_cnn_model.pth"
+        if os.path.exists(weights_path):
+            try:
+                models['cnn_model'].load_state_dict(torch.load(weights_path, map_location=device))
+                logger.info("Loaded custom trained food CNN model weights")
+                st.success("✅ Loaded custom trained food CNN model weights!")
+            except Exception as e:
+                logger.warning(f"Failed to load custom CNN weights: {e}")
+                st.warning(f"Using default ImageNet weights for CNN model: {e}")
+        else:
+            logger.warning("Custom CNN weights not found. Using ImageNet weights.")
+            st.warning("Custom CNN weights not found. Visualizations may be less accurate.")
+    except Exception as e:
+        logger.error(f"Failed to load CNN model: {e}")
+        st.error(f"Failed to load CNN model: {e}. Visualizations will be unavailable.")
+        models['cnn_model'] = None
     return models
 
 models = load_models()
+
+# CNN transform for food images
+cnn_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
 
 # ------------------------ Session State Initialization ------------------------ #
 if "history" not in st.session_state:
@@ -173,19 +229,168 @@ if "activity_preference" not in st.session_state:
 if "dietary_preferences" not in st.session_state:
     st.session_state.dietary_preferences = []
 
+# ------------------------ Visualization Functions ------------------------ #
+def visualize_food_features(image):
+    """Edge detection for food image features"""
+    try:
+        img_np = np.array(image.convert("RGB").resize((224, 224)))
+        edges = cv2.Canny(cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY), 100, 200)
+        plt.figure(figsize=(6, 6))
+        plt.imshow(edges, cmap="gray")
+        edge_path = f"edge_output_{uuid.uuid4().hex}.png"
+        plt.axis("off")
+        plt.savefig(edge_path, bbox_inches="tight")
+        plt.close()
+        return edge_path
+    except Exception as e:
+        logger.error(f"Edge detection failed: {e}")
+        st.warning(f"Edge detection failed: {e}")
+        return None
+
+def apply_gradcam(image_tensor, model, target_class):
+    """Apply Grad-CAM to highlight regions influencing food item detection"""
+    if model is None:
+        logger.warning("CNN model unavailable for Grad-CAM")
+        return None
+    try:
+        model.eval()
+        gradients, activations = [], []
+        
+        def backward_hook(module, grad_input, grad_output):
+            if grad_output[0] is not None:
+                gradients.append(grad_output[0].detach())
+        
+        def forward_hook(module, input, output):
+            activations.append(output.detach())
+        
+        last_conv = model.features.norm5
+        handle_fwd = last_conv.register_forward_hook(forward_hook)
+        handle_bwd = last_conv.register_backward_hook(backward_hook)
+        
+        image_tensor = image_tensor.clone().detach().to(device).requires_grad_(True)
+        output = model(image_tensor)
+        model.zero_grad()
+        
+        class_loss = output[0, target_class]
+        class_loss.backward()
+        
+        if not gradients or not activations:
+            handle_fwd.remove()
+            handle_bwd.remove()
+            return None
+        
+        grads_val = gradients[0]
+        activations_val = activations[0]
+        
+        weights = grads_val.mean(dim=[2, 3], keepdim=True)
+        cam = (weights * activations_val).sum(dim=1, keepdim=True)
+        cam = F.relu(cam)
+        cam = F.interpolate(cam, size=(224, 224), mode='bilinear', align_corners=False)
+        
+        cam = cam - cam.min()
+        cam = cam / (cam.max() + 1e-8)
+        cam_np = cam.squeeze().detach().cpu().numpy()
+        
+        image_np = image_tensor.permute(0, 2, 3, 1).squeeze().detach().cpu().numpy()
+        image_np = (image_np * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])).clip(0, 1)
+        
+        plt.figure(figsize=(8, 6))
+        plt.imshow(image_np)
+        plt.imshow(cam_np, cmap="jet", alpha=0.5)
+        gradcam_path = f"gradcam_{uuid.uuid4().hex}.png"
+        plt.axis("off")
+        plt.savefig(gradcam_path, bbox_inches="tight")
+        plt.close()
+        
+        handle_fwd.remove()
+        handle_bwd.remove()
+        return gradcam_path
+    except Exception as e:
+        logger.error(f"Grad-CAM failed: {e}")
+        st.warning(f"Grad-CAM failed: {e}")
+        return None
+
+def apply_shap(image_tensor, model):
+    """Apply SHAP to show pixel importance for food item detection"""
+    if model is None:
+        logger.warning("CNN model unavailable for SHAP")
+        return None
+    try:
+        model.eval()
+        gradient_shap = GradientShap(model)
+        baseline = torch.zeros_like(image_tensor).to(device)
+        image_tensor = image_tensor.clone().detach().requires_grad_(True).to(device)
+        attributions = gradient_shap.attribute(image_tensor, baselines=baseline, target=0)
+        attr_np = attributions.sum(dim=1).squeeze().detach().cpu().numpy()
+        image_np = image_tensor.permute(0, 2, 3, 1).squeeze().detach().cpu().numpy()
+        image_np = (image_np * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])).clip(0, 1)
+        
+        plt.figure(figsize=(8, 6))
+        plt.imshow(np.abs(attr_np), cmap="viridis", alpha=0.5)
+        plt.imshow(image_np, alpha=0.5)
+        shap_path = f"shap_{uuid.uuid4().hex}.png"
+        plt.axis("off")
+        plt.savefig(shap_path, bbox_inches="tight")
+        plt.close()
+        return shap_path
+    except Exception as e:
+        logger.error(f"SHAP failed: {e}")
+        st.warning(f"SHAP failed: {e}")
+        return None
+
+def apply_lime(image, model, classes):
+    """Apply LIME to highlight local feature importance for food item detection"""
+    if model is None:
+        logger.warning("CNN model unavailable for LIME")
+        return None
+    try:
+        explainer = LimeImageExplainer()
+        
+        def predict_fn(images):
+            images = torch.tensor(images, dtype=torch.float32).permute(0, 3, 1, 2).to(device)
+            images = (images - torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(device)) / torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(device)
+            with torch.no_grad():
+                outputs = model(images)
+            return F.softmax(outputs, dim=1).cpu().numpy()
+        
+        image_np = np.array(image.convert("RGB").resize((224, 224)))
+        explanation = explainer.explain_instance(
+            image_np, predict_fn, top_labels=2, num_samples=200, segmentation_fn=None
+        )
+        temp, mask = explanation.get_image_and_mask(
+            explanation.top_labels[0], positive_only=True, num_features=5, hide_rest=False
+        )
+        
+        plt.figure(figsize=(6, 6))
+        plt.imshow(image_np)
+        plt.imshow(mask, cmap="viridis", alpha=0.5)
+        plt.colorbar(label="Importance")
+        plt.axis("off")
+        lime_path = f"lime_{uuid.uuid4().hex}.png"
+        plt.savefig(lime_path, bbox_inches="tight", dpi=150)
+        plt.close()
+        return lime_path
+    except Exception as e:
+        logger.error(f"LIME failed: {e}")
+        st.warning(f"LIME failed: {e}")
+        return None
+
 # ------------------------ Helper Functions ------------------------ #
 def query_langchain(prompt):
     if not models['llm']:
-        return "LLM service unavailable"
+        logger.error("LLM is None. Cannot process prompt.")
+        return "LLM service unavailable. Please check GROQ_API_KEY and try again."
     try:
         response = models['llm']([HumanMessage(content=prompt)])
         return response.content
     except Exception as e:
+        logger.error(f"Error querying LLM: {e}")
         return f"Error querying LLM: {str(e)}"
 
 def describe_image(image: Image.Image) -> str:
     if not models['processor'] or not models['blip_model']:
-        return "Image analysis unavailable"
+        logger.error("BLIP model or processor is None. Image analysis unavailable.")
+        return "Image analysis unavailable. Please check model loading and try again."
     try:
         if image.mode != "RGB":
             image = image.convert("RGB")
@@ -202,7 +407,8 @@ def describe_image(image: Image.Image) -> str:
                 return f"Vague caption detected: '{initial_caption}'. Please provide a clearer image or specify food items in the context field (e.g., 'chicken, rice, broccoli')."
         return caption
     except Exception as e:
-        return f"Image analysis error: {str(e)}"
+        logger.error(f"Image analysis error: {e}")
+        return f"Image analysis error: {str(e)}. Please try a clearer image or describe the meal in the context field."
 
 def extract_items_and_nutrients(text):
     items = []
@@ -307,7 +513,7 @@ def generate_daily_summary(calorie_target, activity_preferences, dietary_prefere
     
     return summary + advice
 
-def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None):
+def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None, edge_path=None, gradcam_path=None, shap_path=None, lime_path=None):
     try:
         pdf = FPDF()
         pdf.add_page()
@@ -357,6 +563,19 @@ def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None):
             pdf.image(chart_path, w=180)
             os.remove(chart_path)
         
+        viz_paths = [
+            (edge_path, "Edge Detection Analysis"),
+            (gradcam_path, "Grad-CAM Visualization"),
+            (shap_path, "SHAP Explanation"),
+            (lime_path, "LIME Interpretation")
+        ]
+        for path, title in viz_paths:
+            if path and os.path.exists(path):
+                pdf.set_font("Arial", "B", 12)
+                pdf.cell(0, 10, title, ln=1)
+                pdf.image(path, w=180)
+                pdf.ln(10)
+        
         pdf.set_y(-15)
         pdf.set_font("Arial", "I", 8)
         pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, "C")
@@ -365,8 +584,17 @@ def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None):
         pdf.output(pdf_path)
         return pdf_path
     except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
         st.error(f"PDF generation failed: {e}")
         return None
+    finally:
+        # Clean up temporary visualization files
+        for path in [edge_path, gradcam_path, shap_path, lime_path]:
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                except:
+                    pass
 
 # ------------------------ Streamlit UI ------------------------ #
 with st.container():
@@ -386,36 +614,44 @@ with st.container():
     with tab1:
         st.subheader("📷 Analyze Food Photos")
         st.write("Upload a meal image to identify all food items and their nutrients.")
-        with st.container():
-            img_file = st.file_uploader(
-                "Upload a food image",
-                type=["jpg", "jpeg", "png"],
-                key="img_uploader",
-                help="Upload a clear, well-lit image of your meal for best results."
-            )
-            context = st.text_area(
-                "Additional Context (Optional)",
-                placeholder="E.g., 'Chicken, rice, broccoli, sauce' or specify meal timing",
-                height=100,
-                help="List specific food items or add details like 'post-workout meal' for tailored analysis."
-            )
-            
-            if st.button("🔍 Analyze Meal", disabled=not img_file, key="analyze_image", help="Click to analyze the uploaded meal image"):
-                with st.spinner("Analyzing your meal..."):
-                    try:
-                        if img_file is None or getattr(img_file, 'size', 1) == 0:
-                            st.error("File upload failed. Please refresh and re-upload your image.")
-                            st.stop()
-                        image = Image.open(img_file)
-                        st.image(image, caption="Uploaded Meal", use_column_width=True, clamp=True)
-                        
-                        description = describe_image(image)
-                        if "Vague caption detected" in description:
-                            st.warning(f"{description}\n\n**Tip**: Upload a clearer, well-lit image or list specific food items in the context field (e.g., 'chicken, rice, broccoli').")
-                            st.stop()
-                        
-                        dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                        prompt = f"""You are an expert in food identification and nutrition analysis. Your task is to identify **every single food item** in the meal, including minor components (e.g., sauces, garnishes, sides), and provide a detailed nutritional analysis tailored to the user’s dietary preferences. Follow this exact format:
+        
+        subtab1, subtab2 = st.tabs(["🔍 Analysis", "🎨 Visualizations"])
+        
+        with subtab1:
+            with st.container():
+                img_file = st.file_uploader(
+                    "Upload a food image",
+                    type=["jpg", "jpeg", "png"],
+                    key="img_uploader",
+                    help="Upload a clear, well-lit image of your meal for best results."
+                )
+                context = st.text_area(
+                    "Additional Context (Optional)",
+                    placeholder="E.g., 'Chicken, rice, broccoli, sauce' or specify meal timing",
+                    height=100,
+                    help="List specific food items or add details like 'post-workout meal' for tailored analysis."
+                )
+                
+                if st.button("🔍 Analyze Meal", disabled=not img_file, key="analyze_image", help="Click to analyze the uploaded meal image"):
+                    with st.spinner("Analyzing your meal..."):
+                        try:
+                            if img_file is None or getattr(img_file, 'size', 1) == 0:
+                                st.error("File upload failed. Please refresh and re-upload your image.")
+                                st.stop()
+                            image = Image.open(img_file)
+                            st.image(image, caption="Uploaded Meal", use_column_width=True, clamp=True)
+                            
+                            description = describe_image(image)
+                            if "unavailable" in description.lower() or "error" in description.lower():
+                                st.error(description)
+                                st.stop()
+                            
+                            if "Vague caption detected" in description:
+                                st.warning(f"{description}\n\n**Tip**: Upload a clearer, well-lit image or list specific food items in the context field (e.g., 'chicken, rice, broccoli').")
+                                st.stop()
+                            
+                            dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
+                            prompt = f"""You are an expert in food identification and nutrition analysis. Your task is to identify **every single food item** in the meal, including minor components (e.g., sauces, garnishes, sides), and provide a detailed nutritional analysis tailored to the user’s dietary preferences. Follow this exact format:
 
 **Food Items and Nutrients**:
 - Item: [Food Name with portion size, e.g., Grilled Chicken Breast (100g)], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
@@ -432,71 +668,105 @@ Instructions:
 1. Identify **all** food items in the description, including every component (e.g., protein, starch, vegetables, sauces, garnishes). If the description is vague (e.g., 'plate of food'), assume a balanced meal with at least 3-5 components (e.g., protein like chicken or tofu, starch like rice or potatoes, vegetable like broccoli or salad, sauce, and a side like bread or fruit) and list them explicitly.
 2. For each food item, provide an estimated portion size (e.g., '100g chicken', '1 cup rice', '50g salad') based on typical serving sizes or context clues. **Do not omit any items**, even minor ones like dressings or toppings.
 3. Provide complete nutritional data (calories, protein, carbs, fats) for each item based on typical values. **All macronutrients must be included** for every item.
-4. Ensure the analysis and suggestions align with the user’s dietary preferences (e.g., vegan, keto, gluten-free). For example, suggest plant-based alternatives for vegan users or low-carb options for keto users.
+4. Ensure the analysis and suggestions align with the user’s dietary preferences (e.g., vegan, keto, gluten-free).
 5. If the context includes specific requests (e.g., 'identify each item', meal timing), prioritize those in the analysis and tailor suggestions accordingly.
 6. Ensure the total calories match the sum of individual item calories.
-7. Strictly adhere to the specified format to ensure compatibility with parsing logic.
+7. Strictly adhere to the specified format.
 8. If the description or context suggests a complex meal but is unclear, maximize item detection by assuming a diverse meal composition and estimating portions conservatively."""
-                        
-                        analysis = query_langchain(prompt)
-                        food_data, totals = extract_items_and_nutrients(analysis)
-                        
-                        if not food_data or len(food_data) < 2 or any(item["protein"] is None or item["carbs"] is None or item["fats"] is None for item in food_data):
-                            st.warning("Incomplete or insufficient food items detected. Retrying with stricter instructions...")
-                            prompt += f"""\n\n**Stricter Instructions**: The initial analysis may have missed items or macronutrients. Re-analyze the meal description '{description}' and context '{context or 'None'}', ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). Assume a complex meal with at least 3-5 items (e.g., protein, starch, vegetable, sauce, side) if the description is vague. Provide portion sizes and complete macronutrient data (calories, protein, carbs, fats) for **each item**. Do not skip any items or macronutrients, and align with dietary preferences: {dietary_prefs}."""
-                            analysis = query_langchain(prompt)
-                            food_data, totals = extract_items_and_nutrients(analysis)
-                        
-                        st.subheader("🍴 Nutritional Analysis")
-                        st.markdown(analysis, unsafe_allow_html=True)
-                        
-                        if food_data:
-                            col1, col2, col3, col4 = st.columns(4)
-                            col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
-                            col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
-                            col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
-                            col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
                             
-                            chart = plot_chart(food_data)
-                            if chart:
-                                st.pyplot(chart)
-                        else:
-                            st.error("Failed to extract food items. Please try a clearer image or provide a detailed description in the context field (e.g., 'grilled chicken, rice, broccoli, sauce').")
-                        
-                        st.session_state.last_results = {
-                            "type": "image",
-                            "image": image,
-                            "description": description,
-                            "context": context or "None",
-                            "analysis": analysis,
-                            "chart": chart if 'chart' in locals() else None,
-                            "nutrients": food_data,
-                            "totals": totals,
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
-                        }
-                        st.session_state.history.append(st.session_state.last_results)
-                        today = date.today().isoformat()
-                        st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
-                        
-                        if len(food_data) < 3 and ("multiple items" in description.lower() or "plate" in description.lower() or "meal" in description.lower()):
-                            st.info("The analysis may have missed some food items. Please specify items in the context field (e.g., 'chicken, rice, broccoli') or visit the Portion Adjustment tab to refine the analysis.")
-                        
-                    except Exception as e:
-                        st.error(f"Analysis failed: {str(e)}\n\n**Tip**: Ensure the image is clear, well-lit, and shows all food items distinctly, or describe the meal in the context field.")
-            
-            # Follow-up question section
-            if st.session_state.last_results.get("type") == "image":
-                st.subheader("❓ Refine or Ask for More Details")
-                follow_up_question = st.text_input(
-                    "Ask about this meal or refine the analysis",
-                    placeholder="E.g., 'List all items in the meal' or 'How much protein is in this meal?'",
-                    key="image_follow_up",
-                    help="Ask specific questions or request a detailed item list."
-                )
-                if st.button("🔎 Get Details", disabled=not follow_up_question, key="image_follow_up_button", help="Click to get additional details or refine the analysis"):
-                    with st.spinner("Fetching details..."):
-                        dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                        follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
+                            analysis = query_langchain(prompt)
+                            if "unavailable" in analysis.lower() or "error" in analysis.lower():
+                                st.error(analysis)
+                                st.stop()
+                            
+                            food_data, totals = extract_items_and_nutrients(analysis)
+                            
+                            if not food_data or len(food_data) < 2 or any(item["protein"] is None or item["carbs"] is None or item["fats"] is None for item in food_data):
+                                st.warning("Incomplete or insufficient food items detected. Retrying with stricter instructions...")
+                                prompt += f"""\n\n**Stricter Instructions**: The initial analysis may have missed items or macronutrients. Re-analyze the meal description '{description}' and context '{context or 'None'}', ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). Assume a complex meal with at least 3-5 items (e.g., protein, starch, vegetable, sauce, side) if the description is vague. Provide portion sizes and complete macronutrient data (calories, protein, carbs, fats) for **each item**. Do not skip any items or macronutrients, and align with dietary preferences: {dietary_prefs}."""
+                                analysis = query_langchain(prompt)
+                                if "unavailable" in analysis.lower() or "error" in analysis.lower():
+                                    st.error(analysis)
+                                    st.stop()
+                                food_data, totals = extract_items_and_nutrients(analysis)
+                            
+                            # CNN prediction for visualization
+                            edge_path, gradcam_path, shap_path, lime_path = None, None, None, None
+                            cnn_predicted_class, cnn_confidence = None, None
+                            if models['cnn_model']:
+                                try:
+                                    image_tensor = cnn_transform(image).unsqueeze(0).to(device)
+                                    with torch.no_grad():
+                                        outputs = models['cnn_model'](image_tensor)
+                                        probabilities = F.softmax(outputs, dim=1)
+                                        cnn_confidence, cnn_predicted_idx = torch.max(probabilities, dim=1)
+                                        cnn_predicted_class = FOOD_CLASSES[cnn_predicted_idx.item()]
+                                    
+                                    edge_path = visualize_food_features(image)
+                                    gradcam_path = apply_gradcam(image_tensor, models['cnn_model'], cnn_predicted_idx)
+                                    shap_path = apply_shap(image_tensor, models['cnn_model'])
+                                    lime_path = apply_lime(image, models['cnn_model'], FOOD_CLASSES)
+                                except Exception as e:
+                                    logger.error(f"Visualization generation failed: {e}")
+                                    st.warning(f"Visualizations unavailable: {e}")
+                            
+                            st.subheader("🍴 Nutritional Analysis")
+                            st.markdown(analysis, unsafe_allow_html=True)
+                            
+                            if food_data:
+                                col1, col2, col3, col4 = st.columns(4)
+                                col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
+                                col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                                col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                                col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                                
+                                chart = plot_chart(food_data)
+                                if chart:
+                                    st.pyplot(chart)
+                            else:
+                                st.error("Failed to extract food items. Please try a clearer image or provide a detailed description in the context field (e.g., 'grilled chicken, rice, broccoli, sauce').")
+                            
+                            st.session_state.last_results = {
+                                "type": "image",
+                                "image": image,
+                                "description": description,
+                                "context": context or "None",
+                                "analysis": analysis,
+                                "chart": chart if 'chart' in locals() else None,
+                                "nutrients": food_data,
+                                "totals": totals,
+                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                "edge_path": edge_path,
+                                "gradcam_path": gradcam_path,
+                                "shap_path": shap_path,
+                                "lime_path": lime_path,
+                                "cnn_prediction": cnn_predicted_class,
+                                "cnn_confidence": cnn_confidence.item() if cnn_confidence is not None else None
+                            }
+                            st.session_state.history.append(st.session_state.last_results)
+                            today = date.today().isoformat()
+                            st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
+                            
+                            if len(food_data) < 3 and ("multiple items" in description.lower() or "plate" in description.lower() or "meal" in description.lower()):
+                                st.info("The analysis may have missed some food items. Please specify items in the context field (e.g., 'chicken, rice, broccoli') or visit the Portion Adjustment tab to refine the analysis.")
+                            
+                        except Exception as e:
+                            logger.error(f"Meal analysis failed: {e}")
+                            st.error(f"Meal analysis failed: {str(e)}\n\n**Tip**: Ensure the image is clear, well-lit, and shows all food items distinctly, or describe the meal in the context field (e.g., 'chicken, rice, broccoli').")
+                            st.stop()
+                
+                if st.session_state.last_results.get("type") == "image":
+                    st.subheader("❓ Refine or Ask for More Details")
+                    follow_up_question = st.text_input(
+                        "Ask about this meal or refine the analysis",
+                        placeholder="E.g., 'List all items in the meal' or 'How much protein is in this meal?'",
+                        key="image_follow_up",
+                        help="Ask specific questions or request a detailed item list."
+                    )
+                    if st.button("🔎 Get Details", disabled=not follow_up_question, key="image_follow_up_button", help="Click to get additional details or refine the analysis"):
+                        with st.spinner("Fetching details..."):
+                            dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
+                            follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
 
 Previous meal description: {st.session_state.last_results.get('description')}
 Previous context: {st.session_state.last_results.get('context')}
@@ -510,10 +780,39 @@ Instructions:
 2. If the description is vague, assume a complex meal with at least 3-5 components (e.g., protein, starch, vegetable, sauce, side) and list them explicitly.
 3. Ensure all macronutrients are included for each item and align with dietary preferences.
 4. Provide a clear and concise response tailored to the user’s question or request."""
-                        follow_up_answer = query_langchain(follow_up_prompt)
-                        st.markdown(f"**Additional Details**:\n{follow_up_answer}")
+                            follow_up_answer = query_langchain(follow_up_prompt)
+                            if "unavailable" in follow_up_answer.lower() or "error" in follow_up_answer.lower():
+                                st.error(follow_up_answer)
+                            else:
+                                st.markdown(f"**Additional Details**:\n{follow_up_answer}")
+        
+        with subtab2:
+            st.markdown("### Explainability Visualizations")
+            st.info("These visualizations highlight the regions of the image the AI model focused on to identify food items.")
+            
+            if not st.session_state.last_results.get("image"):
+                st.info("No meal image analyzed yet. Upload and analyze an image in the Analysis tab to view visualizations.")
+            else:
+                viz_cols = st.columns(2)
+                
+                with viz_cols[0]:
+                    if st.session_state.last_results.get("edge_path") and os.path.exists(st.session_state.last_results["edge_path"]):
+                        st.image(st.session_state.last_results["edge_path"], caption="🔍 Edge Detection - Key food boundaries", use_column_width=True)
+                    
+                    if st.session_state.last_results.get("shap_path") and os.path.exists(st.session_state.last_results["shap_path"]):
+                        st.image(st.session_state.last_results["shap_path"], caption="📊 SHAP - Pixel importance for food detection", use_column_width=True)
+                
+                with viz_cols[1]:
+                    if st.session_state.last_results.get("gradcam_path") and os.path.exists(st.session_state.last_results["gradcam_path"]):
+                        st.image(st.session_state.last_results["gradcam_path"], caption="🎯 Grad-CAM - Model attention regions", use_column_width=True)
+                    
+                    if st.session_state.last_results.get("lime_path") and os.path.exists(st.session_state.last_results["lime_path"]):
+                        st.image(st.session_state.last_results["lime_path"], caption="🔬 LIME - Local feature importance", use_column_width=True)
+                
+                if st.session_state.last_results.get("cnn_prediction"):
+                    st.markdown(f"**CNN Prediction**: {st.session_state.last_results['cnn_prediction']} (Confidence: {st.session_state.last_results['cnn_confidence']*100:.1f}%)")
 
-    # Text Analysis Tab
+    # Text Analysis Tab (unchanged)
     with tab2:
         st.subheader("📝 Describe Your Meal")
         st.write("Manually enter your meal details for nutritional analysis.")
@@ -551,11 +850,18 @@ Instructions:
 7. Strictly adhere to the specified format."""
                         
                         analysis = query_langchain(prompt)
+                        if "unavailable" in analysis.lower() or "error" in analysis.lower():
+                            st.error(analysis)
+                            st.stop()
+                        
                         food_data, totals = extract_items_and_nutrients(analysis)
                         if not food_data or len(food_data) < 2 or any(item["protein"] is None or item["carbs"] is None or item["fats"] is None for item in food_data):
                             st.warning("Incomplete or insufficient food items detected. Retrying with stricter instructions...")
                             prompt += f"""\n\n**Stricter Instructions**: The initial analysis may have missed items or macronutrients. Re-analyze the meal description '{meal_desc}', ensuring **every single food item** is identified, including minor components (e.g., sauces, toppings). Assume a complex meal with at least 3-5 items (e.g., protein, starch, vegetable, sauce, side) if the description is vague. Provide portion sizes and complete macronutrient data (calories, protein, carbs, fats) for **each item**. Do not skip any items or macronutrients, and align with dietary preferences: {dietary_prefs}."""
                             analysis = query_langchain(prompt)
+                            if "unavailable" in analysis.lower() or "error" in analysis.lower():
+                                st.error(analysis)
+                                st.stop()
                             food_data, totals = extract_items_and_nutrients(analysis)
                         
                         st.subheader("🍴 Nutritional Analysis")
@@ -589,20 +895,21 @@ Instructions:
                             st.info("The analysis may have missed some food items. Please provide a more detailed description (e.g., 'pepperoni pizza with crust, cheese, sauce, and soda') or visit the Portion Adjustment tab.")
                         
                     except Exception as e:
-                        st.error(f"Analysis failed: {str(e)}\n\n**Tip**: Provide a detailed description listing all food items (e.g., 'chicken, rice, broccoli, sauce').")
-            
-            if st.session_state.last_results.get("type") == "text":
-                st.subheader("❓ Ask for More Details")
-                follow_up_question = st.text_input(
-                    "Ask about this meal",
-                    placeholder="E.g., 'List all items in the meal' or 'Is this meal good for weight loss?'",
-                    key="text_follow_up",
-                    help="Ask specific questions or request a detailed item list."
-                )
-                if st.button("🔎 Get Details", disabled=not follow_up_question, key="text_follow_up_button", help="Click to get additional details"):
-                    with st.spinner("Fetching details..."):
-                        dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                        follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, toppings). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
+                        logger.error(f"Text analysis failed: {e}")
+                        st.error(f"Text analysis failed: {str(e)}\n\n**Tip**: Provide a detailed description listing all food items (e.g., 'chicken, rice, broccoli, sauce').")
+                
+                if st.session_state.last_results.get("type") == "text":
+                    st.subheader("❓ Ask for More Details")
+                    follow_up_question = st.text_input(
+                        "Ask about this meal",
+                        placeholder="E.g., 'List all items in the meal' or 'Is this meal good for weight loss?'",
+                        key="text_follow_up",
+                        help="Ask specific questions or request a detailed item list."
+                    )
+                    if st.button("🔎 Get Details", disabled=not follow_up_question, key="text_follow_up_button", help="Click to get additional details"):
+                        with st.spinner("Fetching details..."):
+                            dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
+                            follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, toppings). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
 
 Previous meal description: {st.session_state.last_results.get('description')}
 Previous analysis: {st.session_state.last_results.get('analysis')}
@@ -615,8 +922,11 @@ Instructions:
 2. If the description is vague, assume a complex meal with at least 3-5 components (e.g., protein, starch, vegetable, sauce, side) and list them explicitly.
 3. Ensure all macronutrients are included for each item and align with dietary preferences.
 4. Provide a clear and concise response tailored to the user’s question or request."""
-                        follow_up_answer = query_langchain(follow_up_prompt)
-                        st.markdown(f"**Additional Details**:\n{follow_up_answer}")
+                            follow_up_answer = query_langchain(follow_up_prompt)
+                            if "unavailable" in follow_up_answer.lower() or "error" in follow_up_answer.lower():
+                                st.error(follow_up_answer)
+                            else:
+                                st.markdown(f"**Additional Details**:\n{follow_up_answer}")
 
     # History Tab
     with tab3:
@@ -641,6 +951,22 @@ Instructions:
                     
                     if entry.get("chart"):
                         st.pyplot(entry["chart"])
+                    
+                    if entry['type'] == "image":
+                        st.markdown("### Visualizations")
+                        viz_cols = st.columns(2)
+                        with viz_cols[0]:
+                            if entry.get("edge_path") and os.path.exists(entry["edge_path"]):
+                                st.image(entry["edge_path"], caption="Edge Detection", width=300)
+                            if entry.get("shap_path") and os.path.exists(entry["shap_path"]):
+                                st.image(entry["shap_path"], caption="SHAP Explanation", width=300)
+                        with viz_cols[1]:
+                            if entry.get("gradcam_path") and os.path.exists(entry["gradcam_path"]):
+                                st.image(entry["gradcam_path"], caption="Grad-CAM Visualization", width=300)
+                            if entry.get("lime_path") and os.path.exists(entry["lime_path"]):
+                                st.image(entry["lime_path"], caption="LIME Interpretation", width=300)
+                            if entry.get("cnn_prediction"):
+                                st.markdown(f"**CNN Prediction**: {entry['cnn_prediction']} (Confidence: {entry['cnn_confidence']*100:.1f}%)")
             
             if st.session_state.last_results and st.session_state.history:
                 if st.button("📄 Export Latest PDF Report", key="export_pdf", help="Download a PDF of the latest meal analysis"):
@@ -649,7 +975,11 @@ Instructions:
                         st.session_state.last_results.get("analysis"),
                         st.session_state.last_results.get("chart"),
                         st.session_state.last_results.get("nutrients", []),
-                        st.session_state.last_results.get("daily_summary")
+                        st.session_state.last_results.get("daily_summary"),
+                        st.session_state.last_results.get("edge_path"),
+                        st.session_state.last_results.get("gradcam_path"),
+                        st.session_state.last_results.get("shap_path"),
+                        st.session_state.last_results.get("lime_path")
                     )
                     if pdf_path:
                         with open(pdf_path, "rb") as f:
@@ -722,6 +1052,10 @@ Instructions:
                         3. Provide complete nutritional data (calories, protein, carbs, fats) for each item.
                         4. Ensure suggestions align with dietary preferences."""
                         analysis = query_langchain(prompt)
+                        if "unavailable" in analysis.lower() or "error" in analysis.lower():
+                            st.error(analysis)
+                            st.stop()
+                        
                         food_data, totals = extract_items_and_nutrients(analysis)
                         
                         st.subheader("🍴 Updated Nutritional Analysis")
@@ -785,11 +1119,10 @@ with st.sidebar:
         help="Select your dietary preferences for tailored analysis"
     )
     
-    # Calorie Progress Bar
+    st.subheader("Today's Progress")
     today = date.today().isoformat()
     today_cals = st.session_state.daily_calories.get(today, 0)
     progress = min(today_cals / st.session_state.calorie_target, 1.0) if st.session_state.calorie_target > 0 else 0
-    st.subheader("Today's Progress")
     st.progress(progress)
     st.caption(f"Progress: {today_cals}/{st.session_state.calorie_target} kcal ({progress*100:.1f}%)")
     
@@ -835,6 +1168,12 @@ with st.sidebar:
         st.session_state.history.clear()
         st.session_state.daily_calories.clear()
         st.session_state.last_results = {}
+        for pattern in ["gradcam_*.png", "shap_*.png", "lime_*.png", "edge_output_*.png"]:
+            for file in glob.glob(pattern):
+                try:
+                    os.remove(file)
+                except:
+                    pass
         st.rerun()
 
 # Footer
@@ -845,3 +1184,7 @@ st.markdown("""
     Powered by <a href='https://x.ai' target='_blank'>xAI</a></p>
 </div>
 """, unsafe_allow_html=True)
+
+# Memory cleanup
+if torch.cuda.is_available():
+    torch.cuda.empty_cache()
