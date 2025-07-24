@@ -229,7 +229,10 @@ def plot_chart(food_data):
     ax.set_xlabel("Amount", fontsize=12)
     ax.set_title("Nutritional Breakdown", fontsize=14, pad=15)
     ax.legend(fontsize=10)
-    plt.style.use('seaborn')
+    try:
+        plt.style.use('seaborn')
+    except:
+        plt.style.use('ggplot')  # Fallback to ggplot if seaborn is unavailable
     plt.tight_layout()
     return fig
 
@@ -468,9 +471,7 @@ User's question: {follow_up_question}"""
                         prompt = f"""You are a nutrition expert analyzing a meal based on the user's description. If the description includes additional details (e.g., portion sizes, meal timing, dietary preferences, or activity level), incorporate them into your analysis and provide tailored advice. Follow this exact format:
 
 **Food Items and Nutrients**:
-- Item: [Food Name], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats
-
-: [X] g
+- Item: [Food Name], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
 - Item: [Food Name], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
 **Total Calories**: [X] cal
 **Nutritional Assessment**: [Detailed assessment of macronutrients, vitamins, and suitability for the user's context]
@@ -642,7 +643,10 @@ with st.sidebar:
         ax.set_ylabel("Amount", fontsize=10)
         ax.set_title("Weekly Nutrition", fontsize=12)
         ax.legend(fontsize=8)
-        plt.style.use('seaborn')
+        try:
+            plt.style.use('seaborn')
+        except:
+            plt.style.use('ggplot')  # Fallback to ggplot if seaborn is unavailable
         plt.tight_layout()
         st.pyplot(fig)
         st.caption("Last 7 days' nutrition trends")
@@ -658,5 +662,6 @@ st.markdown("""
 <div class='footer'>
     <p>Built with ❤️ by <b>Ujjwal Sinha</b> • 
     <a href='https://github.com/Ujjwal-sinha' target='_blank'>GitHub</a> • 
+    Powered by <a href='https://x.ai' target='_blank'>xAI</a></p>
 </div>
 """, unsafe_allow_html=True)
