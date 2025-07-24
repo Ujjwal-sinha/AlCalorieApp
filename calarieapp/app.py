@@ -11,7 +11,7 @@ from fpdf import FPDF
 import io
 import re
 import torch
-import torchvision.models as models
+import torchvision.models as torchvision_models
 from torchvision import transforms
 import cv2
 import numpy as np
@@ -22,114 +22,33 @@ import uuid
 import glob
 import logging
 
-# ------------------------ Setup Logging ------------------------ #
+# Setup logging for debugging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ------------------------ Setup Streamlit ------------------------ #
-st.set_page_config(
-    page_title="🍱 AI Calorie Tracker",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    page_icon="🍽️"
-)
+# Streamlit page configuration
+st.set_page_config(page_title="🍱 AI Calorie Tracker", layout="wide", initial_sidebar_state="expanded", page_icon="🍽️")
 
-# Custom CSS (unchanged)
+# Custom CSS for UI styling
 st.markdown("""
 <style>
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f5f7fa;
-    }
-    .main {
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 16px;
-        justify-content: center;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #e9ecef;
-        border-radius: 8px;
-        padding: 12px 24px;
-        font-weight: 500;
-        font-size: 16px;
-        transition: all 0.3s ease;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: #4CAF50;
-        color: white;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #4CAF50;
-        color: white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border-radius: 8px;
-        padding: 10px 20px;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        border: none;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-    .stFileUploader {
-        border: 2px dashed #4CAF50;
-        border-radius: 8px;
-        padding: 10px;
-        background-color: #f8f9fa;
-    }
-    .stMetric {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 12px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 10px;
-    }
-    .sidebar .sidebar-content {
-        background-color: #ffffff;
-        border-right: 1px solid #e9ecef;
-        padding: 20px;
-        border-radius: 10px;
-    }
-    .stProgress .st-bo {
-        background-color: #4CAF50;
-    }
-    .footer {
-        text-align: center;
-        padding: 20px;
-        background-color: #e9ecef;
-        border-radius: 8px;
-        margin-top: 20px;
-        font-size: 14px;
-    }
-    h1, h2, h3 {
-        color: #2c3e50;
-        margin-bottom: 15px;
-    }
-    .stTextInput input, .stTextArea textarea, .stNumberInput input, .stSelectbox, .stMultiselect {
-        border-radius: 8px;
-        border: 1px solid #ced4da;
-        padding: 10px;
-        background-color: #f8f9fa;
-    }
-    .stExpander {
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        margin-bottom: 10px;
-    }
-    .stAlert {
-        border-radius: 8px;
-        padding: 10px;
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa; }
+    .main { background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    .stTabs [data-baseweb="tab-list"] { gap: 16px; justify-content: center; }
+    .stTabs [data-baseweb="tab"] { background-color: #e9ecef; border-radius: 8px; padding: 12px 24px; font-weight: 500; font-size: 16px; transition: all 0.3s ease; }
+    .stTabs [data-baseweb="tab"]:hover { background-color: #4CAF50; color: white; }
+    .stTabs [aria-selected="true"] { background-color: #4CAF50; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .stButton>button { background-color: #4CAF50; color: white; border-radius: 8px; padding: 10px 20px; font-weight: 500; transition: all 0.3s ease; border: none; }
+    .stButton>button:hover { background-color: #45a049; transform: scale(1.05); }
+    .stFileUploader { border: 2px dashed #4CAF50; border-radius: 8px; padding: 10px; background-color: #f8f9fa; }
+    .stMetric { background-color: #f8f9fa; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 10px; }
+    .sidebar .sidebar-content { background-color: #ffffff; border-right: 1px solid #e9ecef; padding: 20px; border-radius: 10px; }
+    .stProgress .st-bo { background-color: #4CAF50; }
+    .footer { text-align: center; padding: 20px; background-color: #e9ecef; border-radius: 8px; margin-top: 20px; font-size: 14px; }
+    h1, h2, h3 { color: #2c3e50; margin-bottom: 15px; }
+    .stTextInput input, .stTextArea textarea, .stNumberInput input, .stSelectbox, .stMultiselect { border-radius: 8px; border: 1px solid #ced4da; padding: 10px; background-color: #f8f9fa; }
+    .stExpander { border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 10px; }
+    .stAlert { border-radius: 8px; padding: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -140,7 +59,7 @@ if not groq_api_key:
     st.error("GROQ_API_KEY not found in .env file. Please set it to use the AI Calorie Tracker.")
     st.stop()
 
-# Activity calorie burn rates
+# Activity calorie burn rates (kcal/hour)
 ACTIVITY_BURN_RATES = {
     "Brisk Walking": 300,
     "Running": 600,
@@ -149,16 +68,15 @@ ACTIVITY_BURN_RATES = {
     "Strength Training": 400
 }
 
-# Food classes for surrogate CNN model
+# Food classes for CNN model
 FOOD_CLASSES = ["chicken", "rice", "broccoli", "pizza", "salad", "sauce", "bread", "fruit"]
 
-# Device configuration
+# Device configuration (GPU if available, else CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# ------------------------ Model Initialization ------------------------ #
+# Initialize models (LLM, BLIP, CNN)
 @st.cache_resource
 def load_models():
-    """Initialize BLIP and surrogate CNN models with enhanced error handling"""
     models = {}
     try:
         logger.info("Loading ChatGroq LLM...")
@@ -173,9 +91,7 @@ def load_models():
         dtype = torch.float16 if device.type == "cuda" else torch.float32
         models['processor'] = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
         models['blip_model'] = BlipForConditionalGeneration.from_pretrained(
-            "Salesforce/blip-image-captioning-base",
-            torch_dtype=dtype,
-            low_cpu_mem_usage=True
+            "Salesforce/blip-image-captioning-base", torch_dtype=dtype, low_cpu_mem_usage=True
         ).to(device).eval()
         logger.info("BLIP models loaded successfully")
     except Exception as e:
@@ -185,7 +101,7 @@ def load_models():
         models['blip_model'] = None
     try:
         logger.info("Loading DenseNet121 CNN model...")
-        models['cnn_model'] = models.densenet121(weights="IMAGENET1K_V1")
+        models['cnn_model'] = torchvision_models.densenet121(weights="IMAGENET1K_V1")
         models['cnn_model'].classifier = torch.nn.Linear(models['cnn_model'].classifier.in_features, len(FOOD_CLASSES))
         models['cnn_model'] = models['cnn_model'].to(device).eval()
         weights_path = "trained_food_cnn_model.pth"
@@ -208,14 +124,14 @@ def load_models():
 
 models = load_models()
 
-# CNN transform for food images
+# CNN image transform
 cnn_transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# ------------------------ Session State Initialization ------------------------ #
+# Initialize session state
 if "history" not in st.session_state:
     st.session_state.history = []
 if "daily_calories" not in st.session_state:
@@ -229,9 +145,8 @@ if "activity_preference" not in st.session_state:
 if "dietary_preferences" not in st.session_state:
     st.session_state.dietary_preferences = []
 
-# ------------------------ Visualization Functions ------------------------ #
+# Edge detection visualization
 def visualize_food_features(image):
-    """Edge detection for food image features"""
     try:
         img_np = np.array(image.convert("RGB").resize((224, 224)))
         edges = cv2.Canny(cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY), 100, 200)
@@ -247,8 +162,8 @@ def visualize_food_features(image):
         st.warning(f"Edge detection failed: {e}")
         return None
 
+# Grad-CAM visualization
 def apply_gradcam(image_tensor, model, target_class):
-    """Apply Grad-CAM to highlight regions influencing food item detection"""
     if model is None:
         logger.warning("CNN model unavailable for Grad-CAM")
         return None
@@ -310,8 +225,8 @@ def apply_gradcam(image_tensor, model, target_class):
         st.warning(f"Grad-CAM failed: {e}")
         return None
 
+# SHAP visualization
 def apply_shap(image_tensor, model):
-    """Apply SHAP to show pixel importance for food item detection"""
     if model is None:
         logger.warning("CNN model unavailable for SHAP")
         return None
@@ -338,8 +253,8 @@ def apply_shap(image_tensor, model):
         st.warning(f"SHAP failed: {e}")
         return None
 
+# LIME visualization
 def apply_lime(image, model, classes):
-    """Apply LIME to highlight local feature importance for food item detection"""
     if model is None:
         logger.warning("CNN model unavailable for LIME")
         return None
@@ -375,7 +290,7 @@ def apply_lime(image, model, classes):
         st.warning(f"LIME failed: {e}")
         return None
 
-# ------------------------ Helper Functions ------------------------ #
+# Query LLM with error handling
 def query_langchain(prompt):
     if not models['llm']:
         logger.error("LLM is None. Cannot process prompt.")
@@ -387,6 +302,7 @@ def query_langchain(prompt):
         logger.error(f"Error querying LLM: {e}")
         return f"Error querying LLM: {str(e)}"
 
+# Describe image using BLIP model
 def describe_image(image: Image.Image) -> str:
     if not models['processor'] or not models['blip_model']:
         logger.error("BLIP model or processor is None. Image analysis unavailable.")
@@ -410,6 +326,7 @@ def describe_image(image: Image.Image) -> str:
         logger.error(f"Image analysis error: {e}")
         return f"Image analysis error: {str(e)}. Please try a clearer image or describe the meal in the context field."
 
+# Extract food items and nutrients from text
 def extract_items_and_nutrients(text):
     items = []
     pattern = r'Item:\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?'
@@ -435,6 +352,7 @@ def extract_items_and_nutrients(text):
     }
     return items, totals
 
+# Plot nutritional breakdown chart
 def plot_chart(food_data):
     if not food_data:
         return None
@@ -465,6 +383,7 @@ def plot_chart(food_data):
     plt.tight_layout()
     return fig
 
+# Generate daily nutritional summary and advice
 def generate_daily_summary(calorie_target, activity_preferences, dietary_preferences):
     today = date.today().isoformat()
     total_calories = st.session_state.daily_calories.get(today, 0)
@@ -513,6 +432,7 @@ def generate_daily_summary(calorie_target, activity_preferences, dietary_prefere
     
     return summary + advice
 
+# Generate PDF report with analysis and visualizations
 def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None, edge_path=None, gradcam_path=None, shap_path=None, lime_path=None):
     try:
         pdf = FPDF()
@@ -588,7 +508,6 @@ def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None, e
         st.error(f"PDF generation failed: {e}")
         return None
     finally:
-        # Clean up temporary visualization files
         for path in [edge_path, gradcam_path, shap_path, lime_path]:
             if path and os.path.exists(path):
                 try:
@@ -596,12 +515,12 @@ def generate_pdf_report(image, analysis, chart, nutrients, daily_summary=None, e
                 except:
                     pass
 
-# ------------------------ Streamlit UI ------------------------ #
+# Main UI
 with st.container():
     st.title("🍽️ AI-Powered Calorie Tracker")
     st.caption("Track your nutrition with ease using AI-powered analysis")
 
-    # Tabs for key functionalities
+    # Tabs for functionalities
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📷 Image Analysis",
         "📝 Text Analysis",
@@ -619,18 +538,8 @@ with st.container():
         
         with subtab1:
             with st.container():
-                img_file = st.file_uploader(
-                    "Upload a food image",
-                    type=["jpg", "jpeg", "png"],
-                    key="img_uploader",
-                    help="Upload a clear, well-lit image of your meal for best results."
-                )
-                context = st.text_area(
-                    "Additional Context (Optional)",
-                    placeholder="E.g., 'Chicken, rice, broccoli, sauce' or specify meal timing",
-                    height=100,
-                    help="List specific food items or add details like 'post-workout meal' for tailored analysis."
-                )
+                img_file = st.file_uploader("Upload a food image", type=["jpg", "jpeg", "png"], key="img_uploader", help="Upload a clear, well-lit image of your meal for best results.")
+                context = st.text_area("Additional Context (Optional)", placeholder="E.g., 'Chicken, rice, broccoli, sauce' or specify meal timing", height=100, help="List specific food items or add details like 'post-workout meal' for tailored analysis.")
                 
                 if st.button("🔍 Analyze Meal", disabled=not img_file, key="analyze_image", help="Click to analyze the uploaded meal image"):
                     with st.spinner("Analyzing your meal..."):
@@ -690,7 +599,7 @@ Instructions:
                                     st.stop()
                                 food_data, totals = extract_items_and_nutrients(analysis)
                             
-                            # CNN prediction for visualization
+                            # Generate visualizations if CNN model is available
                             edge_path, gradcam_path, shap_path, lime_path = None, None, None, None
                             cnn_predicted_class, cnn_confidence = None, None
                             if models['cnn_model']:
@@ -757,12 +666,7 @@ Instructions:
                 
                 if st.session_state.last_results.get("type") == "image":
                     st.subheader("❓ Refine or Ask for More Details")
-                    follow_up_question = st.text_input(
-                        "Ask about this meal or refine the analysis",
-                        placeholder="E.g., 'List all items in the meal' or 'How much protein is in this meal?'",
-                        key="image_follow_up",
-                        help="Ask specific questions or request a detailed item list."
-                    )
+                    follow_up_question = st.text_input("Ask about this meal or refine the analysis", placeholder="E.g., 'List all items in the meal' or 'How much protein is in this meal?'", key="image_follow_up", help="Ask specific questions or request a detailed item list.")
                     if st.button("🔎 Get Details", disabled=not follow_up_question, key="image_follow_up_button", help="Click to get additional details or refine the analysis"):
                         with st.spinner("Fetching details..."):
                             dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
@@ -798,31 +702,24 @@ Instructions:
                 with viz_cols[0]:
                     if st.session_state.last_results.get("edge_path") and os.path.exists(st.session_state.last_results["edge_path"]):
                         st.image(st.session_state.last_results["edge_path"], caption="🔍 Edge Detection - Key food boundaries", use_column_width=True)
-                    
                     if st.session_state.last_results.get("shap_path") and os.path.exists(st.session_state.last_results["shap_path"]):
                         st.image(st.session_state.last_results["shap_path"], caption="📊 SHAP - Pixel importance for food detection", use_column_width=True)
                 
                 with viz_cols[1]:
                     if st.session_state.last_results.get("gradcam_path") and os.path.exists(st.session_state.last_results["gradcam_path"]):
                         st.image(st.session_state.last_results["gradcam_path"], caption="🎯 Grad-CAM - Model attention regions", use_column_width=True)
-                    
                     if st.session_state.last_results.get("lime_path") and os.path.exists(st.session_state.last_results["lime_path"]):
                         st.image(st.session_state.last_results["lime_path"], caption="🔬 LIME - Local feature importance", use_column_width=True)
                 
                 if st.session_state.last_results.get("cnn_prediction"):
                     st.markdown(f"**CNN Prediction**: {st.session_state.last_results['cnn_prediction']} (Confidence: {st.session_state.last_results['cnn_confidence']*100:.1f}%)")
 
-    # Text Analysis Tab (unchanged)
+    # Text Analysis Tab
     with tab2:
         st.subheader("📝 Describe Your Meal")
         st.write("Manually enter your meal details for nutritional analysis.")
         with st.container():
-            meal_desc = st.text_area(
-                "Describe what you ate",
-                placeholder="E.g., Grilled chicken, mashed potatoes, broccoli, and a creamy sauce",
-                height=100,
-                help="List all food items, including sides and sauces, for accurate analysis."
-            )
+            meal_desc = st.text_area("Describe what you ate", placeholder="E.g., Grilled chicken, mashed potatoes, broccoli, and a creamy sauce", height=100, help="List all food items, including sides and sauces, for accurate analysis.")
             
             if st.button("🔍 Analyze Description", key="analyze_text", help="Click to analyze the meal description"):
                 with st.spinner("Analyzing your description..."):
@@ -900,12 +797,7 @@ Instructions:
                 
                 if st.session_state.last_results.get("type") == "text":
                     st.subheader("❓ Ask for More Details")
-                    follow_up_question = st.text_input(
-                        "Ask about this meal",
-                        placeholder="E.g., 'List all items in the meal' or 'Is this meal good for weight loss?'",
-                        key="text_follow_up",
-                        help="Ask specific questions or request a detailed item list."
-                    )
+                    follow_up_question = st.text_input("Ask about this meal", placeholder="E.g., 'List all items in the meal' or 'Is this meal good for weight loss?'", key="text_follow_up", help="Ask specific questions or request a detailed item list.")
                     if st.button("🔎 Get Details", disabled=not follow_up_question, key="text_follow_up_button", help="Click to get additional details"):
                         with st.spinner("Fetching details..."):
                             dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
@@ -1028,11 +920,7 @@ Instructions:
                 st.subheader("Adjust Portions")
                 for item in st.session_state.last_results["nutrients"]:
                     item_name = item["item"]
-                    portion = st.number_input(
-                        f"Portion size for {item_name} (g)",
-                        min_value=10, max_value=1000, value=100, step=10, key=f"portion_{item_name}",
-                        help=f"Enter the portion size for {item_name} in grams"
-                    )
+                    portion = st.number_input(f"Portion size for {item_name} (g)", min_value=10, max_value=1000, value=100, step=10, key=f"portion_{item_name}", help=f"Enter the portion size for {item_name} in grams")
                 if st.button("🔄 Re-analyze with Adjusted Portions", key="reanalyze_portions", help="Click to re-analyze the meal with new portion sizes"):
                     with st.spinner("Re-analyzing with adjusted portions..."):
                         dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
@@ -1093,31 +981,9 @@ with st.sidebar:
     st.caption("Configure your profile and track progress")
     
     st.subheader("User Profile")
-    st.number_input(
-        "Daily Calorie Target (kcal)",
-        min_value=1000,
-        max_value=5000,
-        value=st.session_state.calorie_target,
-        step=100,
-        key="calorie_target",
-        help="Set your daily calorie goal (e.g., 2000 kcal)"
-    )
-    
-    st.multiselect(
-        "Preferred Activities",
-        options=["Brisk Walking", "Running", "Cycling", "Swimming", "Strength Training"],
-        default=st.session_state.activity_preference,
-        key="activity_preference",
-        help="Select activities you enjoy for personalized fitness advice"
-    )
-    
-    st.multiselect(
-        "Dietary Preferences",
-        options=["Vegan", "Vegetarian", "Keto", "Gluten-Free", "Low-Carb"],
-        default=st.session_state.dietary_preferences,
-        key="dietary_preferences",
-        help="Select your dietary preferences for tailored analysis"
-    )
+    st.number_input("Daily Calorie Target (kcal)", min_value=1000, max_value=5000, value=st.session_state.calorie_target, step=100, key="calorie_target", help="Set your daily calorie goal (e.g., 2000 kcal)")
+    st.multiselect("Preferred Activities", options=["Brisk Walking", "Running", "Cycling", "Swimming", "Strength Training"], default=st.session_state.activity_preference, key="activity_preference", help="Select activities you enjoy for personalized fitness advice")
+    st.multiselect("Dietary Preferences", options=["Vegan", "Vegetarian", "Keto", "Gluten-Free", "Low-Carb"], default=st.session_state.dietary_preferences, key="dietary_preferences", help="Select your dietary preferences for tailored analysis")
     
     st.subheader("Today's Progress")
     today = date.today().isoformat()
@@ -1185,6 +1051,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Memory cleanup
+# Clean up GPU memory
 if torch.cuda.is_available():
     torch.cuda.empty_cache()
