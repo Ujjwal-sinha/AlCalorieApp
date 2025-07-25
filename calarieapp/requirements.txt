@@ -42,4 +42,5 @@ accelerate
 peft
 captum 
 lime 
-opencv-python
+opencv-python-headless
+numexpr
