@@ -13,3 +13,4 @@ captum==0.7.0
 lime==0.2.0.1
 pandas==2.2.3
 numexpr==2.10.1
+langchain
