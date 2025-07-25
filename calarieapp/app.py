@@ -1052,7 +1052,7 @@ st.markdown("""
 <div class='footer'>
     <p>Built with ❤️ by <b>Ujjwal Sinha</b> • 
     <a href='https://github.com/Ujjwal-sinha' target='_blank'>GitHub</a> • 
-    Powered by <a href='https://x.ai' target='_blank'>xAI</a></p>
+    
 </div>
 """, unsafe_allow_html=True)
 

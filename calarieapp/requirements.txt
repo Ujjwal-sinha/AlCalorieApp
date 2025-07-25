@@ -40,3 +40,5 @@ fpdf
 SpeechRecognition
 accelerate 
 peft
+
+lime 
