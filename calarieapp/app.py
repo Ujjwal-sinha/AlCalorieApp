@@ -114,7 +114,7 @@ def load_models():
                 logger.warning(f"Failed to load custom CNN weights: {e}")
                 st.warning(f"Using default ImageNet weights for CNN model: {e}")
         else:
-            logger.warning("Custom CNN weights not found. Using ImageNet weights.")  # Warning only in logs
+            logger.warning("Custom CNN weights not found. Using ImageNet weights.")
     except Exception as e:
         logger.error(f"Failed to load CNN model: {e}")
         st.error(f"Failed to load CNN model: {e}. Visualizations will be unavailable.")
@@ -925,60 +925,84 @@ Instructions:
                 st.subheader("Adjust Portions")
                 for item in st.session_state.last_results["nutrients"]:
                     item_name = item["item"]
-                    portion = st.number_input(f"Portion size for {item_name} (g)", min_value=10, max_value=1000, value=100, step=10, key=f"portion_{item_name}", help=f"Enter the portion size for {item_name} in grams")
+                    sanitized_key = f"portion_{re.sub(r'[^a-zA-Z0-9]', '_', item_name.lower())}"
+                    portion = st.number_input(
+                        f"Portion size for {item_name} (g)",
+                        min_value=10,
+                        max_value=1000,
+                        value=100,
+                        step=10,
+                        key=sanitized_key,
+                        help=f"Enter the portion size for {item_name} in grams"
+                    )
                 if st.button("🔄 Re-analyze with Adjusted Portions", key="reanalyze_portions", help="Click to re-analyze the meal with new portion sizes"):
                     with st.spinner("Re-analyzing with adjusted portions..."):
-                        dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                        prompt = f"""You are an expert in food identification and nutrition analysis. Re-analyze the meal with the following items and user-specified portion sizes, ensuring **every single food item** is included with complete nutritional data, respecting dietary preferences: {dietary_prefs}.
-                        Items and portions:
-                        {', '.join([f'{item['item']} ({st.session_state[f'portion_{item['item']}']}g)' for item in st.session_state.last_results['nutrients']])}.
-                        Provide nutritional data in the format:
-                        **Food Items and Nutrients**:
-                        - Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
-                        **Total Calories**: [X] cal
-                        **Nutritional Assessment**: [Assessment tailored to dietary preferences]
-                        **Health Suggestions**: [2-3 suggestions aligned with dietary preferences]
-                        
-                        Instructions:
-                        1. Use the user-specified portion sizes for each item.
-                        2. Include **all** items from the previous analysis, adding any minor components (e.g., sauces, garnishes) if applicable.
-                        3. Provide complete nutritional data (calories, protein, carbs, fats) for each item.
-                        4. Ensure suggestions align with dietary preferences."""
-                        analysis = query_langchain(prompt)
-                        if "unavailable" in analysis.lower() or "error" in analysis.lower():
-                            st.error(analysis)
-                            st.stop()
-                        
-                        food_data, totals = extract_items_and_nutrients(analysis)
-                        
-                        st.subheader("🍴 Updated Nutritional Analysis")
-                        st.markdown(analysis, unsafe_allow_html=True)
-                        
-                        if food_data:
-                            col1, col2, col3, col4 = st.columns(4)
-                            col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
-                            col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
-                            col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
-                            col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                        try:
+                            if not st.session_state.last_results.get("nutrients"):
+                                st.error("No nutrients data available for portion adjustment.")
+                                st.stop()
+                            dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
+                            items_with_portions = [
+                                f"{item['item']} ({st.session_state.get(f'portion_{re.sub(r'[^a-zA-Z0-9]', '_', item['item'].lower())}', 100)}g)"
+                                for item in st.session_state.last_results['nutrients']
+                            ]
+                            portion_string = ', '.join(items_with_portions)
+                            logger.info(f"Portion string: {portion_string}")
+                            prompt = f"""You are an expert in food identification and nutrition analysis. Re-analyze the meal with the following items and user-specified portion sizes, ensuring **every single food item** is included with complete nutritional data, respecting dietary preferences: {dietary_prefs}.
+                            Items and portions:
+                            {portion_string}.
+                            Provide nutritional data in the format:
+                            **Food Items and Nutrients**:
+                            - Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
+                            **Total Calories**: [X] cal
+                            **Nutritional Assessment**: [Assessment tailored to dietary preferences]
+                            **Health Suggestions**: [2-3 suggestions aligned with dietary preferences]
                             
-                            chart = plot_chart(food_data)
-                            if chart:
-                                st.pyplot(chart)
+                            Instructions:
+                            1. Use the user-specified portion sizes for each item.
+                            2. Include **all** items from the previous analysis, adding any minor components (e.g., sauces, garnishes) if applicable.
+                            3. Provide complete nutritional data (calories, protein, carbs, fats) for each item.
+                            4. Ensure suggestions align with dietary preferences."""
+                            analysis = query_langchain(prompt)
+                            if "unavailable" in analysis.lower() or "error" in analysis.lower():
+                                st.error(analysis)
+                                st.stop()
+                            
+                            food_data, totals = extract_items_and_nutrients(analysis)
+                            
+                            st.subheader("🍴 Updated Nutritional Analysis")
+                            st.markdown(analysis, unsafe_allow_html=True)
+                            
+                            if food_data:
+                                col1, col2, col3, col4 = st.columns(4)
+                                col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
+                                col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                                col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                                col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                                
+                                chart = plot_chart(food_data)
+                                if chart:
+                                    st.pyplot(chart)
+                            
+                            st.session_state.last_results = {
+                                "type": st.session_state.last_results.get("type", "image"),
+                                "image": st.session_state.last_results.get("image"),
+                                "description": st.session_state.last_results.get("description"),
+                                "context": st.session_state.last_results.get("context", "None"),
+                                "analysis": analysis,
+                                "chart": chart if 'chart' in locals() else None,
+                                "nutrients": food_data,
+                                "totals": totals,
+                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            }
+                            st.session_state.history.append(st.session_state.last_results)
+                            today = date.today().isoformat()
+                            st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
                         
-                        st.session_state.last_results = {
-                            "type": st.session_state.last_results.get("type", "image"),
-                            "image": st.session_state.last_results.get("image"),
-                            "description": st.session_state.last_results.get("description"),
-                            "context": st.session_state.last_results.get("context", "None"),
-                            "analysis": analysis,
-                            "chart": chart if 'chart' in locals() else None,
-                            "nutrients": food_data,
-                            "totals": totals,
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
-                        }
-                        st.session_state.history.append(st.session_state.last_results)
-                        today = date.today().isoformat()
-                        st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
+                        except Exception as e:
+                            logger.error(f"Portion adjustment failed: {e}")
+                            st.error(f"Portion adjustment failed: {str(e)}")
+                            st.stop()
 
 # Sidebar
 with st.sidebar:
@@ -1051,8 +1075,7 @@ with st.sidebar:
 st.markdown("""
 <div class='footer'>
     <p>Built with ❤️ by <b>Ujjwal Sinha</b> • 
-    <a href='https://github.com/Ujjwal-sinha' target='_blank'>GitHub</a> • 
-    
+    <a href='https://github.com/Ujjwal-sinha' target='_blank'>GitHub</a> 
 </div>
 """, unsafe_allow_html=True)
 
