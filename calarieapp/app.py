@@ -552,7 +552,7 @@ with st.container():
                                 st.error("File upload failed. Please refresh and re-upload your image.")
                                 st.stop()
                             image = Image.open(img_file)
-                            st.image(image, caption="Uploaded Meal", use_column_width=True, clamp=True)
+                            st.image(image, caption="Uploaded Meal", use_container_width=True, clamp=True)
                             
                             description = describe_image(image)
                             if "unavailable" in description.lower() or "error" in description.lower():
@@ -705,15 +705,15 @@ Instructions:
                 
                 with viz_cols[0]:
                     if st.session_state.last_results.get("edge_path") and os.path.exists(st.session_state.last_results["edge_path"]):
-                        st.image(st.session_state.last_results["edge_path"], caption="🔍 Edge Detection - Key food boundaries", use_column_width=True)
+                        st.image(st.session_state.last_results["edge_path"], caption="🔍 Edge Detection - Key food boundaries", use_container_width=True)
                     if st.session_state.last_results.get("shap_path") and os.path.exists(st.session_state.last_results["shap_path"]):
-                        st.image(st.session_state.last_results["shap_path"], caption="📊 SHAP - Pixel importance for food detection", use_column_width=True)
+                        st.image(st.session_state.last_results["shap_path"], caption="📊 SHAP - Pixel importance for food detection", use_container_width=True)
                 
                 with viz_cols[1]:
                     if st.session_state.last_results.get("gradcam_path") and os.path.exists(st.session_state.last_results["gradcam_path"]):
-                        st.image(st.session_state.last_results["gradcam_path"], caption="🎯 Grad-CAM - Model attention regions", use_column_width=True)
+                        st.image(st.session_state.last_results["gradcam_path"], caption="🎯 Grad-CAM - Model attention regions", use_container_width=True)
                     if st.session_state.last_results.get("lime_path") and os.path.exists(st.session_state.last_results["lime_path"]):
-                        st.image(st.session_state.last_results["lime_path"], caption="🔬 LIME - Local feature importance", use_column_width=True)
+                        st.image(st.session_state.last_results["lime_path"], caption="🔬 LIME - Local feature importance", use_container_width=True)
                 
                 if st.session_state.last_results.get("cnn_confidence"):
                     st.markdown(f"**Confidence**: {st.session_state.last_results['cnn_confidence']*100:.1f}%")
@@ -834,7 +834,7 @@ Instructions:
             for i, entry in enumerate(reversed(st.session_state.history)):
                 with st.expander(f"📅 {entry['timestamp']} - {entry['type'].title()} Analysis"):
                     if entry['type'] == "image" and entry.get("image"):
-                        st.image(entry["image"], caption="Meal Image", width=300)
+                        st.image(entry["image"], caption="Meal Image", use_container_width=True)
                     
                     st.markdown(entry["analysis"], unsafe_allow_html=True)
                     
@@ -853,14 +853,14 @@ Instructions:
                         viz_cols = st.columns(2)
                         with viz_cols[0]:
                             if entry.get("edge_path") and os.path.exists(entry["edge_path"]):
-                                st.image(entry["edge_path"], caption="Edge Detection", width=300)
+                                st.image(entry["edge_path"], caption="Edge Detection", use_container_width=True)
                             if entry.get("shap_path") and os.path.exists(entry["shap_path"]):
-                                st.image(entry["shap_path"], caption="SHAP Explanation", width=300)
+                                st.image(entry["shap_path"], caption="SHAP Explanation", use_container_width=True)
                         with viz_cols[1]:
                             if entry.get("gradcam_path") and os.path.exists(entry["gradcam_path"]):
-                                st.image(entry["gradcam_path"], caption="Grad-CAM Visualization", width=300)
+                                st.image(entry["gradcam_path"], caption="Grad-CAM Visualization", use_container_width=True)
                             if entry.get("lime_path") and os.path.exists(entry["lime_path"]):
-                                st.image(entry["lime_path"], caption="LIME Interpretation", width=300)
+                                st.image(entry["lime_path"], caption="LIME Interpretation", use_container_width=True)
                             if entry.get("cnn_confidence"):
                                 st.markdown(f"**Confidence**: {entry['cnn_confidence']*100:.1f}%")
             
@@ -910,101 +910,100 @@ Instructions:
                         st.session_state.last_results["daily_summary"] = daily_summary
 
     # Portion Adjustment Tab
-    # Portion Adjustment Tab
-with tab5:
-    st.subheader("⚖️ Adjust Portion Sizes")
-    st.write("Modify portion sizes for the latest meal analysis and recalculate nutrients.")
-    with st.container():
-        if not st.session_state.last_results.get("nutrients"):
-            st.info("No meal analysis available. Analyze a meal in the Image or Text Analysis tabs first.")
-        else:
-            st.write(f"**Latest Meal ({st.session_state.last_results['timestamp']})**")
-            if st.session_state.last_results.get("type") == "image" and st.session_state.last_results.get("image"):
-                st.image(st.session_state.last_results["image"], caption="Meal Image", width=300)
-            st.markdown(st.session_state.last_results["analysis"], unsafe_allow_html=True)
-            
-            st.subheader("Adjust Portions")
-            for item in st.session_state.last_results["nutrients"]:
-                item_name = item["item"]
-                sanitized_key = f"portion_{re.sub(r'[^a-zA-Z0-9]', '_', item_name.lower())}"
-                portion = st.number_input(
-                    f"Portion size for {item_name} (g)",
-                    min_value=10,
-                    max_value=1000,
-                    value=100,
-                    step=10,
-                    key=sanitized_key,
-                    help=f"Enter the portion size for {item_name} in grams"
-                )
-            if st.button("🔄 Re-analyze with Adjusted Portions", key="reanalyze_portions", help="Click to re-analyze the meal with new portion sizes"):
-                with st.spinner("Re-analyzing with adjusted portions..."):
-                    try:
-                        if not st.session_state.last_results.get("nutrients"):
-                            st.error("No nutrients data available for portion adjustment.")
-                            st.stop()
-                        dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                        items_with_portions = []
-                        for item in st.session_state.last_results['nutrients']:
-                            sanitized_key = f"portion_{re.sub(r'[^a-zA-Z0-9]', '_', item['item'].lower())}"
-                            portion = st.session_state.get(sanitized_key, 100)
-                            items_with_portions.append(f"{item['item']} ({portion}g)")
-                        portion_string = ', '.join(items_with_portions)
-                        logger.info(f"Portion string: {portion_string}")
-                        prompt = f"""You are an expert in food identification and nutrition analysis. Re-analyze the meal with the following items and user-specified portion sizes, ensuring **every single food item** is included with complete nutritional data, respecting dietary preferences: {dietary_prefs}.
-                        Items and portions:
-                        {portion_string}.
-                        Provide nutritional data in the format:
-                        **Food Items and Nutrients**:
-                        - Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
-                        **Total Calories**: [X] cal
-                        **Nutritional Assessment**: [Assessment tailored to dietary preferences]
-                        **Health Suggestions**: [2-3 suggestions aligned with dietary preferences]
-                        
-                        Instructions:
-                        1. Use the user-specified portion sizes for each item.
-                        2. Include **all** items from the previous analysis, adding any minor components (e.g., sauces, garnishes) if applicable.
-                        3. Provide complete nutritional data (calories, protein, carbs, fats) for each item.
-                        4. Ensure suggestions align with dietary preferences."""
-                        analysis = query_langchain(prompt)
-                        if "unavailable" in analysis.lower() or "error" in analysis.lower():
-                            st.error(analysis)
-                            st.stop()
-                        
-                        food_data, totals = extract_items_and_nutrients(analysis)
-                        
-                        st.subheader("🍴 Updated Nutritional Analysis")
-                        st.markdown(analysis, unsafe_allow_html=True)
-                        
-                        if food_data:
-                            col1, col2, col3, col4 = st.columns(4)
-                            col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
-                            col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
-                            col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
-                            col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+    with tab5:
+        st.subheader("⚖️ Adjust Portion Sizes")
+        st.write("Modify portion sizes for the latest meal analysis and recalculate nutrients.")
+        with st.container():
+            if not st.session_state.last_results.get("nutrients"):
+                st.info("No meal analysis available. Analyze a meal in the Image or Text Analysis tabs first.")
+            else:
+                st.write(f"**Latest Meal ({st.session_state.last_results['timestamp']})**")
+                if st.session_state.last_results.get("type") == "image" and st.session_state.last_results.get("image"):
+                    st.image(st.session_state.last_results["image"], caption="Meal Image", use_container_width=True)
+                st.markdown(st.session_state.last_results["analysis"], unsafe_allow_html=True)
+                
+                st.subheader("Adjust Portions")
+                for item in st.session_state.last_results["nutrients"]:
+                    item_name = item["item"]
+                    sanitized_key = f"portion_{re.sub(r'[^a-zA-Z0-9]', '_', item_name.lower())}"
+                    portion = st.number_input(
+                        f"Portion size for {item_name} (g)",
+                        min_value=10,
+                        max_value=1000,
+                        value=100,
+                        step=10,
+                        key=sanitized_key,
+                        help=f"Enter the portion size for {item_name} in grams"
+                    )
+                if st.button("🔄 Re-analyze with Adjusted Portions", key="reanalyze_portions", help="Click to re-analyze the meal with new portion sizes"):
+                    with st.spinner("Re-analyzing with adjusted portions..."):
+                        try:
+                            if not st.session_state.last_results.get("nutrients"):
+                                st.error("No nutrients data available for portion adjustment.")
+                                st.stop()
+                            dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
+                            items_with_portions = []
+                            for item in st.session_state.last_results['nutrients']:
+                                sanitized_key = f"portion_{re.sub(r'[^a-zA-Z0-9]', '_', item['item'].lower())}"
+                                portion = st.session_state.get(sanitized_key, 100)
+                                items_with_portions.append(f"{item['item']} ({portion}g)")
+                            portion_string = ', '.join(items_with_portions)
+                            logger.info(f"Portion string: {portion_string}")
+                            prompt = f"""You are an expert in food identification and nutrition analysis. Re-analyze the meal with the following items and user-specified portion sizes, ensuring **every single food item** is included with complete nutritional data, respecting dietary preferences: {dietary_prefs}.
+                            Items and portions:
+                            {portion_string}.
+                            Provide nutritional data in the format:
+                            **Food Items and Nutrients**:
+                            - Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
+                            **Total Calories**: [X] cal
+                            **Nutritional Assessment**: [Assessment tailored to dietary preferences]
+                            **Health Suggestions**: [2-3 suggestions aligned with dietary preferences]
                             
-                            chart = plot_chart(food_data)
-                            if chart:
-                                st.pyplot(chart)
+                            Instructions:
+                            1. Use the user-specified portion sizes for each item.
+                            2. Include **all** items from the previous analysis, adding any minor components (e.g., sauces, garnishes) if applicable.
+                            3. Provide complete nutritional data (calories, protein, carbs, fats) for each item.
+                            4. Ensure suggestions align with dietary preferences."""
+                            analysis = query_langchain(prompt)
+                            if "unavailable" in analysis.lower() or "error" in analysis.lower():
+                                st.error(analysis)
+                                st.stop()
+                            
+                            food_data, totals = extract_items_and_nutrients(analysis)
+                            
+                            st.subheader("🍴 Updated Nutritional Analysis")
+                            st.markdown(analysis, unsafe_allow_html=True)
+                            
+                            if food_data:
+                                col1, col2, col3, col4 = st.columns(4)
+                                col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
+                                col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                                col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                                col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                                
+                                chart = plot_chart(food_data)
+                                if chart:
+                                    st.pyplot(chart)
+                            
+                            st.session_state.last_results = {
+                                "type": st.session_state.last_results.get("type", "image"),
+                                "image": st.session_state.last_results.get("image"),
+                                "description": st.session_state.last_results.get("description"),
+                                "context": st.session_state.last_results.get("context", "None"),
+                                "analysis": analysis,
+                                "chart": chart if 'chart' in locals() else None,
+                                "nutrients": food_data,
+                                "totals": totals,
+                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            }
+                            st.session_state.history.append(st.session_state.last_results)
+                            today = date.today().isoformat()
+                            st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
                         
-                        st.session_state.last_results = {
-                            "type": st.session_state.last_results.get("type", "image"),
-                            "image": st.session_state.last_results.get("image"),
-                            "description": st.session_state.last_results.get("description"),
-                            "context": st.session_state.last_results.get("context", "None"),
-                            "analysis": analysis,
-                            "chart": chart if 'chart' in locals() else None,
-                            "nutrients": food_data,
-                            "totals": totals,
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")
-                        }
-                        st.session_state.history.append(st.session_state.last_results)
-                        today = date.today().isoformat()
-                        st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
-                    
-                    except Exception as e:
-                        logger.error(f"Portion adjustment failed: {e}")
-                        st.error(f"Portion adjustment failed: {str(e)}")
-                        st.stop()
+                        except Exception as e:
+                            logger.error(f"Portion adjustment failed: {e}")
+                            st.error(f"Portion adjustment failed: {str(e)}")
+                            st.stop()
 
 # Sidebar
 with st.sidebar:
