@@ -342,7 +342,7 @@ def query_langchain(prompt):
         logger.error(f"Error querying LLM: {e}")
         return f"Error querying LLM: {str(e)}"
 
-# Describe image using BLIP model with optimized food detection
+# Describe image using BLIP model with accurate food detection
 def describe_image(image: Image.Image) -> str:
     if not models['processor'] or not models['blip_model']:
         logger.error("BLIP model or processor is None. Image analysis unavailable.")
@@ -352,12 +352,11 @@ def describe_image(image: Image.Image) -> str:
             image = image.convert("RGB")
         device = next(models['blip_model'].parameters()).device
         
-        # Try multiple approaches to get the best food detection
-        captions = []
-        
-        # Approach 1: Direct image captioning without prompt
+        # Simple, direct food detection
         try:
-            inputs = models['processor'](image, return_tensors="pt").to(device)
+            # Use a clear, specific prompt for food detection
+            inputs = models['processor'](image, text="what food items are in this image: ", return_tensors="pt").to(device)
+            
             with torch.no_grad():
                 outputs = models['blip_model'].generate(
                     **inputs, 
@@ -366,64 +365,56 @@ def describe_image(image: Image.Image) -> str:
                     do_sample=True,
                     temperature=0.7
                 )
-            caption1 = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            captions.append(caption1)
-        except Exception as e:
-            logger.warning(f"Direct captioning failed: {e}")
-        
-        # Approach 2: With food-specific prompt
-        try:
-            inputs = models['processor'](image, text="a photo of food showing: ", return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=150, 
-                    num_beams=8, 
-                    do_sample=True,
-                    temperature=0.7
-                )
-            caption2 = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            if caption2.startswith("a photo of food showing: "):
-                caption2 = caption2.replace("a photo of food showing: ", "")
-            captions.append(caption2)
-        except Exception as e:
-            logger.warning(f"Food prompt captioning failed: {e}")
-        
-        # Approach 3: With detailed food prompt
-        try:
-            inputs = models['processor'](image, text="describe all food items in this image: ", return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=200, 
-                    num_beams=10, 
-                    do_sample=True,
-                    temperature=0.8
-                )
-            caption3 = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            if caption3.startswith("describe all food items in this image: "):
-                caption3 = caption3.replace("describe all food items in this image: ", "")
-            captions.append(caption3)
-        except Exception as e:
-            logger.warning(f"Detailed food prompt failed: {e}")
-        
-        # Select the best caption
-        best_caption = ""
-        for caption in captions:
+            
+            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            
+            # Clean up the caption
+            if caption.startswith("what food items are in this image: "):
+                caption = caption.replace("what food items are in this image: ", "")
+            
             caption = caption.strip()
+            
             # Remove common prefixes
             caption = caption.replace("a photo of ", "").replace("an image of ", "").replace("a picture of ", "")
             caption = caption.strip()
             
-            # Prefer longer, more detailed captions
-            if len(caption.split()) > len(best_caption.split()) and len(caption.split()) > 2:
-                best_caption = caption
-        
-        # If no good caption found, return a default message
-        if not best_caption or len(best_caption.split()) < 2:
-            return "Unable to detect food items clearly. Please try a clearer image or describe the meal manually."
-        
-        return best_caption
+            # Ensure we have meaningful content
+            if len(caption.split()) < 2:
+                return "Unable to detect food items clearly. Please try a clearer image or describe the meal manually."
+            
+            return caption
+            
+        except Exception as e:
+            logger.warning(f"Food detection failed: {e}")
+            
+            # Fallback: try without any prompt
+            try:
+                inputs = models['processor'](image, return_tensors="pt").to(device)
+                
+                with torch.no_grad():
+                    outputs = models['blip_model'].generate(
+                        **inputs, 
+                        max_new_tokens=100, 
+                        num_beams=5, 
+                        do_sample=True,
+                        temperature=0.6
+                    )
+                
+                caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                caption = caption.strip()
+                
+                # Remove common prefixes
+                caption = caption.replace("a photo of ", "").replace("an image of ", "").replace("a picture of ", "")
+                caption = caption.strip()
+                
+                if len(caption.split()) < 2:
+                    return "Unable to detect food items clearly. Please try a clearer image or describe the meal manually."
+                
+                return caption
+                
+            except Exception as e2:
+                logger.error(f"Fallback detection also failed: {e2}")
+                return "Unable to detect food items. Please try a clearer image or describe the meal manually."
         
     except Exception as e:
         logger.error(f"Image analysis error: {e}")
@@ -674,6 +665,12 @@ with st.container():
                             # Debug: Log what was detected
                             logger.info(f"BLIP Detection Result: {description}")
                             
+                            # Show detection details to user
+                            with st.expander("🔍 Detection Details"):
+                                st.write("**Food Items Detected:**")
+                                st.write(description)
+                                st.write("**Detection Method:** Simple BLIP food detection with fallback")
+                            
                             status_text.text("📊 Analyzing nutritional content...")
                             progress_bar.progress(60)
                             if "unavailable" in description.lower() or "error" in description.lower():
@@ -690,7 +687,7 @@ with st.container():
                                 st.stop()
                             
                             dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                            prompt = f"""You are an expert in food identification and nutrition analysis. Analyze the food items detected in the image and provide detailed nutritional information. Follow this exact format:
+                            prompt = f"""You are an expert in food identification and nutrition analysis. Analyze the food items detected in the image and provide accurate nutritional information. Follow this exact format:
 
 **Food Items and Nutrients**:
 - Item: [Food Name with portion size, e.g., Grilled Chicken Breast (100g)], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
@@ -699,30 +696,26 @@ with st.container():
 **Nutritional Assessment**: [Detailed assessment of macronutrients, vitamins, and suitability for dietary preferences: {dietary_prefs}]
 **Health Suggestions**: [2-3 tailored suggestions based on the meal, context, and dietary preferences]
 
-Meal description from image analysis: {description}
+Food items detected in image: {description}
 Additional context: {context or 'No additional context provided'}
 Dietary preferences: {dietary_prefs}
 
 Instructions:
-1. **Carefully analyze the image description above**. Identify ALL food items, dishes, ingredients, sauces, garnishes, or sides that are mentioned.
+1. **Carefully analyze the food items detected above**. Identify the specific food items mentioned.
 
-2. **If the description mentions a complex dish** (like "thali", "curry", "pizza", "sandwich"), break it down into its individual components and provide nutritional data for each component separately.
+2. **For each food item identified**, provide an estimated portion size (e.g., '100g chicken', '1 cup rice', '50g vegetables') based on typical serving sizes.
 
-3. **For each food item identified**, provide an estimated portion size (e.g., '100g chicken', '1 cup rice', '50g vegetables', '2 rotis', '1 cup dal') based on typical serving sizes.
+3. **Provide complete nutritional data** (calories, protein, carbs, fats) for each item based on typical values.
 
-4. **Provide complete nutritional data** (calories, protein, carbs, fats) for each item based on typical values.
+4. **Ensure the analysis aligns** with the user's dietary preferences (e.g., vegan, keto, gluten-free).
 
-5. **Ensure the analysis aligns** with the user's dietary preferences (e.g., vegan, keto, gluten-free).
+5. **If the context includes specific requests** (e.g., 'identify each item', meal timing), prioritize those in the analysis.
 
-6. **If the context includes specific requests** (e.g., 'identify each item', meal timing), prioritize those in the analysis.
+6. **Ensure total calories match** the sum of individual item calories.
 
-7. **Ensure total calories match** the sum of individual item calories.
+7. **Strictly follow the specified format**.
 
-8. **Strictly follow the specified format**.
-
-9. **If the description is vague** (like "a plate of food" or "a meal"), ask the user to provide more specific details about what food items are visible.
-
-10. **Be comprehensive** - include all food items mentioned in the description."""
+8. **Be accurate** - only include food items that are actually mentioned in the detection result."""
                             
                             analysis = query_langchain(prompt)
                             if "unavailable" in analysis.lower() or "error" in analysis.lower():
