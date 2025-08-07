@@ -112,32 +112,23 @@ if "daily_calories" not in st.session_state:
 if "calorie_target" not in st.session_state:
     st.session_state.calorie_target = 2000
 
-# Enhanced image processing
+# Fast image processing (optimized for speed)
 def enhance_image_quality(image: Image.Image) -> List[Image.Image]:
-    """Enhance image quality for better food detection."""
+    """Fast image enhancement - only essential enhancements for speed."""
     try:
         if image.mode != "RGB":
             image = image.convert("RGB")
         
         enhanced_images = []
         
-        # Contrast enhancement
+        # Only the most effective enhancement (contrast)
         enhancer = ImageEnhance.Contrast(image)
-        enhanced_images.append(enhancer.enhance(1.4))
-        
-        # Brightness enhancement
-        enhancer = ImageEnhance.Brightness(image)
         enhanced_images.append(enhancer.enhance(1.3))
         
-        # Sharpness enhancement
-        enhancer = ImageEnhance.Sharpness(image)
-        enhanced_images.append(enhancer.enhance(1.6))
-        
-        # Combined enhancement
+        # One combined enhancement for backup
         balanced = image.copy()
-        balanced = ImageEnhance.Contrast(balanced).enhance(1.25)
-        balanced = ImageEnhance.Brightness(balanced).enhance(1.15)
-        balanced = ImageEnhance.Sharpness(balanced).enhance(1.4)
+        balanced = ImageEnhance.Contrast(balanced).enhance(1.2)
+        balanced = ImageEnhance.Sharpness(balanced).enhance(1.3)
         enhanced_images.append(balanced)
         
         return enhanced_images
@@ -366,9 +357,9 @@ def extract_food_items_from_text(text: str) -> set:
     
     return items
 
-# Enhanced comprehensive food detection
+# Optimized fast food detection
 def describe_image_enhanced(image: Image.Image) -> str:
-    """Comprehensive food detection using multiple strategies to catch ALL items."""
+    """Fast, optimized food detection with smart strategies for speed."""
     if not models['processor'] or not models['blip_model']:
         return "Image analysis unavailable. Please check model loading."
     
@@ -379,43 +370,25 @@ def describe_image_enhanced(image: Image.Image) -> str:
         device = next(models['blip_model'].parameters()).device
         all_food_items = set()
         
-        # Strategy 1: Comprehensive BLIP with specialized prompts
-        comprehensive_prompts = [
-            # General detection
-            "List every single food item, ingredient, dish, and beverage visible in this image:",
-            "What are all the foods, drinks, vegetables, fruits, meats, and grains you can see?",
-            "Identify each individual food component including main dishes, sides, sauces, and garnishes:",
-            
-            # Specific category detection
-            "What vegetables, fruits, herbs, and plant-based foods are in this image?",
-            "What proteins, meats, fish, eggs, and dairy products can you identify?",
-            "What grains, breads, pasta, rice, and carbohydrates are visible?",
-            "What sauces, dressings, condiments, and seasonings can you see?",
-            "What beverages, drinks, and liquids are present?",
-            
-            # Detail-focused detection
-            "Look closely and identify every small ingredient, garnish, and food component:",
-            "What cooking ingredients, spices, and flavor enhancers are visible?",
-            "Describe all the individual food elements that make up this meal:",
-            
-            # Context-aware detection
-            "This appears to be a meal. What are ALL the food items and ingredients present?",
-            "Analyze this food image and list every edible component you can identify:",
-            "What complete meal components including appetizers, mains, sides, and desserts are shown?"
+        # Strategy 1: Fast BLIP with optimized prompts (reduced from 14 to 3 most effective)
+        fast_prompts = [
+            "List every food item, ingredient, dish, sauce, and beverage visible in this image:",
+            "What are all the foods, vegetables, fruits, meats, grains, and drinks you can see?",
+            "Identify each food component including main dishes, sides, garnishes, and condiments:"
         ]
         
-        for prompt in comprehensive_prompts:
+        for prompt in fast_prompts:
             try:
                 inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
                 with torch.no_grad():
                     outputs = models['blip_model'].generate(
                         **inputs, 
-                        max_new_tokens=400,
-                        num_beams=10,
+                        max_new_tokens=300,  # Reduced from 400
+                        num_beams=6,         # Reduced from 10
                         do_sample=True,
-                        temperature=0.2,
-                        top_p=0.95,
-                        repetition_penalty=1.2
+                        temperature=0.3,     # Slightly higher for faster generation
+                        top_p=0.9,          # Reduced from 0.95
+                        repetition_penalty=1.1  # Reduced from 1.2
                     )
                 caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
                 
@@ -424,275 +397,109 @@ def describe_image_enhanced(image: Image.Image) -> str:
                 
                 items = extract_food_items_from_text(caption)
                 all_food_items.update(items)
-                logger.info(f"BLIP found: {items}")
+                logger.info(f"BLIP found: {len(items)} items")
                 
             except Exception as e:
                 logger.warning(f"BLIP prompt failed: {e}")
         
-        # Strategy 2: Enhanced YOLO with expanded food detection
+        # Strategy 2: Single-pass YOLO (optimized)
         if models['yolo_model']:
             try:
                 img_np = np.array(image)
-                # Multiple confidence levels to catch more items
-                confidence_levels = [0.05, 0.1, 0.15, 0.2]
+                # Single confidence level for speed
+                results = models['yolo_model'](img_np, conf=0.1, iou=0.4)
                 
-                for conf_level in confidence_levels:
-                    results = models['yolo_model'](img_np, conf=conf_level, iou=0.3)
-                    
-                    for result in results:
-                        if result.boxes is not None:
-                            for box in result.boxes:
-                                cls = int(box.cls[0])
-                                conf = float(box.conf[0])
-                                class_name = models['yolo_model'].names[cls]
-                                
-                                # Expanded food-related terms
-                                food_related_terms = [
-                                    # Fruits
-                                    'apple', 'banana', 'orange', 'lemon', 'lime', 'grape', 'strawberry', 'blueberry',
-                                    'pineapple', 'mango', 'avocado', 'watermelon', 'peach', 'pear', 'cherry', 'kiwi',
-                                    
-                                    # Vegetables
-                                    'tomato', 'potato', 'carrot', 'onion', 'garlic', 'broccoli', 'lettuce', 'spinach',
-                                    'cucumber', 'pepper', 'corn', 'peas', 'beans', 'cabbage', 'celery', 'mushroom',
-                                    'eggplant', 'zucchini', 'asparagus', 'cauliflower',
-                                    
-                                    # Proteins
-                                    'chicken', 'fish', 'beef', 'pork', 'lamb', 'turkey', 'egg', 'shrimp',
-                                    'salmon', 'tuna', 'bacon', 'sausage', 'ham', 'steak', 'meat',
-                                    
-                                    # Dairy
-                                    'cheese', 'milk', 'yogurt', 'butter', 'cream', 'ice cream',
-                                    
-                                    # Grains & Carbs
-                                    'bread', 'rice', 'pasta', 'noodles', 'cereal', 'oats', 'quinoa', 'wheat',
-                                    
-                                    # Prepared foods
-                                    'pizza', 'burger', 'sandwich', 'soup', 'salad', 'pie', 'cake', 'cookie',
-                                    'muffin', 'pancake', 'waffle', 'toast', 'bagel', 'donut', 'croissant',
-                                    
-                                    # Beverages
-                                    'coffee', 'tea', 'juice', 'water', 'soda', 'beer', 'wine', 'smoothie',
-                                    
-                                    # General food terms
-                                    'food', 'meal', 'dish', 'snack', 'dessert', 'appetizer'
-                                ]
-                                
-                                if conf > 0.05 and any(term in class_name.lower() for term in food_related_terms):
-                                    all_food_items.add(class_name.lower())
-                                    logger.info(f"YOLO found: {class_name} ({conf:.2f})")
+                # Streamlined food terms (most common ones)
+                food_terms = {
+                    'apple', 'banana', 'orange', 'tomato', 'potato', 'carrot', 'onion', 'broccoli',
+                    'chicken', 'fish', 'beef', 'pork', 'egg', 'cheese', 'bread', 'rice', 'pasta',
+                    'pizza', 'burger', 'sandwich', 'salad', 'soup', 'cake', 'coffee', 'tea'
+                }
+                
+                for result in results:
+                    if result.boxes is not None:
+                        for box in result.boxes:
+                            cls = int(box.cls[0])
+                            conf = float(box.conf[0])
+                            class_name = models['yolo_model'].names[cls].lower()
+                            
+                            if conf > 0.1 and any(term in class_name for term in food_terms):
+                                all_food_items.add(class_name)
                                 
             except Exception as e:
                 logger.warning(f"YOLO detection failed: {e}")
         
-        # Strategy 3: Multi-scale enhanced image analysis
+        # Strategy 3: Single enhanced image (fastest enhancement)
         try:
-            enhanced_images = enhance_image_quality(image)
-            scales = [(224, 224), (384, 384), (512, 512)]
+            # Use only the best enhancement technique
+            enhancer = ImageEnhance.Contrast(image)
+            enhanced_img = enhancer.enhance(1.3)
             
-            for scale in scales:
-                try:
-                    scaled_img = image.resize(scale, Image.Resampling.LANCZOS)
-                    
-                    scale_prompts = [
-                        "What food items are in this image?",
-                        "List all visible ingredients and food components:",
-                        "What dishes and food elements can you identify?"
-                    ]
-                    
-                    for prompt in scale_prompts:
-                        try:
-                            inputs = models['processor'](scaled_img, text=prompt, return_tensors="pt").to(device)
-                            with torch.no_grad():
-                                outputs = models['blip_model'].generate(
-                                    **inputs, 
-                                    max_new_tokens=250,
-                                    num_beams=8,
-                                    temperature=0.3
-                                )
-                            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-                            
-                            if caption.startswith(prompt):
-                                caption = caption.replace(prompt, "").strip()
-                            
-                            items = extract_food_items_from_text(caption)
-                            all_food_items.update(items)
-                            
-                        except Exception as e:
-                            continue
-                            
-                except Exception as e:
-                    continue
-                    
-            # Enhanced images analysis
-            for enhanced_img in enhanced_images[:3]:
-                try:
-                    enhanced_prompts = [
-                        "What food items are visible in this enhanced image?",
-                        "List all the ingredients and food components you can see:"
-                    ]
-                    
-                    for prompt in enhanced_prompts:
-                        inputs = models['processor'](enhanced_img, text=prompt, return_tensors="pt").to(device)
-                        with torch.no_grad():
-                            outputs = models['blip_model'].generate(
-                                **inputs, 
-                                max_new_tokens=200,
-                                num_beams=6,
-                                temperature=0.4
-                            )
-                        caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-                        
-                        if caption.startswith(prompt):
-                            caption = caption.replace(prompt, "").strip()
-                        
-                        items = extract_food_items_from_text(caption)
-                        all_food_items.update(items)
-                        
-                except Exception as e:
-                    continue
-                    
-        except Exception as e:
-            logger.warning(f"Multi-scale analysis failed: {e}")
-        
-        # Strategy 4: Contextual and semantic analysis
-        try:
-            contextual_prompts = [
-                "This is a food photograph. Identify every single edible item:",
-                "What ingredients went into making this meal?",
-                "What are all the food components that make up this dish?",
-                "List every food item including hidden ingredients and seasonings:",
-                "What cooking ingredients, spices, and garnishes are present?"
-            ]
+            inputs = models['processor'](enhanced_img, text="What food items are in this image?", return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs, 
+                    max_new_tokens=200,
+                    num_beams=4,  # Reduced for speed
+                    temperature=0.4
+                )
+            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
             
-            for prompt in contextual_prompts:
-                try:
-                    inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
-                    with torch.no_grad():
-                        outputs = models['blip_model'].generate(
-                            **inputs, 
-                            max_new_tokens=350,
-                            num_beams=12,
-                            do_sample=True,
-                            temperature=0.1,
-                            top_p=0.98
-                        )
-                    caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-                    
-                    if caption.startswith(prompt):
-                        caption = caption.replace(prompt, "").strip()
-                    
-                    items = extract_food_items_from_text(caption)
-                    all_food_items.update(items)
-                    
-                except Exception as e:
-                    continue
-                    
+            if "what food items are in this image?" in caption.lower():
+                caption = caption.lower().replace("what food items are in this image?", "").strip()
+            
+            items = extract_food_items_from_text(caption)
+            all_food_items.update(items)
+            
         except Exception as e:
-            logger.warning(f"Contextual analysis failed: {e}")
+            logger.warning(f"Enhanced image analysis failed: {e}")
         
-        # Enhanced filtering and cleaning
+        # Fast filtering with essential food keywords
         if all_food_items:
-            # Comprehensive food keywords
-            food_keywords = {
-                # Fruits
-                'apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'raspberry', 'blackberry',
-                'tomato', 'avocado', 'lemon', 'lime', 'pineapple', 'mango', 'peach', 'pear', 'cherry',
-                'watermelon', 'cantaloupe', 'kiwi', 'papaya', 'coconut', 'fig', 'date', 'plum',
-                
-                # Vegetables
-                'potato', 'carrot', 'onion', 'garlic', 'broccoli', 'lettuce', 'spinach', 'kale',
-                'cucumber', 'pepper', 'bell pepper', 'chili', 'corn', 'peas', 'beans', 'cabbage',
-                'celery', 'mushroom', 'eggplant', 'zucchini', 'squash', 'asparagus', 'cauliflower',
-                'radish', 'beet', 'turnip', 'parsnip', 'leek', 'scallion', 'shallot',
-                
-                # Proteins
-                'chicken', 'beef', 'pork', 'lamb', 'turkey', 'duck', 'fish', 'salmon', 'tuna',
-                'shrimp', 'crab', 'lobster', 'egg', 'tofu', 'tempeh', 'seitan', 'bacon',
-                'sausage', 'ham', 'steak', 'ground beef', 'meat', 'protein',
-                
-                # Dairy
-                'cheese', 'milk', 'yogurt', 'butter', 'cream', 'sour cream', 'cottage cheese',
-                'mozzarella', 'cheddar', 'parmesan', 'feta', 'goat cheese', 'ice cream',
-                
-                # Grains & Carbs
-                'bread', 'rice', 'pasta', 'noodles', 'spaghetti', 'linguine', 'penne', 'fusilli',
-                'cereal', 'oats', 'quinoa', 'barley', 'wheat', 'flour', 'bagel', 'croissant',
-                'muffin', 'biscuit', 'cracker', 'pretzel', 'tortilla', 'pita',
-                
-                # Prepared foods
-                'pizza', 'burger', 'sandwich', 'wrap', 'burrito', 'taco', 'quesadilla',
-                'soup', 'stew', 'chili', 'curry', 'stir fry', 'salad', 'coleslaw',
-                'pie', 'cake', 'cookie', 'brownie', 'pancake', 'waffle', 'french toast',
-                'omelet', 'scrambled eggs', 'fried eggs',
-                
-                # Seasonings & Condiments
-                'salt', 'pepper', 'garlic powder', 'onion powder', 'paprika', 'cumin',
-                'oregano', 'basil', 'thyme', 'rosemary', 'parsley', 'cilantro', 'dill',
-                'sauce', 'ketchup', 'mustard', 'mayo', 'mayonnaise', 'ranch', 'vinaigrette',
-                'soy sauce', 'hot sauce', 'barbecue sauce', 'marinara', 'pesto',
-                'oil', 'olive oil', 'butter', 'margarine', 'dressing', 'marinade',
-                
-                # Beverages
-                'coffee', 'tea', 'juice', 'water', 'soda', 'beer', 'wine', 'smoothie',
-                'milkshake', 'latte', 'cappuccino', 'espresso', 'cocktail',
-                
-                # Nuts & Seeds
-                'almond', 'walnut', 'pecan', 'cashew', 'peanut', 'pistachio', 'hazelnut',
-                'sunflower seeds', 'pumpkin seeds', 'sesame seeds', 'chia seeds', 'flax seeds',
-                
-                # General terms
-                'food', 'meal', 'dish', 'ingredient', 'snack', 'appetizer', 'entree', 'dessert',
-                'side dish', 'garnish', 'topping', 'filling', 'seasoning', 'spice', 'herb'
+            essential_food_keywords = {
+                # Core foods
+                'apple', 'banana', 'orange', 'tomato', 'potato', 'carrot', 'onion', 'garlic',
+                'chicken', 'beef', 'pork', 'fish', 'egg', 'cheese', 'milk', 'bread', 'rice',
+                'pasta', 'pizza', 'burger', 'sandwich', 'salad', 'soup', 'cake', 'cookie',
+                'coffee', 'tea', 'juice', 'water', 'sauce', 'oil', 'butter', 'salt', 'pepper',
+                'lettuce', 'spinach', 'broccoli', 'corn', 'beans', 'meat', 'vegetable', 'fruit'
             }
             
             final_items = []
             for item in all_food_items:
                 item_clean = item.strip().lower()
-                
-                # More inclusive filtering
-                if (any(keyword in item_clean for keyword in food_keywords) or 
-                    (len(item_clean) > 2 and 
-                     not any(non_food in item_clean for non_food in ['plate', 'bowl', 'cup', 'glass', 'fork', 'knife', 'spoon', 'table', 'napkin']) and
-                     any(food_indicator in item_clean for food_indicator in ['fried', 'grilled', 'baked', 'roasted', 'steamed', 'boiled', 'fresh', 'cooked', 'raw', 'sliced', 'diced', 'chopped']))):
+                if (any(keyword in item_clean for keyword in essential_food_keywords) or 
+                    (len(item_clean) > 3 and 
+                     not any(non_food in item_clean for non_food in ['plate', 'bowl', 'cup', 'glass', 'table']))):
                     final_items.append(item_clean)
             
             if final_items:
-                # Remove duplicates and sort
                 unique_items = sorted(set(final_items))
                 result = ', '.join(unique_items)
-                logger.info(f"Final detected food items ({len(unique_items)}): {result}")
+                logger.info(f"Fast detection found {len(unique_items)} items: {result}")
                 return result
         
-        # Enhanced fallback
+        # Quick fallback
         try:
-            fallback_prompts = [
-                "What food is in this image?",
-                "Describe this meal:",
-                "What can you see in this food photo?",
-                "What ingredients are visible?"
-            ]
+            inputs = models['processor'](image, text="What food is in this image?", return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(**inputs, max_new_tokens=100, num_beams=3)
+            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
             
-            for prompt in fallback_prompts:
-                inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
-                with torch.no_grad():
-                    outputs = models['blip_model'].generate(**inputs, max_new_tokens=150, num_beams=6)
-                caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            if "what food is in this image?" in caption.lower():
+                caption = caption.lower().replace("what food is in this image?", "").strip()
+            
+            if len(caption.split()) >= 2:
+                return caption
                 
-                if caption.startswith(prompt):
-                    caption = caption.replace(prompt, "").strip()
-                
-                if len(caption.split()) >= 3:
-                    return caption
-                    
         except Exception as e:
             logger.warning(f"Fallback failed: {e}")
         
-        return "Multiple food items detected but specific identification is challenging. Please add context description."
+        return "Food items detected. Add context for better identification."
             
     except Exception as e:
         logger.error(f"Food detection error: {e}")
-        return "Detection failed. Please try again or describe manually."
+        return "Detection failed. Please try again."
 
 # Query LLM
 def query_langchain(prompt):
@@ -925,120 +732,143 @@ with tab1:
                           height=80)
     
     if st.button("🔍 Analyze Food", disabled=not img_file):
-        with st.spinner("Analyzing your food..."):
-            try:
-                image = Image.open(img_file)
+        # Create progress tracking
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        try:
+            status_text.text("📷 Loading image...")
+            progress_bar.progress(10)
+            
+            image = Image.open(img_file)
+            
+            # Display image immediately
+            st.image(image, caption="Uploaded Image", use_container_width=True)
+            
+            status_text.text("🔍 Detecting food items...")
+            progress_bar.progress(30)
+            
+            # Get food description (optimized)
+            food_description = describe_image_enhanced(image)
+            
+            status_text.text("📊 Analyzing nutrition...")
+            progress_bar.progress(70)
+            
+            # Analyze the food (optimized)
+            analysis_result = analyze_food_with_enhanced_prompt(food_description, context)
+            
+            progress_bar.progress(100)
+            status_text.text("✅ Analysis complete!")
+            
+            # Clear progress indicators
+            progress_bar.empty()
+            status_text.empty()
+            
+            if analysis_result["success"]:
+                st.success("✅ Food analysis completed!")
                 
-                # Display image
-                st.image(image, caption="Uploaded Image", use_container_width=True)
+                # Show detected food items
+                st.subheader("🍽️ Detected Food Items")
+                st.write(f"**Foods found:** {food_description}")
                 
-                # Get food description
-                food_description = describe_image_enhanced(image)
+                # Show nutrition summary
+                nutrition = analysis_result["nutritional_data"]
                 
-                # Analyze the food
-                analysis_result = analyze_food_with_enhanced_prompt(food_description, context)
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Calories", f"{nutrition['total_calories']}")
+                with col2:
+                    st.metric("Protein", f"{nutrition['total_protein']:.1f}g")
+                with col3:
+                    st.metric("Carbs", f"{nutrition['total_carbs']:.1f}g")
+                with col4:
+                    st.metric("Fats", f"{nutrition['total_fats']:.1f}g")
                 
-                if analysis_result["success"]:
-                    st.success("✅ Food analysis completed!")
-                    
-                    # Show detected food items
-                    st.subheader("🍽️ Detected Food Items")
-                    st.write(f"**Foods found:** {food_description}")
-                    
-                    # Show nutrition summary
-                    nutrition = analysis_result["nutritional_data"]
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Calories", f"{nutrition['total_calories']}")
-                    with col2:
-                        st.metric("Protein", f"{nutrition['total_protein']:.1f}g")
-                    with col3:
-                        st.metric("Carbs", f"{nutrition['total_carbs']:.1f}g")
-                    with col4:
-                        st.metric("Fats", f"{nutrition['total_fats']:.1f}g")
-                    
-                    # Show detailed analysis
-                    with st.expander("📊 Detailed Analysis"):
-                        st.write(analysis_result["analysis"])
-                    
-                    # Add visualizations
-                    with st.expander("🔬 AI Visualizations"):
-                        st.write("**AI Model Interpretability Visualizations**")
-                        
-                        if models['cnn_model']:
-                            try:
-                                # Prepare image for CNN
-                                image_rgb = image.convert("RGB")
-                                image_tensor = cnn_transform(image_rgb).unsqueeze(0).to(device)
-                                
-                                # Generate visualizations
-                                col1, col2 = st.columns(2)
-                                
-                                with col1:
-                                    st.write("**Edge Detection**")
-                                    edge_path = visualize_food_features(image)
-                                    if edge_path:
-                                        edge_img = Image.open(edge_path)
-                                        st.image(edge_img, caption="Edge Detection - Food Boundaries", use_container_width=True)
-                                        os.remove(edge_path)
-                                    
-                                    st.write("**SHAP Analysis**")
-                                    shap_path = apply_shap(image_tensor, models['cnn_model'])
-                                    if shap_path:
-                                        shap_img = Image.open(shap_path)
-                                        st.image(shap_img, caption="SHAP - Feature Importance", use_container_width=True)
-                                        os.remove(shap_path)
-                                
-                                with col2:
-                                    st.write("**Grad-CAM**")
-                                    gradcam_path = apply_gradcam(image_tensor, models['cnn_model'], 0)
-                                    if gradcam_path:
-                                        gradcam_img = Image.open(gradcam_path)
-                                        st.image(gradcam_img, caption="Grad-CAM - Model Focus Areas", use_container_width=True)
-                                        os.remove(gradcam_path)
-                                    
-                                    st.write("**LIME Explanation**")
-                                    lime_path = apply_lime(image, models['cnn_model'], ["food"])
-                                    if lime_path:
-                                        lime_img = Image.open(lime_path)
-                                        st.image(lime_img, caption="LIME - Local Interpretability", use_container_width=True)
-                                        os.remove(lime_path)
-                                
-                                st.info("💡 **Visualization Guide:**")
-                                st.write("• **Edge Detection**: Shows food boundaries and textures")
-                                st.write("• **Grad-CAM**: Highlights areas the AI focuses on")
-                                st.write("• **SHAP**: Shows feature importance for predictions")
-                                st.write("• **LIME**: Explains local decision-making regions")
-                                
-                            except Exception as e:
-                                st.warning(f"Visualization generation failed: {e}")
-                        else:
-                            st.info("CNN model not available for visualizations.")
-                    
-                    # Save to history
-                    entry = {
-                        "timestamp": datetime.now(),
-                        "type": "image",
-                        "description": food_description,
-                        "analysis": analysis_result["analysis"],
-                        "nutritional_data": analysis_result["nutritional_data"],
-                        "context": context
-                    }
-                    st.session_state.history.append(entry)
-                    
-                    # Update daily calories
-                    today = date.today().isoformat()
-                    if today not in st.session_state.daily_calories:
-                        st.session_state.daily_calories[today] = 0
-                    st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
-                    
-                else:
-                    st.warning("Analysis had issues. Try adding more context or describing the meal manually.")
-                    
-            except Exception as e:
-                st.error(f"Analysis failed: {str(e)}")
-                st.info("Try uploading a clearer image or add more context description.")
+                # Show detailed analysis
+                with st.expander("📊 Detailed Analysis"):
+                    st.write(analysis_result["analysis"])
+                
+                # Add optional visualizations (faster loading)
+                with st.expander("🔬 AI Visualizations (Click to Generate)"):
+                    if st.button("Generate Visualizations", key="gen_viz"):
+                            st.write("**AI Model Interpretability Visualizations**")
+                            
+                            if models['cnn_model']:
+                                with st.spinner("Generating visualizations..."):
+                                    try:
+                                        # Prepare image for CNN
+                                        image_rgb = image.convert("RGB")
+                                        image_tensor = cnn_transform(image_rgb).unsqueeze(0).to(device)
+                                        
+                                        # Generate visualizations
+                                        col1, col2 = st.columns(2)
+                                        
+                                        with col1:
+                                            st.write("**Edge Detection**")
+                                            edge_path = visualize_food_features(image)
+                                            if edge_path:
+                                                edge_img = Image.open(edge_path)
+                                                st.image(edge_img, caption="Edge Detection - Food Boundaries", use_container_width=True)
+                                                os.remove(edge_path)
+                                            
+                                            st.write("**SHAP Analysis**")
+                                            shap_path = apply_shap(image_tensor, models['cnn_model'])
+                                            if shap_path:
+                                                shap_img = Image.open(shap_path)
+                                                st.image(shap_img, caption="SHAP - Feature Importance", use_container_width=True)
+                                                os.remove(shap_path)
+                                        
+                                        with col2:
+                                            st.write("**Grad-CAM**")
+                                            gradcam_path = apply_gradcam(image_tensor, models['cnn_model'], 0)
+                                            if gradcam_path:
+                                                gradcam_img = Image.open(gradcam_path)
+                                                st.image(gradcam_img, caption="Grad-CAM - Model Focus Areas", use_container_width=True)
+                                                os.remove(gradcam_path)
+                                            
+                                            st.write("**LIME Explanation**")
+                                            lime_path = apply_lime(image, models['cnn_model'], ["food"])
+                                            if lime_path:
+                                                lime_img = Image.open(lime_path)
+                                                st.image(lime_img, caption="LIME - Local Interpretability", use_container_width=True)
+                                                os.remove(lime_path)
+                                        
+                                        st.info("💡 **Visualization Guide:**")
+                                        st.write("• **Edge Detection**: Shows food boundaries and textures")
+                                        st.write("• **Grad-CAM**: Highlights areas the AI focuses on")
+                                        st.write("• **SHAP**: Shows feature importance for predictions")
+                                        st.write("• **LIME**: Explains local decision-making regions")
+                                        
+                                    except Exception as e:
+                                        st.warning(f"Visualization generation failed: {e}")
+                            else:
+                                st.info("CNN model not available for visualizations.")
+                    else:
+                        st.info("Click the button above to generate AI visualizations (takes ~10-15 seconds)")
+                
+                # Save to history
+                entry = {
+                    "timestamp": datetime.now(),
+                    "type": "image",
+                    "description": food_description,
+                    "analysis": analysis_result["analysis"],
+                    "nutritional_data": analysis_result["nutritional_data"],
+                    "context": context
+                }
+                st.session_state.history.append(entry)
+                
+                # Update daily calories
+                today = date.today().isoformat()
+                if today not in st.session_state.daily_calories:
+                    st.session_state.daily_calories[today] = 0
+                st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
+                
+            else:
+                st.warning("Analysis had issues. Try adding more context or describing the meal manually.")
+                
+        except Exception as e:
+            st.error(f"Analysis failed: {str(e)}")
+            st.info("Try uploading a clearer image or add more context description.")
 
 # History Tab  
 with tab2:
