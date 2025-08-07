@@ -512,14 +512,24 @@ def query_langchain(prompt):
         logger.error(f"Error querying LLM: {e}")
         return f"Error querying LLM: {str(e)}"
 
-# Extract nutritional data
+# Enhanced nutritional data extraction
 def extract_items_and_nutrients(text):
-    """Extract food items and nutritional data from analysis text."""
+    """Extract food items and nutritional data with enhanced parsing for detailed analysis."""
     items = []
     
     try:
+        # Enhanced patterns to capture more detailed nutritional information
         patterns = [
-            r'Item:\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?',
+            # Standard format with fiber
+            r'Item:\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fiber:\s*(\d+\.?\d*)\s*g)?',
+            
+            # Bullet point format with enhanced nutrients
+            r'-\s*Item:\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fiber:\s*(\d+\.?\d*)\s*g)?',
+            
+            # Simple bullet format
+            r'-\s*([^:,]+):\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?',
+            
+            # Alternative format without "Item:" prefix
             r'-\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?'
         ]
         
@@ -527,22 +537,35 @@ def extract_items_and_nutrients(text):
             matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
             
             for match in matches:
-                item = match[0].strip()
-                calories = int(match[1]) if match[1] else 0
-                protein = float(match[2]) if len(match) > 2 and match[2] else 0
-                carbs = float(match[3]) if len(match) > 3 and match[3] else 0
-                fats = float(match[4]) if len(match) > 4 and match[4] else 0
-                
-                if not any(existing_item["item"].lower() == item.lower() for existing_item in items):
-                    items.append({
-                        "item": item,
-                        "calories": calories,
-                        "protein": protein,
-                        "carbs": carbs,
-                        "fats": fats
-                    })
+                if len(match) >= 3:  # Ensure we have at least item, calories
+                    # Handle different match group structures
+                    if len(match) == 7 and match[0] and match[1]:  # Pattern with item description
+                        item = f"{match[0].strip()}: {match[1].strip()}"
+                        calories = int(match[2]) if match[2] else 0
+                        protein = float(match[3]) if len(match) > 3 and match[3] else 0
+                        carbs = float(match[4]) if len(match) > 4 and match[4] else 0
+                        fats = float(match[5]) if len(match) > 5 and match[5] else 0
+                        fiber = float(match[6]) if len(match) > 6 and match[6] else 0
+                    else:  # Standard patterns
+                        item = match[0].strip()
+                        calories = int(match[1]) if match[1] else 0
+                        protein = float(match[2]) if len(match) > 2 and match[2] else 0
+                        carbs = float(match[3]) if len(match) > 3 and match[3] else 0
+                        fats = float(match[4]) if len(match) > 4 and match[4] else 0
+                        fiber = float(match[5]) if len(match) > 5 and match[5] else 0
+                    
+                    # Avoid duplicates
+                    if not any(existing_item["item"].lower() == item.lower() for existing_item in items):
+                        items.append({
+                            "item": item,
+                            "calories": calories,
+                            "protein": protein,
+                            "carbs": carbs,
+                            "fats": fats,
+                            "fiber": fiber
+                        })
         
-        # Calculate totals
+        # Enhanced total extraction from summary sections
         totals = {
             "calories": sum(item["calories"] for item in items),
             "protein": sum(item["protein"] for item in items if item["protein"]),
@@ -550,7 +573,43 @@ def extract_items_and_nutrients(text):
             "fats": sum(item["fats"] for item in items if item["fats"])
         }
         
-        # If no items extracted, try to extract calories from text
+        # Try to extract totals from summary sections if individual items weren't found
+        if not items:
+            total_patterns = [
+                r'Total Calories?:\s*(\d{1,4})\s*(?:kcal|cal|calories)?',
+                r'Total Protein:\s*(\d+\.?\d*)\s*g',
+                r'Total Carbohydrates?:\s*(\d+\.?\d*)\s*g',
+                r'Total Fats?:\s*(\d+\.?\d*)\s*g'
+            ]
+            
+            calorie_match = re.search(total_patterns[0], text, re.IGNORECASE)
+            protein_match = re.search(total_patterns[1], text, re.IGNORECASE)
+            carbs_match = re.search(total_patterns[2], text, re.IGNORECASE)
+            fats_match = re.search(total_patterns[3], text, re.IGNORECASE)
+            
+            if calorie_match:
+                total_calories = int(calorie_match.group(1))
+                total_protein = float(protein_match.group(1)) if protein_match else total_calories * 0.15 / 4
+                total_carbs = float(carbs_match.group(1)) if carbs_match else total_calories * 0.50 / 4
+                total_fats = float(fats_match.group(1)) if fats_match else total_calories * 0.35 / 9
+                
+                items.append({
+                    "item": "Complete meal (from totals)",
+                    "calories": total_calories,
+                    "protein": total_protein,
+                    "carbs": total_carbs,
+                    "fats": total_fats,
+                    "fiber": 5  # Estimated
+                })
+                
+                totals = {
+                    "calories": total_calories,
+                    "protein": total_protein,
+                    "carbs": total_carbs,
+                    "fats": total_fats
+                }
+        
+        # Final fallback: extract any calorie numbers
         if not items and len(text.strip()) > 10:
             calorie_matches = re.findall(r'(\d{2,4})\s*(?:cal|kcal|calories)', text, re.IGNORECASE)
             if calorie_matches:
@@ -558,12 +617,19 @@ def extract_items_and_nutrients(text):
                 items.append({
                     "item": "Meal items (detected but not fully parsed)",
                     "calories": estimated_calories,
-                    "protein": 0,
-                    "carbs": 0,
-                    "fats": 0
+                    "protein": estimated_calories * 0.15 / 4,
+                    "carbs": estimated_calories * 0.50 / 4,
+                    "fats": estimated_calories * 0.35 / 9,
+                    "fiber": 3
                 })
-                totals["calories"] = estimated_calories
+                totals = {
+                    "calories": estimated_calories,
+                    "protein": estimated_calories * 0.15 / 4,
+                    "carbs": estimated_calories * 0.50 / 4,
+                    "fats": estimated_calories * 0.35 / 9
+                }
         
+        logger.info(f"Extracted {len(items)} food items with {totals['calories']} total calories")
         return items, totals
         
     except Exception as e:
@@ -598,45 +664,73 @@ def estimate_calories_from_description(description: str) -> int:
     
     return max(total_calories, 100)
 
-# Analyze food
+# Enhanced food analysis with detailed formatting
 def analyze_food_with_enhanced_prompt(image_description: str, context: str = "") -> Dict[str, Any]:
-    """Direct, effective food analysis."""
+    """Comprehensive food analysis with detailed, well-formatted responses."""
     try:
-        prompt = f"""Analyze this food and provide detailed nutritional information:
+        # Enhanced prompt for detailed analysis
+        prompt = f"""You are an expert nutritionist analyzing food images. Provide a comprehensive, detailed analysis:
 
-FOODS DETECTED: {image_description}
-CONTEXT: {context if context else "Standard meal"}
+DETECTED FOODS: {image_description}
+MEAL CONTEXT: {context if context else "General meal analysis"}
 
-Please provide a comprehensive analysis in this format:
+Please provide a thorough analysis following this EXACT format:
 
-FOOD ITEMS IDENTIFIED:
-- [Item 1]: [portion size], Calories: [X], Protein: [X]g, Carbs: [X]g, Fats: [X]g
-- [Item 2]: [portion size], Calories: [X], Protein: [X]g, Carbs: [X]g, Fats: [X]g
-[Continue for all items]
+## COMPREHENSIVE FOOD ANALYSIS
 
-MEAL TOTALS:
-Total Calories: [X]
-Total Protein: [X]g
-Total Carbohydrates: [X]g
-Total Fats: [X]g
+### IDENTIFIED FOOD ITEMS:
+For each food item detected, provide detailed breakdown:
+- Item: [Food name with estimated portion size], Calories: [X], Protein: [X]g, Carbs: [X]g, Fats: [X]g, Fiber: [X]g
+- Item: [Food name with estimated portion size], Calories: [X], Protein: [X]g, Carbs: [X]g, Fats: [X]g, Fiber: [X]g
+[Continue for ALL items - include main dishes, sides, sauces, garnishes, beverages]
 
-ASSESSMENT:
-[Brief nutritional assessment and meal type]
+### NUTRITIONAL TOTALS:
+- Total Calories: [X] kcal
+- Total Protein: [X]g ([X]% of calories)
+- Total Carbohydrates: [X]g ([X]% of calories)
+- Total Fats: [X]g ([X]% of calories)
+- Total Fiber: [X]g
+- Estimated Sodium: [X]mg
 
-RECOMMENDATIONS:
-[2-3 health suggestions]
+### MEAL COMPOSITION ANALYSIS:
+- **Meal Type**: [Breakfast/Lunch/Dinner/Snack]
+- **Cuisine Style**: [If identifiable]
+- **Portion Size**: [Small/Medium/Large/Extra Large]
+- **Cooking Methods**: [Grilled, fried, baked, etc.]
+- **Main Macronutrient**: [Carb-heavy/Protein-rich/Fat-dense/Balanced]
 
-IMPORTANT: 
-- Identify every food item mentioned, even small components
-- Provide realistic portion estimates
-- Include cooking oils, sauces, and seasonings in calorie counts
-- Be thorough and accurate with nutritional values"""
+### NUTRITIONAL QUALITY ASSESSMENT:
+- **Strengths**: [What's nutritionally good about this meal]
+- **Areas for Improvement**: [What could be better]
+- **Missing Nutrients**: [What important nutrients might be lacking]
+- **Calorie Density**: [High/Medium/Low - calories per volume]
 
+### HEALTH RECOMMENDATIONS:
+1. **Immediate Suggestions**: [2-3 specific tips for this meal]
+2. **Portion Adjustments**: [If needed]
+3. **Complementary Foods**: [What to add for better nutrition]
+4. **Timing Considerations**: [Best time to eat this meal]
+
+### DIETARY CONSIDERATIONS:
+- **Allergen Information**: [Common allergens present]
+- **Dietary Restrictions**: [Vegan/Vegetarian/Gluten-free compatibility]
+- **Blood Sugar Impact**: [High/Medium/Low glycemic impact]
+
+CRITICAL REQUIREMENTS:
+- Identify EVERY visible food component, no matter how small
+- Include cooking oils, seasonings, and hidden ingredients in calorie counts
+- Provide realistic portion estimates based on visual cues
+- Be thorough with nutritional breakdowns
+- Consider preparation methods that add calories"""
+
+        # Get comprehensive analysis
         response = models['llm'].invoke(prompt)
         analysis = response.content
         
+        # Extract structured data with enhanced parsing
         items, totals = extract_items_and_nutrients(analysis)
         
+        # Create detailed food items list
         food_items = []
         for item in items:
             food_items.append({
@@ -645,53 +739,134 @@ IMPORTANT:
                 "calories": item["calories"],
                 "protein": item.get("protein", 0),
                 "carbs": item.get("carbs", 0),
-                "fats": item.get("fats", 0)
+                "fats": item.get("fats", 0),
+                "fiber": item.get("fiber", 0)
             })
         
+        # Enhanced fallback with detailed estimation
         if not food_items and image_description:
             estimated_calories = estimate_calories_from_description(image_description)
+            
+            # Create detailed fallback analysis
+            fallback_analysis = f"""## COMPREHENSIVE FOOD ANALYSIS
+
+### IDENTIFIED FOOD ITEMS:
+- Item: Complete meal ({image_description}), Calories: {estimated_calories}, Protein: {estimated_calories * 0.15 / 4:.1f}g, Carbs: {estimated_calories * 0.50 / 4:.1f}g, Fats: {estimated_calories * 0.35 / 9:.1f}g
+
+### NUTRITIONAL TOTALS:
+- Total Calories: {estimated_calories} kcal
+- Total Protein: {estimated_calories * 0.15 / 4:.1f}g (15% of calories)
+- Total Carbohydrates: {estimated_calories * 0.50 / 4:.1f}g (50% of calories)
+- Total Fats: {estimated_calories * 0.35 / 9:.1f}g (35% of calories)
+
+### MEAL COMPOSITION ANALYSIS:
+- **Meal Type**: Mixed meal
+- **Portion Size**: Medium (estimated)
+- **Main Macronutrient**: Balanced
+
+### NUTRITIONAL QUALITY ASSESSMENT:
+- **Note**: Limited analysis due to detection constraints
+- **Recommendation**: Provide more specific food descriptions for detailed analysis
+
+### HEALTH RECOMMENDATIONS:
+1. **Balance**: Ensure adequate protein, vegetables, and whole grains
+2. **Portion Control**: Monitor serving sizes for calorie management
+3. **Hydration**: Include water with your meal
+
+### DIETARY CONSIDERATIONS:
+- **Analysis Limitation**: Detailed allergen and dietary information requires clearer food identification"""
+
             food_items = [{
                 "item": "Complete meal",
                 "description": f"Meal with: {image_description}",
                 "calories": estimated_calories,
                 "protein": estimated_calories * 0.15 / 4,
                 "carbs": estimated_calories * 0.50 / 4,
-                "fats": estimated_calories * 0.35 / 9
+                "fats": estimated_calories * 0.35 / 9,
+                "fiber": 5  # Estimated
             }]
+            
             totals = {
                 "calories": estimated_calories,
                 "protein": estimated_calories * 0.15 / 4,
                 "carbs": estimated_calories * 0.50 / 4,
                 "fats": estimated_calories * 0.35 / 9
             }
+            
+            analysis = fallback_analysis
+        
+        # Ensure minimum detail level
+        if len(analysis) < 500:  # If analysis is too brief, enhance it
+            enhancement_prompt = f"""The previous analysis was too brief. Please provide a more detailed analysis of: {image_description}
+
+Include:
+- Detailed breakdown of each food component
+- Comprehensive nutritional information
+- Health assessment and recommendations
+- Meal composition analysis
+
+Make it thorough and informative."""
+            
+            try:
+                enhanced_response = models['llm'].invoke(enhancement_prompt)
+                analysis = enhanced_response.content
+            except:
+                pass  # Keep original if enhancement fails
         
         return {
             "success": True,
             "analysis": analysis,
             "food_items": food_items,
             "nutritional_data": {
-                "total_calories": totals.get("calories", 0),
-                "total_protein": totals.get("protein", 0),
-                "total_carbs": totals.get("carbs", 0),
-                "total_fats": totals.get("fats", 0),
+                "total_calories": int(totals.get("calories", 0)),
+                "total_protein": round(totals.get("protein", 0), 1),
+                "total_carbs": round(totals.get("carbs", 0), 1),
+                "total_fats": round(totals.get("fats", 0), 1),
                 "items": food_items
             },
-            "improved_description": image_description
+            "improved_description": image_description,
+            "detailed": True
         }
         
     except Exception as e:
         logger.error(f"Food analysis error: {e}")
+        
+        # Enhanced error fallback
         estimated_calories = estimate_calories_from_description(image_description)
+        
+        error_analysis = f"""## FOOD ANALYSIS (Limited Mode)
+
+### DETECTED ITEMS:
+- Item: {image_description}, Calories: {estimated_calories} (estimated)
+
+### ANALYSIS NOTE:
+Due to technical limitations, a detailed analysis could not be completed. 
+
+### BASIC NUTRITIONAL ESTIMATE:
+- Estimated Calories: {estimated_calories} kcal
+- This is a rough estimate based on typical meal components
+
+### RECOMMENDATIONS:
+1. For accurate analysis, try uploading a clearer image
+2. Add specific food descriptions in the context field
+3. Consider manual entry for precise tracking
+
+### NEXT STEPS:
+- Retry with better lighting or closer image
+- Describe specific foods in the context field
+- Use the text analysis feature for manual entry"""
+
         return {
             "success": True,
-            "analysis": f"Basic analysis: {image_description}\nEstimated calories: {estimated_calories}",
+            "analysis": error_analysis,
             "food_items": [{
-                "item": "Detected meal",
+                "item": "Estimated meal",
                 "description": image_description,
                 "calories": estimated_calories,
                 "protein": 0,
                 "carbs": 0,
-                "fats": 0
+                "fats": 0,
+                "fiber": 0
             }],
             "nutritional_data": {
                 "total_calories": estimated_calories,
@@ -700,7 +875,8 @@ IMPORTANT:
                 "total_fats": 0,
                 "items": []
             },
-            "improved_description": image_description
+            "improved_description": image_description,
+            "detailed": False
         }
 
 # Main UI
@@ -784,9 +960,34 @@ with tab1:
                 with col4:
                     st.metric("Fats", f"{nutrition['total_fats']:.1f}g")
                 
-                # Show detailed analysis
-                with st.expander("📊 Detailed Analysis"):
-                    st.write(analysis_result["analysis"])
+                # Show detailed analysis with better formatting
+                with st.expander("📊 Comprehensive Nutritional Analysis", expanded=True):
+                    # Check if we have detailed analysis
+                    if analysis_result.get("detailed", False):
+                        st.markdown("### 🔬 **Complete Analysis Report**")
+                        st.markdown(analysis_result["analysis"])
+                        
+                        # Show individual food items if available
+                        if analysis_result["food_items"] and len(analysis_result["food_items"]) > 1:
+                            st.markdown("### 📋 **Individual Food Items Breakdown**")
+                            
+                            for i, item in enumerate(analysis_result["food_items"], 1):
+                                with st.container():
+                                    col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
+                                    with col1:
+                                        st.write(f"**{i}. {item['item']}**")
+                                    with col2:
+                                        st.write(f"{item['calories']} cal")
+                                    with col3:
+                                        st.write(f"{item['protein']:.1f}g protein")
+                                    with col4:
+                                        st.write(f"{item['carbs']:.1f}g carbs")
+                                    with col5:
+                                        st.write(f"{item['fats']:.1f}g fats")
+                    else:
+                        st.markdown("### 📊 **Basic Analysis**")
+                        st.write(analysis_result["analysis"])
+                        st.info("💡 **Tip**: For more detailed analysis, try uploading a clearer image or add specific food descriptions in the context field.")
                 
                 # Add optional visualizations (faster loading)
                 with st.expander("🔬 AI Visualizations (Click to Generate)"):
