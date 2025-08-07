@@ -22,6 +22,7 @@ validators==0.28.1
 
 pytube
 
+ultralytics
 gradio
 Pillow
 streamlit
@@ -36,3 +37,4 @@ captum
 lime 
 opencv-python-headless
 numexpr
+duckduckgo-search

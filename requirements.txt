@@ -40,3 +40,4 @@ fpdf
 SpeechRecognition
 accelerate 
 peft
+ ultralytics
