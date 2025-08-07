@@ -342,7 +342,7 @@ def query_langchain(prompt):
         logger.error(f"Error querying LLM: {e}")
         return f"Error querying LLM: {str(e)}"
 
-# Describe image using BLIP model with accurate food detection
+# Describe image using BLIP model with comprehensive food detection
 def describe_image(image: Image.Image) -> str:
     if not models['processor'] or not models['blip_model']:
         logger.error("BLIP model or processor is None. Image analysis unavailable.")
@@ -352,11 +352,12 @@ def describe_image(image: Image.Image) -> str:
             image = image.convert("RGB")
         device = next(models['blip_model'].parameters()).device
         
-        # Simple, direct food detection
+        # Multiple focused strategies to detect all food items
+        detection_results = []
+        
+        # Strategy 1: Basic food detection
         try:
-            # Use a clear, specific prompt for food detection
             inputs = models['processor'](image, text="what food items are in this image: ", return_tensors="pt").to(device)
-            
             with torch.no_grad():
                 outputs = models['blip_model'].generate(
                     **inputs, 
@@ -365,56 +366,129 @@ def describe_image(image: Image.Image) -> str:
                     do_sample=True,
                     temperature=0.7
                 )
-            
             caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            
-            # Clean up the caption
             if caption.startswith("what food items are in this image: "):
                 caption = caption.replace("what food items are in this image: ", "")
-            
             caption = caption.strip()
+            if len(caption.split()) > 2:
+                detection_results.append(caption)
+        except Exception as e:
+            logger.warning(f"Basic detection failed: {e}")
+        
+        # Strategy 2: Detailed food listing
+        try:
+            inputs = models['processor'](image, text="list all food items visible in this image: ", return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs, 
+                    max_new_tokens=200, 
+                    num_beams=10, 
+                    do_sample=True,
+                    temperature=0.8
+                )
+            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            if caption.startswith("list all food items visible in this image: "):
+                caption = caption.replace("list all food items visible in this image: ", "")
+            caption = caption.strip()
+            if len(caption.split()) > 3:
+                detection_results.append(caption)
+        except Exception as e:
+            logger.warning(f"Detailed listing failed: {e}")
+        
+        # Strategy 3: Component-based detection
+        try:
+            inputs = models['processor'](image, text="describe all dishes and ingredients in this meal: ", return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs, 
+                    max_new_tokens=200, 
+                    num_beams=10, 
+                    do_sample=True,
+                    temperature=0.8
+                )
+            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            if caption.startswith("describe all dishes and ingredients in this meal: "):
+                caption = caption.replace("describe all dishes and ingredients in this meal: ", "")
+            caption = caption.strip()
+            if len(caption.split()) > 3:
+                detection_results.append(caption)
+        except Exception as e:
+            logger.warning(f"Component detection failed: {e}")
+        
+        # Strategy 4: Comprehensive food identification
+        try:
+            inputs = models['processor'](image, text="identify every food item, sauce, and side dish in this image: ", return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs, 
+                    max_new_tokens=250, 
+                    num_beams=12, 
+                    do_sample=True,
+                    temperature=0.8
+                )
+            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            if caption.startswith("identify every food item, sauce, and side dish in this image: "):
+                caption = caption.replace("identify every food item, sauce, and side dish in this image: ", "")
+            caption = caption.strip()
+            if len(caption.split()) > 4:
+                detection_results.append(caption)
+        except Exception as e:
+            logger.warning(f"Comprehensive detection failed: {e}")
+        
+        # Combine all detection results naturally
+        if detection_results:
+            # Use the most detailed result as base
+            base_result = max(detection_results, key=lambda x: len(x.split()))
             
-            # Remove common prefixes
+            # Add unique information from other results
+            combined_result = base_result
+            
+            # If we have multiple good results, combine them naturally
+            if len(detection_results) > 1:
+                for result in detection_results:
+                    if result != base_result and len(result.split()) > 5:
+                        # Add unique information
+                        combined_result += f". Also visible: {result}"
+            
+            # Clean up the combined result
+            combined_result = combined_result.strip()
+            combined_result = combined_result.replace("a photo of ", "").replace("an image of ", "").replace("a picture of ", "")
+            combined_result = combined_result.strip()
+            
+            # Remove duplicate phrases
+            sentences = combined_result.split('.')
+            unique_sentences = []
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if sentence and sentence not in unique_sentences:
+                    unique_sentences.append(sentence)
+            combined_result = '. '.join(unique_sentences)
+            
+            if len(combined_result.split()) >= 3:
+                return combined_result
+        
+        # Fallback: try without any prompt
+        try:
+            inputs = models['processor'](image, return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs, 
+                    max_new_tokens=100, 
+                    num_beams=5, 
+                    do_sample=True,
+                    temperature=0.6
+                )
+            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            caption = caption.strip()
             caption = caption.replace("a photo of ", "").replace("an image of ", "").replace("a picture of ", "")
             caption = caption.strip()
             
-            # Ensure we have meaningful content
-            if len(caption.split()) < 2:
-                return "Unable to detect food items clearly. Please try a clearer image or describe the meal manually."
-            
-            return caption
-            
-        except Exception as e:
-            logger.warning(f"Food detection failed: {e}")
-            
-            # Fallback: try without any prompt
-            try:
-                inputs = models['processor'](image, return_tensors="pt").to(device)
-                
-                with torch.no_grad():
-                    outputs = models['blip_model'].generate(
-                        **inputs, 
-                        max_new_tokens=100, 
-                        num_beams=5, 
-                        do_sample=True,
-                        temperature=0.6
-                    )
-                
-                caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-                caption = caption.strip()
-                
-                # Remove common prefixes
-                caption = caption.replace("a photo of ", "").replace("an image of ", "").replace("a picture of ", "")
-                caption = caption.strip()
-                
-                if len(caption.split()) < 2:
-                    return "Unable to detect food items clearly. Please try a clearer image or describe the meal manually."
-                
+            if len(caption.split()) >= 2:
                 return caption
-                
-            except Exception as e2:
-                logger.error(f"Fallback detection also failed: {e2}")
-                return "Unable to detect food items. Please try a clearer image or describe the meal manually."
+        except Exception as e:
+            logger.warning(f"Fallback detection failed: {e}")
+        
+        return "Unable to detect food items clearly. Please try a clearer image or describe the meal manually."
         
     except Exception as e:
         logger.error(f"Image analysis error: {e}")
@@ -667,9 +741,14 @@ with st.container():
                             
                             # Show detection details to user
                             with st.expander("🔍 Detection Details"):
-                                st.write("**Food Items Detected:**")
+                                st.write("**Comprehensive Food Detection Results:**")
                                 st.write(description)
-                                st.write("**Detection Method:** Simple BLIP food detection with fallback")
+                                st.write("**Detection Strategy:** Multiple BLIP strategies combined:")
+                                st.write("1. Basic food detection")
+                                st.write("2. Detailed food listing")
+                                st.write("3. Component-based detection")
+                                st.write("4. Comprehensive food identification")
+                                st.write("5. Intelligent result combination")
                             
                             status_text.text("📊 Analyzing nutritional content...")
                             progress_bar.progress(60)
@@ -687,7 +766,7 @@ with st.container():
                                 st.stop()
                             
                             dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                            prompt = f"""You are an expert in food identification and nutrition analysis. Analyze the food items detected in the image and provide accurate nutritional information. Follow this exact format:
+                            prompt = f"""You are an expert in food identification and nutrition analysis. Analyze the food detection results and provide detailed nutritional information. Follow this exact format:
 
 **Food Items and Nutrients**:
 - Item: [Food Name with portion size, e.g., Grilled Chicken Breast (100g)], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
@@ -696,12 +775,12 @@ with st.container():
 **Nutritional Assessment**: [Detailed assessment of macronutrients, vitamins, and suitability for dietary preferences: {dietary_prefs}]
 **Health Suggestions**: [2-3 tailored suggestions based on the meal, context, and dietary preferences]
 
-Food items detected in image: {description}
+Food detection results: {description}
 Additional context: {context or 'No additional context provided'}
 Dietary preferences: {dietary_prefs}
 
 Instructions:
-1. **Carefully analyze the food items detected above**. Identify the specific food items mentioned.
+1. **Analyze the food detection results above**. Identify all food items, dishes, ingredients, sauces, garnishes, and sides mentioned.
 
 2. **For each food item identified**, provide an estimated portion size (e.g., '100g chicken', '1 cup rice', '50g vegetables') based on typical serving sizes.
 
@@ -715,7 +794,7 @@ Instructions:
 
 7. **Strictly follow the specified format**.
 
-8. **Be accurate** - only include food items that are actually mentioned in the detection result."""
+8. **Include all food items** mentioned in the detection results."""
                             
                             analysis = query_langchain(prompt)
                             if "unavailable" in analysis.lower() or "error" in analysis.lower():
