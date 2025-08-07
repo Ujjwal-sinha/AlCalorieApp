@@ -1311,85 +1311,247 @@ with st.container():
                         status_text.text("✅ Analysis complete!")
                         progress_bar.progress(100)
                         
-                        st.subheader("🔍 Food Items Detected")
-                        st.info(f"**Enhanced AI Detection**: {description}")
+                        # Create tabs for organized information display
+                        analysis_tab1, analysis_tab2, analysis_tab3, analysis_tab4, analysis_tab5 = st.tabs([
+                            "🔍 Detection Results",
+                            "🍴 Nutrition Analysis", 
+                            "📊 Visualizations",
+                            "💡 Health Insights",
+                            "🔧 Technical Details"
+                        ])
                         
-                        # Show detection confidence and tips
-                        detection_confidence = "High" if len(description.split()) > 10 else "Medium" if len(description.split()) > 5 else "Low"
-                        confidence_color = "🟢" if detection_confidence == "High" else "🟡" if detection_confidence == "Medium" else "🔴"
-                        
-                        st.metric("Detection Confidence", f"{confidence_color} {detection_confidence}")
-                        
-                        if detection_confidence == "Low":
-                            st.info("💡 **Tips for Better Detection:**")
-                            st.write("• 📸 Take photos from closer distance")
-                            st.write("• 💡 Ensure good lighting")
-                            st.write("• 🍽️ Make sure all food items are visible")
-                            st.write("• 📝 Use the context field for additional details")
-                        
-                        # Show limited detection warning if applicable
-                        if "limited" in description.lower() or "generic" in description.lower():
-                            st.warning("⚠️ **Limited Detection**")
-                            st.write("The AI detected food items but couldn't identify specific components.")
-                            st.write("**To improve results:**")
-                            st.write("• 📝 Add detailed context in the context field")
-                            st.write("• 🍽️ Use the Text Analysis tab for manual description")
-                            st.write("• 📸 Try uploading a clearer image")
-                        
-                        # Debug information (can be removed in production)
-                        with st.expander("🔧 Debug Information", expanded=False):
-                            st.write(f"**Model Status**: BLIP loaded: {models['blip_model'] is not None}")
-                            st.write(f"**Device**: {device}")
-                            st.write(f"**Description Length**: {len(description.split())} words")
-                            st.write(f"**Raw Description**: {description}")
-                            st.write(f"**Improved Description**: {enhanced_analysis.get('improved_description', 'Not available')}")
-                            st.write(f"**Context**: {context}")
-                            st.write(f"**Enhanced Analysis Success**: {enhanced_analysis['success']}")
-                            if not enhanced_analysis['success']:
-                                st.write(f"**Enhanced Analysis Error**: {enhanced_analysis.get('error', 'Unknown')}")
-                        
-                        st.subheader("🍴 Nutritional Analysis")
-                        st.markdown(analysis, unsafe_allow_html=True)
-                        
-                        if food_data:
-                            col1, col2, col3, col4 = st.columns(4)
-                            col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
-                            col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
-                            col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
-                            col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                        # Tab 1: Detection Results
+                        with analysis_tab1:
+                            st.subheader("🔍 Food Detection Results")
+                            st.info(f"**Enhanced AI Detection**: {description}")
                             
-                            chart = plot_chart(food_data)
-                            if chart:
-                                st.pyplot(chart)
-                        else:
-                            st.error("❌ **Failed to Extract Food Items**")
-                            st.write("The nutritional analysis couldn't identify specific food items.")
+                            # Show detection confidence and tips
+                            detection_confidence = "High" if len(description.split()) > 10 else "Medium" if len(description.split()) > 5 else "Low"
+                            confidence_color = "🟢" if detection_confidence == "High" else "🟡" if detection_confidence == "Medium" else "🔴"
                             
-                            # Provide immediate solutions
-                            st.info("**Quick Solutions:**")
                             col1, col2 = st.columns(2)
                             with col1:
-                                st.write("**Option 1: Add Context**")
-                                st.write("Describe your meal in the context field above and click 'Analyze Meal' again.")
-                                st.write("**Example**: 'chicken curry with rice, naan bread, and yogurt sauce'")
+                                st.metric("Detection Confidence", f"{confidence_color} {detection_confidence}")
+                            with col2:
+                                st.metric("Items Detected", f"{len(food_data) if food_data else 0} items")
+                            
+                            if detection_confidence == "Low":
+                                st.info("💡 **Tips for Better Detection:**")
+                                st.write("• 📸 Take photos from closer distance")
+                                st.write("• 💡 Ensure good lighting")
+                                st.write("• 🍽️ Make sure all food items are visible")
+                                st.write("• 📝 Use the context field for additional details")
+                            
+                            # Show limited detection warning if applicable
+                            if "limited" in description.lower() or "generic" in description.lower():
+                                st.warning("⚠️ **Limited Detection**")
+                                st.write("The AI detected food items but couldn't identify specific components.")
+                                st.write("**To improve results:**")
+                                st.write("• 📝 Add detailed context in the context field")
+                                st.write("• 🍽️ Use the Text Analysis tab for manual description")
+                                st.write("• 📸 Try uploading a clearer image")
+                            
+                            # Show detection methods used
+                            with st.expander("🔬 **Detection Methods Used**", expanded=False):
+                                st.write("**AI Detection Strategies:**")
+                                st.write("• 🤖 Multi-Strategy AI Analysis")
+                                st.write("• 🖼️ Image Quality Enhancement")
+                                st.write("• 📊 Comprehensive Item Identification")
+                                st.write("• 🍽️ Complete Nutritional Breakdown")
+                                st.write("• 🔄 Multiple Fallback Approaches")
+                        
+                        # Tab 2: Nutrition Analysis
+                        with analysis_tab2:
+                            st.subheader("🍴 Nutritional Analysis")
+                            st.markdown(analysis, unsafe_allow_html=True)
+                            
+                            if food_data:
+                                # Nutrition metrics
+                                col1, col2, col3, col4 = st.columns(4)
+                                col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
+                                col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                                col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                                col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                                
+                                # Nutrition chart
+                                chart = plot_chart(food_data)
+                                if chart:
+                                    st.pyplot(chart)
+                                
+                                # Detailed nutrition breakdown
+                                with st.expander("📋 **Detailed Nutrition Breakdown**", expanded=False):
+                                    for i, item in enumerate(food_data, 1):
+                                        col1, col2, col3, col4, col5 = st.columns(5)
+                                        with col1:
+                                            st.write(f"**{i}. {item['item']}**")
+                                        with col2:
+                                            st.write(f"{item['calories']} kcal")
+                                        with col3:
+                                            st.write(f"{item['protein']:.1f}g" if item['protein'] else "-")
+                                        with col4:
+                                            st.write(f"{item['carbs']:.1f}g" if item['carbs'] else "-")
+                                        with col5:
+                                            st.write(f"{item['fats']:.1f}g" if item['fats'] else "-")
+                            else:
+                                st.error("❌ **Failed to Extract Food Items**")
+                                st.write("The nutritional analysis couldn't identify specific food items.")
+                                
+                                # Provide immediate solutions
+                                st.info("**Quick Solutions:**")
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.write("**Option 1: Add Context**")
+                                    st.write("Describe your meal in the context field above and click 'Analyze Meal' again.")
+                                    st.write("**Example**: 'chicken curry with rice, naan bread, and yogurt sauce'")
+                                
+                                with col2:
+                                    st.write("**Option 2: Text Analysis**")
+                                    st.write("Use the 'Text Analysis' tab to describe your meal manually.")
+                                    st.write("**Example**: 'Grilled chicken, mashed potatoes, broccoli, and sauce'")
+                                
+                                st.write("**For Better Results:**")
+                                st.write("1. 📝 **Add Context**: Describe the meal in the context field")
+                                st.write("2. 📸 **Better Image**: Upload a clearer, closer photo")
+                                st.write("3. 🍽️ **Text Analysis**: Use the Text Analysis tab instead")
+                                st.write("4. 🔄 **Retry**: Upload the image again")
+                                
+                                # Continue with basic analysis
+                                st.warning("**Continuing with basic analysis. Please add context for better results.**")
+                                
+                                # Create basic food data to continue
+                                food_data = [{"item": "Generic meal component", "calories": 300, "protein": 20, "carbs": 30, "fats": 10}]
+                                totals = {"calories": 300, "protein": 20, "carbs": 30, "fats": 10}
+                        
+                        # Tab 3: Visualizations
+                        with analysis_tab3:
+                            st.subheader("📊 AI Visualizations")
+                            
+                            if models['cnn_model'] and 'cnn_confidence' in locals() and cnn_confidence is not None:
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("AI Confidence", f"{cnn_confidence*100:.1f}%")
+                                with col2:
+                                    st.metric("Predicted Class", cnn_predicted_class if cnn_predicted_class else "Unknown")
+                            
+                            # Show visualizations if available
+                            viz_cols = st.columns(2)
+                            with viz_cols[0]:
+                                if edge_path and os.path.exists(edge_path):
+                                    st.image(edge_path, caption="Edge Detection Analysis", use_container_width=True)
+                                if shap_path and os.path.exists(shap_path):
+                                    st.image(shap_path, caption="SHAP Explanation", use_container_width=True)
+                            
+                            with viz_cols[1]:
+                                if gradcam_path and os.path.exists(gradcam_path):
+                                    st.image(gradcam_path, caption="Grad-CAM Visualization", use_container_width=True)
+                                if lime_path and os.path.exists(lime_path):
+                                    st.image(lime_path, caption="LIME Interpretation", use_container_width=True)
+                            
+                            if not any([edge_path, gradcam_path, shap_path, lime_path]):
+                                st.info("📊 **Visualization Information**")
+                                st.write("AI visualizations help understand how the model analyzes your food image:")
+                                st.write("• 🔍 **Edge Detection**: Identifies food boundaries and shapes")
+                                st.write("• 🎯 **Grad-CAM**: Shows which parts of the image the AI focuses on")
+                                st.write("• 📈 **SHAP**: Explains AI decision-making process")
+                                st.write("• 🔬 **LIME**: Provides interpretable explanations")
+                        
+                        # Tab 4: Health Insights
+                        with analysis_tab4:
+                            st.subheader("💡 Health Insights & Recommendations")
+                            
+                            # Daily calorie comparison
+                            today = date.today().isoformat()
+                            daily_total = st.session_state.daily_calories.get(today, 0) + totals["calories"]
+                            calorie_balance = daily_total - st.session_state.calorie_target
+                            
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Today's Total", f"{daily_total} kcal")
+                            with col2:
+                                st.metric("Daily Target", f"{st.session_state.calorie_target} kcal")
+                            with col3:
+                                st.metric("Balance", f"{calorie_balance:+} kcal", delta=f"{calorie_balance} kcal")
+                            
+                            # Health recommendations
+                            with st.expander("🏃‍♂️ **Fitness Recommendations**", expanded=True):
+                                if calorie_balance > 0:
+                                    st.warning("**Calorie Surplus Detected**")
+                                    st.write(f"You consumed {calorie_balance} kcal above your target.")
+                                    st.write("**Recommended Activities:**")
+                                    for activity in st.session_state.activity_preference:
+                                        burn_rate = ACTIVITY_BURN_RATES.get(activity, 300)
+                                        duration = (calorie_balance / burn_rate) * 60
+                                        st.write(f"• **{activity}**: {duration:.0f} minutes")
+                                elif calorie_balance < 0:
+                                    st.info("**Calorie Deficit Detected**")
+                                    st.write(f"You consumed {abs(calorie_balance)} kcal below your target.")
+                                    st.write("**Consider adding:**")
+                                    st.write("• Nutrient-dense snacks")
+                                    st.write("• Protein-rich foods")
+                                    st.write("• Healthy fats")
+                                else:
+                                    st.success("**Perfect Balance!**")
+                                    st.write("Your calorie intake is perfectly balanced!")
+                            
+                            # Nutritional insights
+                            with st.expander("🥗 **Nutritional Insights**", expanded=True):
+                                if totals['protein'] and totals['protein'] > 30:
+                                    st.success("✅ **Good Protein Intake**")
+                                    st.write("This meal provides adequate protein for muscle maintenance.")
+                                elif totals['protein'] and totals['protein'] < 15:
+                                    st.warning("⚠️ **Low Protein Intake**")
+                                    st.write("Consider adding more protein-rich foods.")
+                                
+                                if totals['carbs'] and totals['carbs'] > 50:
+                                    st.info("📊 **High Carbohydrate Meal**")
+                                    st.write("This meal is rich in carbohydrates, good for energy.")
+                                
+                                if totals['fats'] and totals['fats'] > 20:
+                                    st.info("🥑 **Moderate Fat Content**")
+                                    st.write("This meal contains healthy fats for satiety.")
+                            
+                            # Dietary preferences check
+                            if st.session_state.dietary_preferences:
+                                with st.expander("🌱 **Dietary Preferences Check**", expanded=False):
+                                    st.write("**Your Preferences**: " + ", ".join(st.session_state.dietary_preferences))
+                                    st.write("**Compatibility**: This meal appears to align with your dietary preferences.")
+                        
+                        # Tab 5: Technical Details
+                        with analysis_tab5:
+                            st.subheader("🔧 Technical Analysis Details")
+                            
+                            # Model information
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.write("**Model Status**")
+                                st.write(f"• BLIP Model: {'✅ Loaded' if models['blip_model'] is not None else '❌ Failed'}")
+                                st.write(f"• LLM Model: {'✅ Loaded' if models['llm'] is not None else '❌ Failed'}")
+                                st.write(f"• CNN Model: {'✅ Loaded' if models['cnn_model'] is not None else '❌ Failed'}")
+                                st.write(f"• Device: {device}")
                             
                             with col2:
-                                st.write("**Option 2: Text Analysis**")
-                                st.write("Use the 'Text Analysis' tab to describe your meal manually.")
-                                st.write("**Example**: 'Grilled chicken, mashed potatoes, broccoli, and sauce'")
+                                st.write("**Analysis Details**")
+                                st.write(f"• Description Length: {len(description.split())} words")
+                                st.write(f"• Detection Strategies: 6 primary + 3 fallback")
+                                st.write(f"• Image Enhancement: Applied")
+                                st.write(f"• Analysis Success: {'✅ Yes' if enhanced_analysis['success'] else '❌ No'}")
                             
-                            st.write("**For Better Results:**")
-                            st.write("1. 📝 **Add Context**: Describe the meal in the context field")
-                            st.write("2. 📸 **Better Image**: Upload a clearer, closer photo")
-                            st.write("3. 🍽️ **Text Analysis**: Use the Text Analysis tab instead")
-                            st.write("4. 🔄 **Retry**: Upload the image again")
+                            # Raw data
+                            with st.expander("📄 **Raw Analysis Data**", expanded=False):
+                                st.write(f"**Raw Description**: {description}")
+                                st.write(f"**Improved Description**: {enhanced_analysis.get('improved_description', 'Not available')}")
+                                st.write(f"**Context**: {context}")
+                                if not enhanced_analysis['success']:
+                                    st.write(f"**Analysis Error**: {enhanced_analysis.get('error', 'Unknown')}")
                             
-                            # Continue with basic analysis
-                            st.warning("**Continuing with basic analysis. Please add context for better results.**")
-                            
-                            # Create basic food data to continue
-                            food_data = [{"item": "Generic meal component", "calories": 300, "protein": 20, "carbs": 30, "fats": 10}]
-                            totals = {"calories": 300, "protein": 20, "carbs": 30, "fats": 10}
+                            # Performance metrics
+                            with st.expander("⚡ **Performance Metrics**", expanded=False):
+                                st.write("**Detection Performance:**")
+                                st.write(f"• Confidence Level: {detection_confidence}")
+                                st.write(f"• Items Identified: {len(food_data) if food_data else 0}")
+                                st.write(f"• Analysis Quality: {'High' if enhanced_analysis['success'] else 'Low'}")
+                                if 'cnn_confidence' in locals() and cnn_confidence is not None:
+                                    st.write(f"• AI Confidence: {cnn_confidence*100:.1f}%")
                         
                         st.session_state.last_results = {
                             "type": "image",
@@ -1542,19 +1704,110 @@ Instructions:
                                 st.stop()
                             food_data, totals = extract_items_and_nutrients(analysis)
                         
-                        st.subheader("🍴 Nutritional Analysis")
-                        st.markdown(analysis, unsafe_allow_html=True)
+                        # Create tabs for text analysis results
+                        text_tab1, text_tab2, text_tab3 = st.tabs([
+                            "🍴 Nutrition Analysis",
+                            "💡 Health Insights", 
+                            "📊 Detailed Breakdown"
+                        ])
                         
-                        if food_data:
-                            col1, col2, col3, col4 = st.columns(4)
-                            col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
-                            col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
-                            col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
-                            col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                        # Tab 1: Nutrition Analysis
+                        with text_tab1:
+                            st.subheader("🍴 Nutritional Analysis")
+                            st.markdown(analysis, unsafe_allow_html=True)
                             
-                            chart = plot_chart(food_data)
-                            if chart:
-                                st.pyplot(chart)
+                            if food_data:
+                                col1, col2, col3, col4 = st.columns(4)
+                                col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
+                                col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                                col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                                col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                                
+                                chart = plot_chart(food_data)
+                                if chart:
+                                    st.pyplot(chart)
+                        
+                        # Tab 2: Health Insights
+                        with text_tab2:
+                            st.subheader("💡 Health Insights & Recommendations")
+                            
+                            # Daily calorie comparison
+                            today = date.today().isoformat()
+                            daily_total = st.session_state.daily_calories.get(today, 0) + totals["calories"]
+                            calorie_balance = daily_total - st.session_state.calorie_target
+                            
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Today's Total", f"{daily_total} kcal")
+                            with col2:
+                                st.metric("Daily Target", f"{st.session_state.calorie_target} kcal")
+                            with col3:
+                                st.metric("Balance", f"{calorie_balance:+} kcal", delta=f"{calorie_balance} kcal")
+                            
+                            # Health recommendations
+                            with st.expander("🏃‍♂️ **Fitness Recommendations**", expanded=True):
+                                if calorie_balance > 0:
+                                    st.warning("**Calorie Surplus Detected**")
+                                    st.write(f"You consumed {calorie_balance} kcal above your target.")
+                                    st.write("**Recommended Activities:**")
+                                    for activity in st.session_state.activity_preference:
+                                        burn_rate = ACTIVITY_BURN_RATES.get(activity, 300)
+                                        duration = (calorie_balance / burn_rate) * 60
+                                        st.write(f"• **{activity}**: {duration:.0f} minutes")
+                                elif calorie_balance < 0:
+                                    st.info("**Calorie Deficit Detected**")
+                                    st.write(f"You consumed {abs(calorie_balance)} kcal below your target.")
+                                    st.write("**Consider adding:**")
+                                    st.write("• Nutrient-dense snacks")
+                                    st.write("• Protein-rich foods")
+                                    st.write("• Healthy fats")
+                                else:
+                                    st.success("**Perfect Balance!**")
+                                    st.write("Your calorie intake is perfectly balanced!")
+                            
+                            # Nutritional insights
+                            with st.expander("🥗 **Nutritional Insights**", expanded=True):
+                                if totals['protein'] and totals['protein'] > 30:
+                                    st.success("✅ **Good Protein Intake**")
+                                    st.write("This meal provides adequate protein for muscle maintenance.")
+                                elif totals['protein'] and totals['protein'] < 15:
+                                    st.warning("⚠️ **Low Protein Intake**")
+                                    st.write("Consider adding more protein-rich foods.")
+                                
+                                if totals['carbs'] and totals['carbs'] > 50:
+                                    st.info("📊 **High Carbohydrate Meal**")
+                                    st.write("This meal is rich in carbohydrates, good for energy.")
+                                
+                                if totals['fats'] and totals['fats'] > 20:
+                                    st.info("🥑 **Moderate Fat Content**")
+                                    st.write("This meal contains healthy fats for satiety.")
+                        
+                        # Tab 3: Detailed Breakdown
+                        with text_tab3:
+                            st.subheader("📊 Detailed Nutrition Breakdown")
+                            
+                            if food_data:
+                                # Detailed nutrition breakdown
+                                with st.expander("📋 **Item-by-Item Breakdown**", expanded=True):
+                                    for i, item in enumerate(food_data, 1):
+                                        col1, col2, col3, col4, col5 = st.columns(5)
+                                        with col1:
+                                            st.write(f"**{i}. {item['item']}**")
+                                        with col2:
+                                            st.write(f"{item['calories']} kcal")
+                                        with col3:
+                                            st.write(f"{item['protein']:.1f}g" if item['protein'] else "-")
+                                        with col4:
+                                            st.write(f"{item['carbs']:.1f}g" if item['carbs'] else "-")
+                                        with col5:
+                                            st.write(f"{item['fats']:.1f}g" if item['fats'] else "-")
+                                
+                                # Analysis summary
+                                with st.expander("📝 **Analysis Summary**", expanded=False):
+                                    st.write(f"**Description**: {meal_desc}")
+                                    st.write(f"**Items Identified**: {len(food_data)}")
+                                    st.write(f"**Total Calories**: {totals['calories']} kcal")
+                                    st.write(f"**Analysis Quality**: {'High' if len(food_data) >= 2 else 'Low'}")
                         
                         st.session_state.last_results = {
                             "type": "text",
@@ -1610,36 +1863,106 @@ Instructions:
                 st.info("No meal analyses recorded yet. Try analyzing a meal in the Image or Text Analysis tabs!")
             for i, entry in enumerate(reversed(st.session_state.history)):
                 with st.expander(f"📅 {entry['timestamp']} - {entry['type'].title()} Analysis"):
-                    if entry['type'] == "image" and entry.get("image"):
-                        st.image(entry["image"], caption="Meal Image", use_container_width=True)
-                    
-                    st.markdown(entry["analysis"], unsafe_allow_html=True)
-                    
-                    if entry.get("totals", {}):
-                        col1, col2, col3, col4 = st.columns(4)
-                        col1.metric("Calories", f"{entry['totals']['calories']} kcal")
-                        col2.metric("Protein", f"{entry['totals']['protein']:.1f} g" if entry['totals']['protein'] else "-")
-                        col3.metric("Carbs", f"{entry['totals']['carbs']:.1f} g" if entry['totals']['carbs'] else "-")
-                        col4.metric("Fats", f"{entry['totals']['fats']:.1f} g" if entry['totals']['fats'] else "-")
-                    
-                    if entry.get("chart"):
-                        st.pyplot(entry["chart"])
-                    
+                    # Create tabs for history entries
                     if entry['type'] == "image":
-                        st.markdown("### Visualizations")
-                        viz_cols = st.columns(2)
-                        with viz_cols[0]:
-                            if entry.get("edge_path") and os.path.exists(entry["edge_path"]):
-                                st.image(entry["edge_path"], caption="Edge Detection", use_container_width=True)
-                            if entry.get("shap_path") and os.path.exists(entry["shap_path"]):
-                                st.image(entry["shap_path"], caption="SHAP Explanation", use_container_width=True)
-                        with viz_cols[1]:
-                            if entry.get("gradcam_path") and os.path.exists(entry["gradcam_path"]):
-                                st.image(entry["gradcam_path"], caption="Grad-CAM Visualization", use_container_width=True)
-                            if entry.get("lime_path") and os.path.exists(entry["lime_path"]):
-                                st.image(entry["lime_path"], caption="LIME Interpretation", use_container_width=True)
-                            if entry.get("cnn_confidence"):
-                                st.markdown(f"**Confidence**: {entry['cnn_confidence']*100:.1f}%")
+                        hist_tab1, hist_tab2, hist_tab3, hist_tab4 = st.tabs([
+                            "📷 Image & Analysis",
+                            "🍴 Nutrition", 
+                            "📊 Visualizations",
+                            "📋 Details"
+                        ])
+                        
+                        # Tab 1: Image & Analysis
+                        with hist_tab1:
+                            if entry.get("image"):
+                                st.image(entry["image"], caption="Meal Image", use_container_width=True)
+                            st.markdown(entry["analysis"], unsafe_allow_html=True)
+                        
+                        # Tab 2: Nutrition
+                        with hist_tab2:
+                            if entry.get("totals", {}):
+                                col1, col2, col3, col4 = st.columns(4)
+                                col1.metric("Calories", f"{entry['totals']['calories']} kcal")
+                                col2.metric("Protein", f"{entry['totals']['protein']:.1f} g" if entry['totals']['protein'] else "-")
+                                col3.metric("Carbs", f"{entry['totals']['carbs']:.1f} g" if entry['totals']['carbs'] else "-")
+                                col4.metric("Fats", f"{entry['totals']['fats']:.1f} g" if entry['totals']['fats'] else "-")
+                            
+                            if entry.get("chart"):
+                                st.pyplot(entry["chart"])
+                            
+                            if entry.get("nutrients"):
+                                with st.expander("📋 **Detailed Breakdown**", expanded=False):
+                                    for i, item in enumerate(entry["nutrients"], 1):
+                                        col1, col2, col3, col4, col5 = st.columns(5)
+                                        with col1:
+                                            st.write(f"**{i}. {item['item']}**")
+                                        with col2:
+                                            st.write(f"{item['calories']} kcal")
+                                        with col3:
+                                            st.write(f"{item['protein']:.1f}g" if item['protein'] else "-")
+                                        with col4:
+                                            st.write(f"{item['carbs']:.1f}g" if item['carbs'] else "-")
+                                        with col5:
+                                            st.write(f"{item['fats']:.1f}g" if item['fats'] else "-")
+                        
+                        # Tab 3: Visualizations
+                        with hist_tab3:
+                            st.markdown("### AI Visualizations")
+                            viz_cols = st.columns(2)
+                            with viz_cols[0]:
+                                if entry.get("edge_path") and os.path.exists(entry["edge_path"]):
+                                    st.image(entry["edge_path"], caption="Edge Detection", use_container_width=True)
+                                if entry.get("shap_path") and os.path.exists(entry["shap_path"]):
+                                    st.image(entry["shap_path"], caption="SHAP Explanation", use_container_width=True)
+                            with viz_cols[1]:
+                                if entry.get("gradcam_path") and os.path.exists(entry["gradcam_path"]):
+                                    st.image(entry["gradcam_path"], caption="Grad-CAM Visualization", use_container_width=True)
+                                if entry.get("lime_path") and os.path.exists(entry["lime_path"]):
+                                    st.image(entry["lime_path"], caption="LIME Interpretation", use_container_width=True)
+                                if entry.get("cnn_confidence"):
+                                    st.metric("AI Confidence", f"{entry['cnn_confidence']*100:.1f}%")
+                        
+                        # Tab 4: Details
+                        with hist_tab4:
+                            st.write("**Analysis Details:**")
+                            st.write(f"• **Type**: {entry['type']}")
+                            st.write(f"• **Timestamp**: {entry['timestamp']}")
+                            st.write(f"• **Items Detected**: {len(entry.get('nutrients', []))}")
+                            if entry.get("cnn_prediction"):
+                                st.write(f"• **AI Prediction**: {entry['cnn_prediction']}")
+                            if entry.get("context"):
+                                st.write(f"• **Context**: {entry['context']}")
+                    
+                    else:  # Text analysis
+                        hist_tab1, hist_tab2, hist_tab3 = st.tabs([
+                            "📝 Analysis",
+                            "🍴 Nutrition", 
+                            "📋 Details"
+                        ])
+                        
+                        # Tab 1: Analysis
+                        with hist_tab1:
+                            st.markdown(entry["analysis"], unsafe_allow_html=True)
+                        
+                        # Tab 2: Nutrition
+                        with hist_tab2:
+                            if entry.get("totals", {}):
+                                col1, col2, col3, col4 = st.columns(4)
+                                col1.metric("Calories", f"{entry['totals']['calories']} kcal")
+                                col2.metric("Protein", f"{entry['totals']['protein']:.1f} g" if entry['totals']['protein'] else "-")
+                                col3.metric("Carbs", f"{entry['totals']['carbs']:.1f} g" if entry['totals']['carbs'] else "-")
+                                col4.metric("Fats", f"{entry['totals']['fats']:.1f} g" if entry['totals']['fats'] else "-")
+                            
+                            if entry.get("chart"):
+                                st.pyplot(entry["chart"])
+                        
+                        # Tab 3: Details
+                        with hist_tab3:
+                            st.write("**Analysis Details:**")
+                            st.write(f"• **Type**: {entry['type']}")
+                            st.write(f"• **Timestamp**: {entry['timestamp']}")
+                            st.write(f"• **Items Detected**: {len(entry.get('nutrients', []))}")
+                            st.write(f"• **Description**: {entry.get('description', 'N/A')}")
             
             if st.session_state.last_results and st.session_state.history:
                 if st.button("📄 Export Latest PDF Report", key="export_pdf", help="Download a PDF of the latest meal analysis"):
@@ -1750,19 +2073,97 @@ Instructions:
                             
                             food_data, totals = extract_items_and_nutrients(analysis)
                             
-                            st.subheader("🍴 Updated Nutritional Analysis")
-                            st.markdown(analysis, unsafe_allow_html=True)
+                            # Create tabs for portion adjustment results
+                            portion_tab1, portion_tab2, portion_tab3 = st.tabs([
+                                "🍴 Updated Nutrition",
+                                "📊 Comparison", 
+                                "💡 Insights"
+                            ])
                             
-                            if food_data:
-                                col1, col2, col3, col4 = st.columns(4)
-                                col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
-                                col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
-                                col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
-                                col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                            # Tab 1: Updated Nutrition
+                            with portion_tab1:
+                                st.subheader("🍴 Updated Nutritional Analysis")
+                                st.markdown(analysis, unsafe_allow_html=True)
                                 
-                                chart = plot_chart(food_data)
-                                if chart:
-                                    st.pyplot(chart)
+                                if food_data:
+                                    col1, col2, col3, col4 = st.columns(4)
+                                    col1.metric("Total Calories", f"{totals['calories']} kcal", delta=f"{totals['calories']-st.session_state.calorie_target} kcal")
+                                    col2.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-")
+                                    col3.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-")
+                                    col4.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-")
+                                    
+                                    chart = plot_chart(food_data)
+                                    if chart:
+                                        st.pyplot(chart)
+                            
+                            # Tab 2: Comparison
+                            with portion_tab2:
+                                st.subheader("📊 Before vs After Comparison")
+                                
+                                # Get original values
+                                original_totals = st.session_state.last_results.get("totals", {})
+                                original_calories = original_totals.get("calories", 0)
+                                original_protein = original_totals.get("protein", 0)
+                                original_carbs = original_totals.get("carbs", 0)
+                                original_fats = original_totals.get("fats", 0)
+                                
+                                # Calculate differences
+                                calorie_diff = totals["calories"] - original_calories
+                                protein_diff = (totals["protein"] or 0) - original_protein
+                                carbs_diff = (totals["carbs"] or 0) - original_carbs
+                                fats_diff = (totals["fats"] or 0) - original_fats
+                                
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.write("**Original Values**")
+                                    st.metric("Calories", f"{original_calories} kcal")
+                                    st.metric("Protein", f"{original_protein:.1f} g")
+                                    st.metric("Carbs", f"{original_carbs:.1f} g")
+                                    st.metric("Fats", f"{original_fats:.1f} g")
+                                
+                                with col2:
+                                    st.write("**Updated Values**")
+                                    st.metric("Calories", f"{totals['calories']} kcal", delta=f"{calorie_diff:+} kcal")
+                                    st.metric("Protein", f"{totals['protein']:.1f} g" if totals['protein'] else "-", delta=f"{protein_diff:+.1f} g")
+                                    st.metric("Carbs", f"{totals['carbs']:.1f} g" if totals['carbs'] else "-", delta=f"{carbs_diff:+.1f} g")
+                                    st.metric("Fats", f"{totals['fats']:.1f} g" if totals['fats'] else "-", delta=f"{fats_diff:+.1f} g")
+                            
+                            # Tab 3: Insights
+                            with portion_tab3:
+                                st.subheader("💡 Portion Adjustment Insights")
+                                
+                                # Daily impact
+                                today = date.today().isoformat()
+                                daily_total = st.session_state.daily_calories.get(today, 0) + totals["calories"]
+                                calorie_balance = daily_total - st.session_state.calorie_target
+                                
+                                st.write("**Daily Impact:**")
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Today's Total", f"{daily_total} kcal")
+                                with col2:
+                                    st.metric("Daily Target", f"{st.session_state.calorie_target} kcal")
+                                with col3:
+                                    st.metric("Balance", f"{calorie_balance:+} kcal", delta=f"{calorie_balance} kcal")
+                                
+                                # Health insights
+                                with st.expander("🏃‍♂️ **Fitness Recommendations**", expanded=True):
+                                    if calorie_balance > 0:
+                                        st.warning("**Calorie Surplus**")
+                                        st.write("Consider adjusting portions or adding exercise.")
+                                    elif calorie_balance < 0:
+                                        st.info("**Calorie Deficit**")
+                                        st.write("Portion adjustment helps meet your daily target.")
+                                    else:
+                                        st.success("**Perfect Balance**")
+                                        st.write("Great portion control!")
+                                
+                                # Portion tips
+                                with st.expander("💡 **Portion Control Tips**", expanded=False):
+                                    st.write("• Use smaller plates to control portions")
+                                    st.write("• Measure ingredients when cooking")
+                                    st.write("• Pay attention to serving sizes")
+                                    st.write("• Listen to your body's hunger cues")
                             
                             st.session_state.last_results = {
                                 "type": st.session_state.last_results.get("type", "image"),
