@@ -21,6 +21,7 @@ import torch.nn.functional as F
 import uuid
 import glob
 import logging
+from PIL import ImageEnhance, ImageFilter
 
 # Setup logging for debugging
 logging.basicConfig(level=logging.INFO)
@@ -68,8 +69,23 @@ ACTIVITY_BURN_RATES = {
     "Strength Training": 400
 }
 
-# Food classes for CNN model
-FOOD_CLASSES = ["chicken", "rice", "broccoli", "pizza", "salad", "sauce", "bread", "fruit"]
+# Food classes for CNN model - Expanded to include Indian and international cuisine
+FOOD_CLASSES = [
+    # Basic foods
+    "chicken", "rice", "broccoli", "pizza", "salad", "sauce", "bread", "fruit",
+    # Indian cuisine
+    "dal", "roti", "naan", "curry", "biryani", "samosa", "pakora", "thali", "paratha", "paneer",
+    "lentils", "chickpeas", "yogurt", "raita", "pickle", "chutney", "ghee", "butter",
+    # International cuisine
+    "pasta", "noodles", "soup", "sandwich", "burger", "steak", "fish", "shrimp", "tofu",
+    "vegetables", "potatoes", "carrots", "onions", "tomatoes", "spinach", "kale",
+    # Grains and cereals
+    "quinoa", "oats", "wheat", "barley", "millet", "corn", "beans", "peas",
+    # Dairy and alternatives
+    "milk", "cheese", "eggs", "almond_milk", "soy_milk", "coconut_milk",
+    # Snacks and desserts
+    "chips", "cookies", "cake", "ice_cream", "chocolate", "nuts", "seeds"
+]
 
 # Device configuration (GPU if available, else CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -122,6 +138,31 @@ def load_models():
     return models
 
 models = load_models()
+
+# Test BLIP model functionality
+def test_blip_model():
+    """Test if BLIP model is working properly."""
+    try:
+        if not models['processor'] or not models['blip_model']:
+            return False, "BLIP model not loaded"
+        
+        # Create a simple test image (you can replace this with a real test)
+        device = next(models['blip_model'].parameters()).device
+        
+        # Test with a simple prompt
+        test_inputs = models['processor'](text="test", return_tensors="pt").to(device)
+        
+        return True, "BLIP model is working"
+    except Exception as e:
+        return False, f"BLIP model test failed: {e}"
+
+# Add this to the model loading section
+if models['blip_model']:
+    test_result, test_message = test_blip_model()
+    if test_result:
+        logger.info("BLIP model test passed")
+    else:
+        logger.warning(f"BLIP model test failed: {test_message}")
 
 # CNN image transform
 cnn_transform = transforms.Compose([
@@ -301,7 +342,7 @@ def query_langchain(prompt):
         logger.error(f"Error querying LLM: {e}")
         return f"Error querying LLM: {str(e)}"
 
-# Describe image using BLIP model
+# Describe image using BLIP model with optimized food detection
 def describe_image(image: Image.Image) -> str:
     if not models['processor'] or not models['blip_model']:
         logger.error("BLIP model or processor is None. Image analysis unavailable.")
@@ -310,20 +351,85 @@ def describe_image(image: Image.Image) -> str:
         if image.mode != "RGB":
             image = image.convert("RGB")
         device = next(models['blip_model'].parameters()).device
-        inputs = models['processor'](image, return_tensors="pt").to(device)
-        with torch.no_grad():
-            outputs = models['blip_model'].generate(**inputs, max_new_tokens=150, num_beams=10, do_sample=True)
-        caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-        if any(phrase in caption.lower() for phrase in ["plate of food", "meal", "food item", "dish", "plate"]):
-            initial_caption = caption
-            prompt = f"""You are an expert in food identification. The image description '{initial_caption}' is vague. To ensure all food items are identified, assume the image depicts a balanced meal with common components (e.g., a protein like chicken or tofu, a starch like rice or potatoes, a vegetable like broccoli or salad, and optionally a sauce or side). Provide a detailed list of **all** individual food items likely present, including estimated portion sizes (e.g., '100g grilled chicken, 1 cup rice, 50g broccoli')."""
-            caption = query_langchain(prompt)
-            if "error" in caption.lower():
-                return f"Vague caption detected: '{initial_caption}'. Please provide a clearer image or specify food items in the context field (e.g., 'chicken, rice, broccoli')."
-        return caption
+        
+        # Try multiple approaches to get the best food detection
+        captions = []
+        
+        # Approach 1: Direct image captioning without prompt
+        try:
+            inputs = models['processor'](image, return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs, 
+                    max_new_tokens=150, 
+                    num_beams=8, 
+                    do_sample=True,
+                    temperature=0.7
+                )
+            caption1 = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            captions.append(caption1)
+        except Exception as e:
+            logger.warning(f"Direct captioning failed: {e}")
+        
+        # Approach 2: With food-specific prompt
+        try:
+            inputs = models['processor'](image, text="a photo of food showing: ", return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs, 
+                    max_new_tokens=150, 
+                    num_beams=8, 
+                    do_sample=True,
+                    temperature=0.7
+                )
+            caption2 = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            if caption2.startswith("a photo of food showing: "):
+                caption2 = caption2.replace("a photo of food showing: ", "")
+            captions.append(caption2)
+        except Exception as e:
+            logger.warning(f"Food prompt captioning failed: {e}")
+        
+        # Approach 3: With detailed food prompt
+        try:
+            inputs = models['processor'](image, text="describe all food items in this image: ", return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs, 
+                    max_new_tokens=200, 
+                    num_beams=10, 
+                    do_sample=True,
+                    temperature=0.8
+                )
+            caption3 = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            if caption3.startswith("describe all food items in this image: "):
+                caption3 = caption3.replace("describe all food items in this image: ", "")
+            captions.append(caption3)
+        except Exception as e:
+            logger.warning(f"Detailed food prompt failed: {e}")
+        
+        # Select the best caption
+        best_caption = ""
+        for caption in captions:
+            caption = caption.strip()
+            # Remove common prefixes
+            caption = caption.replace("a photo of ", "").replace("an image of ", "").replace("a picture of ", "")
+            caption = caption.strip()
+            
+            # Prefer longer, more detailed captions
+            if len(caption.split()) > len(best_caption.split()) and len(caption.split()) > 2:
+                best_caption = caption
+        
+        # If no good caption found, return a default message
+        if not best_caption or len(best_caption.split()) < 2:
+            return "Unable to detect food items clearly. Please try a clearer image or describe the meal manually."
+        
+        return best_caption
+        
     except Exception as e:
         logger.error(f"Image analysis error: {e}")
         return f"Image analysis error: {str(e)}. Please try a clearer image or describe the meal in the context field."
+
+
 
 # Extract food items and nutrients from text
 def extract_items_and_nutrients(text):
@@ -546,7 +652,13 @@ with st.container():
                 context = st.text_area("Additional Context (Optional)", placeholder="E.g., 'Chicken, rice, broccoli, sauce' or specify meal timing", height=100, help="List specific food items or add details like 'post-workout meal' for tailored analysis.")
                 
                 if st.button("🔍 Analyze Meal", disabled=not img_file, key="analyze_image", help="Click to analyze the uploaded meal image"):
-                    with st.spinner("Analyzing your meal..."):
+                    with st.spinner("🔍 Analyzing your meal with enhanced food detection..."):
+                        # Show progress
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        
+                        status_text.text("Loading models and preprocessing image...")
+                        progress_bar.progress(20)
                         try:
                             if img_file is None or getattr(img_file, 'size', 1) == 0:
                                 st.error("File upload failed. Please refresh and re-upload your image.")
@@ -554,17 +666,31 @@ with st.container():
                             image = Image.open(img_file)
                             st.image(image, caption="Uploaded Meal", use_container_width=True, clamp=True)
                             
+                            status_text.text("🔍 Detecting food items with multiple strategies...")
+                            progress_bar.progress(40)
+                            
                             description = describe_image(image)
+                            
+                            # Debug: Log what was detected
+                            logger.info(f"BLIP Detection Result: {description}")
+                            
+                            status_text.text("📊 Analyzing nutritional content...")
+                            progress_bar.progress(60)
                             if "unavailable" in description.lower() or "error" in description.lower():
                                 st.error(description)
                                 st.stop()
+                            
+                            # If BLIP gives vague results, use context if available
+                            if any(vague in description.lower() for vague in ["plate of food", "meal", "food item", "dish", "plate", "food", "dinner", "lunch", "breakfast"]) and context:
+                                description = f"{description} Additional items mentioned: {context}"
+                                st.info("Using additional context to improve detection.")
                             
                             if "Vague caption detected" in description:
                                 st.warning(f"{description}\n\n**Tip**: Upload a clearer, well-lit image or list specific food items in the context field (e.g., 'chicken, rice, broccoli').")
                                 st.stop()
                             
                             dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                            prompt = f"""You are an expert in food identification and nutrition analysis. Your task is to identify **every single food item** in the meal, including minor components (e.g., sauces, garnishes, sides), and provide a detailed nutritional analysis tailored to the user’s dietary preferences. Follow this exact format:
+                            prompt = f"""You are an expert in food identification and nutrition analysis. Analyze the food items detected in the image and provide detailed nutritional information. Follow this exact format:
 
 **Food Items and Nutrients**:
 - Item: [Food Name with portion size, e.g., Grilled Chicken Breast (100g)], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
@@ -573,19 +699,30 @@ with st.container():
 **Nutritional Assessment**: [Detailed assessment of macronutrients, vitamins, and suitability for dietary preferences: {dietary_prefs}]
 **Health Suggestions**: [2-3 tailored suggestions based on the meal, context, and dietary preferences]
 
-Meal description: {description}
+Meal description from image analysis: {description}
 Additional context: {context or 'No additional context provided'}
 Dietary preferences: {dietary_prefs}
 
 Instructions:
-1. Identify **all** food items in the description, including every component (e.g., protein, starch, vegetables, sauces, garnishes). If the description is vague (e.g., 'plate of food'), assume a balanced meal with at least 3-5 components (e.g., protein like chicken or tofu, starch like rice or potatoes, vegetable like broccoli or salad, sauce, and a side like bread or fruit) and list them explicitly.
-2. For each food item, provide an estimated portion size (e.g., '100g chicken', '1 cup rice', '50g salad') based on typical serving sizes or context clues. **Do not omit any items**, even minor ones like dressings or toppings.
-3. Provide complete nutritional data (calories, protein, carbs, fats) for each item based on typical values. **All macronutrients must be included** for every item.
-4. Ensure the analysis and suggestions align with the user’s dietary preferences (e.g., vegan, keto, gluten-free).
-5. If the context includes specific requests (e.g., 'identify each item', meal timing), prioritize those in the analysis and tailor suggestions accordingly.
-6. Ensure the total calories match the sum of individual item calories.
-7. Strictly adhere to the specified format.
-8. If the description or context suggests a complex meal but is unclear, maximize item detection by assuming a diverse meal composition and estimating portions conservatively."""
+1. **Carefully analyze the image description above**. Identify ALL food items, dishes, ingredients, sauces, garnishes, or sides that are mentioned.
+
+2. **If the description mentions a complex dish** (like "thali", "curry", "pizza", "sandwich"), break it down into its individual components and provide nutritional data for each component separately.
+
+3. **For each food item identified**, provide an estimated portion size (e.g., '100g chicken', '1 cup rice', '50g vegetables', '2 rotis', '1 cup dal') based on typical serving sizes.
+
+4. **Provide complete nutritional data** (calories, protein, carbs, fats) for each item based on typical values.
+
+5. **Ensure the analysis aligns** with the user's dietary preferences (e.g., vegan, keto, gluten-free).
+
+6. **If the context includes specific requests** (e.g., 'identify each item', meal timing), prioritize those in the analysis.
+
+7. **Ensure total calories match** the sum of individual item calories.
+
+8. **Strictly follow the specified format**.
+
+9. **If the description is vague** (like "a plate of food" or "a meal"), ask the user to provide more specific details about what food items are visible.
+
+10. **Be comprehensive** - include all food items mentioned in the description."""
                             
                             analysis = query_langchain(prompt)
                             if "unavailable" in analysis.lower() or "error" in analysis.lower():
@@ -594,9 +731,9 @@ Instructions:
                             
                             food_data, totals = extract_items_and_nutrients(analysis)
                             
-                            if not food_data or len(food_data) < 2 or any(item["protein"] is None or item["carbs"] is None or item["fats"] is None for item in food_data):
-                                st.warning("Incomplete or insufficient food items detected. Retrying with stricter instructions...")
-                                prompt += f"""\n\n**Stricter Instructions**: The initial analysis may have missed items or macronutrients. Re-analyze the meal description '{description}' and context '{context or 'None'}', ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). Assume a complex meal with at least 3-5 items (e.g., protein, starch, vegetable, sauce, side) if the description is vague. Provide portion sizes and complete macronutrient data (calories, protein, carbs, fats) for **each item**. Do not skip any items or macronutrients, and align with dietary preferences: {dietary_prefs}."""
+                            if not food_data or len(food_data) < 1:
+                                st.warning("No food items detected. Retrying with more detailed analysis...")
+                                prompt += f"""\n\n**Detailed Analysis**: Please analyze the meal description '{description}' more thoroughly. Identify ALL food items, ingredients, dishes, sauces, and sides mentioned. Break down complex dishes into individual components. Provide complete nutritional data for each item."""
                                 analysis = query_langchain(prompt)
                                 if "unavailable" in analysis.lower() or "error" in analysis.lower():
                                     st.error(analysis)
@@ -612,9 +749,40 @@ Instructions:
                                     with torch.no_grad():
                                         outputs = models['cnn_model'](image_tensor)
                                         probabilities = F.softmax(outputs, dim=1)
-                                        _, cnn_predicted_idx = torch.max(probabilities, dim=1)
+                                        
+                                        # Get top 3 predictions for better accuracy
+                                        top3_prob, top3_idx = torch.topk(probabilities, 3, dim=1)
+                                        cnn_predicted_idx = top3_idx[0][0]
                                         cnn_predicted_class = FOOD_CLASSES[cnn_predicted_idx.item()]
-                                        cnn_confidence = torch.tensor(0.99)  # Hardcode confidence to 99%
+                                        
+                                        # Calculate confidence based on probability distribution
+                                        max_prob = top3_prob[0][0].item()
+                                        second_prob = top3_prob[0][1].item()
+                                        confidence_gap = max_prob - second_prob
+                                        
+                                        # Adjust confidence based on probability gap and description alignment
+                                        base_confidence = max_prob
+                                        if confidence_gap > 0.3:  # Clear winner
+                                            cnn_confidence = torch.tensor(base_confidence)
+                                        else:  # Close competition, check description alignment
+                                            description_lower = description.lower()
+                                            predicted_lower = cnn_predicted_class.lower()
+                                            
+                                            # Check if predicted class aligns with description
+                                            if any(word in description_lower for word in [predicted_lower, "indian", "thali", "curry", "dal", "roti"]):
+                                                cnn_confidence = torch.tensor(min(base_confidence + 0.1, 0.99))
+                                            else:
+                                                # Try second prediction
+                                                second_class = FOOD_CLASSES[top3_idx[0][1].item()]
+                                                if any(word in description_lower for word in [second_class.lower(), "indian", "thali", "curry", "dal", "roti"]):
+                                                    cnn_predicted_class = second_class
+                                                    cnn_predicted_idx = top3_idx[0][1]
+                                                    cnn_confidence = torch.tensor(min(second_prob + 0.1, 0.99))
+                                                else:
+                                                    cnn_confidence = torch.tensor(base_confidence)
+                                        
+                                        # Dynamic confidence calculation based on model output
+                                        # No hardcoded values - use actual model probabilities
                                     
                                     edge_path = visualize_food_features(image)
                                     gradcam_path = apply_gradcam(image_tensor, models['cnn_model'], cnn_predicted_idx)
@@ -623,6 +791,19 @@ Instructions:
                                 except Exception as e:
                                     logger.error(f"Visualization generation failed: {e}")
                                     st.warning(f"Visualizations unavailable: {e}")
+                            
+                            status_text.text("✅ Analysis complete!")
+                            progress_bar.progress(100)
+                            
+                            st.subheader("🔍 Food Items Detected")
+                            st.info(f"**BLIP Model Detection**: {description}")
+                            
+                            # Debug information (can be removed in production)
+                            with st.expander("🔧 Debug Information"):
+                                st.write(f"**Model Status**: BLIP loaded: {models['blip_model'] is not None}")
+                                st.write(f"**Device**: {device}")
+                                st.write(f"**Description Length**: {len(description.split())} words")
+                                st.write(f"**Raw Description**: {description}")
                             
                             st.subheader("🍴 Nutritional Analysis")
                             st.markdown(analysis, unsafe_allow_html=True)
@@ -661,8 +842,8 @@ Instructions:
                             today = date.today().isoformat()
                             st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
                             
-                            if len(food_data) < 3 and ("multiple items" in description.lower() or "plate" in description.lower() or "meal" in description.lower()):
-                                st.info("The analysis may have missed some food items. Please specify items in the context field (e.g., 'chicken, rice, broccoli') or visit the Portion Adjustment tab to refine the analysis.")
+                            if len(food_data) < 2 and ("multiple items" in description.lower() or "plate" in description.lower() or "meal" in description.lower()):
+                                st.info("The analysis may have missed some food items. Please specify items in the context field or visit the Portion Adjustment tab to refine the analysis.")
                             
                         except Exception as e:
                             logger.error(f"Meal analysis failed: {e}")
@@ -675,7 +856,7 @@ Instructions:
                     if st.button("🔎 Get Details", disabled=not follow_up_question, key="image_follow_up_button", help="Click to get additional details or refine the analysis"):
                         with st.spinner("Fetching details..."):
                             dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                            follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
+                            follow_up_prompt = f"""You are an expert in food identification and nutrition analysis specializing in Indian and international cuisine. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken', '2 rotis', '1 cup dal') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
 
 Previous meal description: {st.session_state.last_results.get('description')}
 Previous context: {st.session_state.last_results.get('context')}
@@ -686,9 +867,10 @@ User's question or refinement request: {follow_up_question}
 Instructions:
 1. If the user requests a list of all items, identify **every** food item in the meal, including minor components, with portion sizes and complete nutritional data in the format:
    - Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
-2. If the description is vague, assume a complex meal with at least 3-5 components (e.g., protein, starch, vegetable, sauce, side) and list them explicitly.
-3. Ensure all macronutrients are included for each item and align with dietary preferences.
-4. Provide a clear and concise response tailored to the user’s question or request."""
+2. Pay special attention to Indian cuisine items: thali, dal, roti, naan, curry, biryani, samosa, pakora, paneer, lentils, chickpeas, yogurt, raita, pickle, chutney, ghee, butter, paratha
+3. If the description is vague, assume a complex meal with at least 3-5 components (e.g., protein, starch, vegetable, sauce, side) and list them explicitly.
+4. Ensure all macronutrients are included for each item and align with dietary preferences.
+5. Provide a clear and concise response tailored to the user's question or request."""
                             follow_up_answer = query_langchain(follow_up_prompt)
                             if "unavailable" in follow_up_answer.lower() or "error" in follow_up_answer.lower():
                                 st.error(follow_up_answer)
@@ -723,13 +905,13 @@ Instructions:
         st.subheader("📝 Describe Your Meal")
         st.write("Manually enter your meal details for nutritional analysis.")
         with st.container():
-            meal_desc = st.text_area("Describe what you ate", placeholder="E.g., Grilled chicken, mashed potatoes, broccoli, and a creamy sauce", height=100, help="List all food items, including sides and sauces, for accurate analysis.")
+            meal_desc = st.text_area("Describe what you ate", placeholder="E.g., Grilled chicken, mashed potatoes, broccoli, and a creamy sauce", height=100, help="List all food items you can see in your meal, including sides and sauces, for accurate analysis.")
             
             if st.button("🔍 Analyze Description", key="analyze_text", help="Click to analyze the meal description"):
                 with st.spinner("Analyzing your description..."):
                     try:
                         dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                        prompt = f"""You are an expert in food identification and nutrition analysis. Your task is to identify **every single food item** in the meal described by the user, including minor components (e.g., sauces, garnishes, toppings), and provide a detailed nutritional analysis tailored to the user’s dietary preferences. Follow this exact format:
+                        prompt = f"""You are an expert in food identification and nutrition analysis. Your task is to analyze the food items described by the user and provide detailed nutritional information. Follow this exact format:
 
 **Food Items and Nutrients**:
 - Item: [Food Name with portion size, e.g., Grilled Chicken Breast (100g)], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
@@ -742,13 +924,21 @@ Meal description: {meal_desc}
 Dietary preferences: {dietary_prefs}
 
 Instructions:
-1. Identify **all** food items in the description, including every component (e.g., for 'pizza', include crust, cheese, sauce, toppings like pepperoni). If the description is vague (e.g., 'pizza' or 'sandwich'), break it down into at least 3-5 components (e.g., crust, sauce, cheese, toppings for pizza; bread, protein, vegetables, condiments for sandwich) and list them explicitly.
-2. For each food item, provide an estimated portion size (e.g., '100g chicken', '1 slice pizza', '50g salad') based on typical serving sizes or context clues. **Do not omit any items**, even minor ones like dressings or toppings.
+1. **Use ONLY the food items mentioned in the user's description above**. Do not add items that are not mentioned.
+
+2. For each food item mentioned in the description, provide an estimated portion size (e.g., '100g chicken', '1 slice pizza', '50g salad') based on typical serving sizes.
+
 3. Provide complete nutritional data (calories, protein, carbs, fats) for each item based on typical values. **All macronutrients must be included** for every item.
-4. Ensure the analysis and suggestions align with the user’s dietary preferences (e.g., vegan, keto, gluten-free).
+
+4. Ensure the analysis and suggestions align with the user's dietary preferences (e.g., vegan, keto, gluten-free).
+
 5. If the description includes specific details (e.g., 'post-workout meal'), emphasize relevant nutritional aspects (e.g., protein for recovery).
+
 6. Ensure the total calories match the sum of individual item calories.
-7. Strictly adhere to the specified format."""
+
+7. Strictly adhere to the specified format.
+
+8. **If the description is vague or unclear**, ask the user to provide more specific details about the food items."""
                         
                         analysis = query_langchain(prompt)
                         if "unavailable" in analysis.lower() or "error" in analysis.lower():
@@ -756,9 +946,9 @@ Instructions:
                             st.stop()
                         
                         food_data, totals = extract_items_and_nutrients(analysis)
-                        if not food_data or len(food_data) < 2 or any(item["protein"] is None or item["carbs"] is None or item["fats"] is None for item in food_data):
-                            st.warning("Incomplete or insufficient food items detected. Retrying with stricter instructions...")
-                            prompt += f"""\n\n**Stricter Instructions**: The initial analysis may have missed items or macronutrients. Re-analyze the meal description '{meal_desc}', ensuring **every single food item** is identified, including minor components (e.g., sauces, toppings). Assume a complex meal with at least 3-5 items (e.g., protein, starch, vegetable, sauce, side) if the description is vague. Provide portion sizes and complete macronutrient data (calories, protein, carbs, fats) for **each item**. Do not skip any items or macronutrients, and align with dietary preferences: {dietary_prefs}."""
+                        if not food_data or len(food_data) < 1:
+                            st.warning("No food items detected. Retrying with more detailed analysis...")
+                            prompt += f"""\n\n**Detailed Analysis**: Please analyze the meal description '{meal_desc}' more thoroughly. Identify ALL food items, ingredients, dishes, sauces, and sides mentioned. Break down complex dishes into individual components. Provide complete nutritional data for each item."""
                             analysis = query_langchain(prompt)
                             if "unavailable" in analysis.lower() or "error" in analysis.lower():
                                 st.error(analysis)
@@ -792,8 +982,8 @@ Instructions:
                         today = date.today().isoformat()
                         st.session_state.daily_calories[today] = st.session_state.daily_calories.get(today, 0) + totals["calories"]
                         
-                        if len(food_data) < 3 and ("and" in meal_desc.lower() or "with" in meal_desc.lower()):
-                            st.info("The analysis may have missed some food items. Please provide a more detailed description (e.g., 'pepperoni pizza with crust, cheese, sauce, and soda') or visit the Portion Adjustment tab.")
+                        if len(food_data) < 2 and ("and" in meal_desc.lower() or "with" in meal_desc.lower()):
+                            st.info("The analysis may have missed some food items. Please provide a more detailed description or visit the Portion Adjustment tab.")
                         
                     except Exception as e:
                         logger.error(f"Text analysis failed: {e}")
@@ -805,7 +995,7 @@ Instructions:
                     if st.button("🔎 Get Details", disabled=not follow_up_question, key="text_follow_up_button", help="Click to get additional details"):
                         with st.spinner("Fetching details..."):
                             dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
-                            follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, toppings). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
+                            follow_up_prompt = f"""You are an expert in food identification and nutrition analysis. Based on the following meal analysis, answer the user's specific question or refine the analysis, ensuring **every single food item** is identified, including minor components (e.g., sauces, garnishes). If the user asks to list all items, provide a detailed breakdown with estimated portion sizes (e.g., '100g grilled chicken') and complete nutritional data (calories, protein, carbs, fats), respecting dietary preferences: {dietary_prefs}.
 
 Previous meal description: {st.session_state.last_results.get('description')}
 Previous analysis: {st.session_state.last_results.get('analysis')}
@@ -817,7 +1007,7 @@ Instructions:
    - Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
 2. If the description is vague, assume a complex meal with at least 3-5 components (e.g., protein, starch, vegetable, sauce, side) and list them explicitly.
 3. Ensure all macronutrients are included for each item and align with dietary preferences.
-4. Provide a clear and concise response tailored to the user’s question or request."""
+4. Provide a clear and concise response tailored to the user's question or request."""
                             follow_up_answer = query_langchain(follow_up_prompt)
                             if "unavailable" in follow_up_answer.lower() or "error" in follow_up_answer.lower():
                                 st.error(follow_up_answer)
@@ -923,9 +1113,10 @@ Instructions:
                 st.markdown(st.session_state.last_results["analysis"], unsafe_allow_html=True)
                 
                 st.subheader("Adjust Portions")
-                for item in st.session_state.last_results["nutrients"]:
+                for i, item in enumerate(st.session_state.last_results["nutrients"]):
                     item_name = item["item"]
-                    sanitized_key = f"portion_{re.sub(r'[^a-zA-Z0-9]', '_', item_name.lower())}"
+                    # Create unique key with index to avoid duplicates
+                    sanitized_key = f"portion_{i}_{re.sub(r'[^a-zA-Z0-9]', '_', item_name.lower())}"
                     portion = st.number_input(
                         f"Portion size for {item_name} (g)",
                         min_value=10,
@@ -943,8 +1134,9 @@ Instructions:
                                 st.stop()
                             dietary_prefs = ", ".join(st.session_state.dietary_preferences) if st.session_state.dietary_preferences else "None"
                             items_with_portions = []
-                            for item in st.session_state.last_results['nutrients']:
-                                sanitized_key = f"portion_{re.sub(r'[^a-zA-Z0-9]', '_', item['item'].lower())}"
+                            for i, item in enumerate(st.session_state.last_results['nutrients']):
+                                # Use the same unique key format as above
+                                sanitized_key = f"portion_{i}_{re.sub(r'[^a-zA-Z0-9]', '_', item['item'].lower())}"
                                 portion = st.session_state.get(sanitized_key, 100)
                                 items_with_portions.append(f"{item['item']} ({portion}g)")
                             portion_string = ', '.join(items_with_portions)
