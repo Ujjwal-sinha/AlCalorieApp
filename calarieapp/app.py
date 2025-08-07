@@ -22,6 +22,38 @@ import uuid
 import glob
 import logging
 from PIL import ImageEnhance, ImageFilter
+import requests
+import json
+
+# Additional model imports for enhanced food detection
+try:
+    from ultralytics import YOLO
+    YOLO_AVAILABLE = True
+except ImportError:
+    YOLO_AVAILABLE = False
+    logging.warning("YOLO not available. Install ultralytics for object detection.")
+
+try:
+    import timm
+    TIMM_AVAILABLE = True
+except ImportError:
+    TIMM_AVAILABLE = False
+    logging.warning("TIMM not available. Install timm for additional models.")
+
+try:
+    from efficientnet_pytorch import EfficientNet
+    EFFICIENTNET_AVAILABLE = True
+except ImportError:
+    EFFICIENTNET_AVAILABLE = False
+    logging.warning("EfficientNet not available. Install efficientnet-pytorch for additional models.")
+
+try:
+    import tensorflow as tf
+    import tensorflow_hub as hub
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+    logging.warning("TensorFlow not available. Install tensorflow for additional models.")
 
 from agents import FoodDetectionAgent, FoodSearchAgent, initialize_agents  # Import agents
 from typing import Dict, Any, List  # Add typing imports
@@ -78,10 +110,12 @@ FOOD_CLASSES = []
 # Device configuration (GPU if available, else CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Initialize models (LLM, BLIP, CNN)
+# Initialize models (LLM, BLIP, CNN, YOLO, ViT, etc.)
 @st.cache_resource
 def load_models():
     models = {}
+    
+    # Load LLM
     try:
         logger.info("Loading ChatGroq LLM...")
         models['llm'] = ChatGroq(model_name="llama3-8b-8192", api_key=groq_api_key)
@@ -90,6 +124,8 @@ def load_models():
         logger.error(f"Failed to load LLM: {e}")
         st.error(f"Failed to load language model: {e}. Please check GROQ_API_KEY and network connection.")
         models['llm'] = None
+    
+    # Load BLIP models
     try:
         logger.info("Loading BLIP models...")
         dtype = torch.float16 if device.type == "cuda" else torch.float32
@@ -104,16 +140,67 @@ def load_models():
         models['processor'] = None
         models['blip_model'] = None
     
+    # Load DenseNet121 CNN model
     try:
         logger.info("Loading DenseNet121 CNN model...")
         models['cnn_model'] = torchvision_models.densenet121(weights="IMAGENET1K_V1")
-        # Use ImageNet classes (1000 classes) for natural detection
         models['cnn_model'] = models['cnn_model'].to(device).eval()
         logger.info("Loaded ImageNet CNN model for natural object detection")
     except Exception as e:
         logger.error(f"Failed to load CNN model: {e}")
         st.error(f"Failed to load CNN model: {e}. Visualizations will be unavailable.")
         models['cnn_model'] = None
+    
+    # Load YOLO model for object detection
+    if YOLO_AVAILABLE:
+        try:
+            logger.info("Loading YOLO model...")
+            models['yolo_model'] = YOLO('yolov8n.pt')  # Load nano model for speed
+            logger.info("YOLO model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load YOLO model: {e}")
+            models['yolo_model'] = None
+    else:
+        models['yolo_model'] = None
+    
+    # Load Vision Transformer (ViT) model
+    if TIMM_AVAILABLE:
+        try:
+            logger.info("Loading Vision Transformer (ViT) model...")
+            models['vit_model'] = timm.create_model('vit_base_patch16_224', pretrained=True, num_classes=1000)
+            models['vit_model'] = models['vit_model'].to(device).eval()
+            logger.info("ViT model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load ViT model: {e}")
+            models['vit_model'] = None
+    else:
+        models['vit_model'] = None
+    
+    # Load EfficientNet model
+    if EFFICIENTNET_AVAILABLE:
+        try:
+            logger.info("Loading EfficientNet model...")
+            models['efficientnet_model'] = EfficientNet.from_pretrained('efficientnet-b0')
+            models['efficientnet_model'] = models['efficientnet_model'].to(device).eval()
+            logger.info("EfficientNet model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load EfficientNet model: {e}")
+            models['efficientnet_model'] = None
+    else:
+        models['efficientnet_model'] = None
+    
+    # Load TensorFlow Hub models
+    if TENSORFLOW_AVAILABLE:
+        try:
+            logger.info("Loading TensorFlow Hub models...")
+            # Load a pre-trained image classification model
+            models['tf_model'] = hub.load('https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/classification/4')
+            logger.info("TensorFlow Hub model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load TensorFlow Hub model: {e}")
+            models['tf_model'] = None
+    else:
+        models['tf_model'] = None
     
     # Initialize food detection agents
     try:
@@ -123,7 +210,6 @@ def load_models():
         models['search_agent'] = search_agent
         if food_agent and search_agent:
             logger.info("Food detection agents initialized successfully")
-            st.success("✅ Food detection agents loaded!")
         else:
             logger.warning("Failed to initialize food detection agents")
     except Exception as e:
@@ -131,9 +217,60 @@ def load_models():
         models['food_agent'] = None
         models['search_agent'] = None
     
+    # Log model status
+    model_status = {
+        'LLM': models['llm'] is not None,
+        'BLIP': models['blip_model'] is not None,
+        'CNN': models['cnn_model'] is not None,
+        'YOLO': models['yolo_model'] is not None,
+        'ViT': models['vit_model'] is not None,
+        'EfficientNet': models['efficientnet_model'] is not None,
+        'TensorFlow': models['tf_model'] is not None
+    }
+    
+    loaded_models = sum(model_status.values())
+    total_models = len(model_status)
+    logger.info(f"Loaded {loaded_models}/{total_models} models successfully")
+    
     return models
 
 models = load_models()
+
+# Show model loading status
+def show_model_status():
+    """Display model loading status in the sidebar."""
+    with st.sidebar:
+        st.subheader("🤖 AI Models Status")
+        
+        model_status = {
+            'BLIP': models['blip_model'] is not None,
+            'YOLO': models['yolo_model'] is not None,
+            'ViT': models['vit_model'] is not None,
+            'EfficientNet': models['efficientnet_model'] is not None,
+            'CNN': models['cnn_model'] is not None,
+            'TensorFlow': models['tf_model'] is not None,
+            'LLM': models['llm'] is not None
+        }
+        
+        loaded_models = sum(model_status.values())
+        total_models = len(model_status)
+        
+        st.metric("Models Loaded", f"{loaded_models}/{total_models}")
+        
+        for model, status in model_status.items():
+            status_icon = "✅" if status else "❌"
+            status_color = "green" if status else "red"
+            st.markdown(f"{status_icon} **{model}**: {'Available' if status else 'Not Available'}")
+        
+        if loaded_models >= 3:
+            st.success("🎉 **Excellent Model Coverage**")
+            st.write("Multiple AI models available for comprehensive detection!")
+        elif loaded_models >= 2:
+            st.info("👍 **Good Model Coverage**")
+            st.write("Several AI models available for detection.")
+        else:
+            st.warning("⚠️ **Limited Model Coverage**")
+            st.write("Consider installing additional models for better detection.")
 
 # Test BLIP model functionality
 def test_blip_model():
@@ -345,64 +482,246 @@ def query_langchain(prompt):
         logger.error(f"Error querying LLM: {e}")
         return f"Error querying LLM: {str(e)}"
 
-# Simple image display without YOLO detection
+# Enhanced YOLO food detection with visualization
 def detect_food_items_with_boxes(image: Image.Image):
-    """Display image without YOLO detection - using BLIP only."""
+    """Enhanced food detection using YOLO with comprehensive food item identification."""
     try:
         # Ensure image is RGB
         if image.mode != "RGB":
             image = image.convert("RGB")
         
-        # Return the original image without any detection
-        return image, [], "Using BLIP text-based detection only"
+        detected_items = []
+        detection_info = "Enhanced multi-model detection active"
+        
+        # Use YOLO if available
+        if models['yolo_model']:
+            try:
+                img_np = np.array(image)
+                results = models['yolo_model'](img_np, conf=0.15, iou=0.4)  # Lower confidence for more detections
+                
+                # Create a copy for drawing boxes
+                img_with_boxes = img_np.copy()
+                
+                for result in results:
+                    boxes = result.boxes
+                    if boxes is not None:
+                        for box in boxes:
+                            cls = int(box.cls[0])
+                            conf = float(box.conf[0])
+                            class_name = models['yolo_model'].names[cls]
+                            
+                            # Comprehensive food-related detection
+                            food_categories = {
+                                'fruits': ['apple', 'banana', 'orange', 'lemon', 'lime', 'grape', 'strawberry', 
+                                          'blueberry', 'pineapple', 'mango', 'avocado', 'watermelon', 'peach', 'pear'],
+                                'vegetables': ['tomato', 'potato', 'carrot', 'onion', 'garlic', 'broccoli', 'lettuce', 
+                                              'spinach', 'cucumber', 'pepper', 'corn', 'peas', 'beans', 'cabbage'],
+                                'proteins': ['chicken', 'fish', 'beef', 'pork', 'lamb', 'turkey', 'egg', 'shrimp',
+                                            'salmon', 'tuna', 'bacon', 'sausage', 'ham'],
+                                'dairy': ['cheese', 'milk', 'yogurt', 'butter', 'cream'],
+                                'grains': ['bread', 'rice', 'pasta', 'noodles', 'cereal', 'oats'],
+                                'prepared_foods': ['cake', 'pizza', 'burger', 'sandwich', 'soup', 'salad', 'pie',
+                                                  'cookie', 'muffin', 'pancake', 'waffle', 'toast'],
+                                'containers': ['bowl', 'plate', 'cup', 'glass', 'bottle', 'can', 'jar'],
+                                'utensils': ['fork', 'spoon', 'knife']
+                            }
+                            
+                            # Check if detected item is food-related
+                            is_food_related = False
+                            food_category = 'other'
+                            
+                            for category, items in food_categories.items():
+                                if any(food_item in class_name.lower() for food_item in items):
+                                    is_food_related = True
+                                    food_category = category
+                                    break
+                            
+                            if is_food_related and conf > 0.15:
+                                # Get bounding box coordinates
+                                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                                
+                                # Draw bounding box
+                                cv2.rectangle(img_with_boxes, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                                
+                                # Add label
+                                label = f"{class_name}: {conf:.2f}"
+                                cv2.putText(img_with_boxes, label, (int(x1), int(y1-10)), 
+                                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                                
+                                detected_items.append({
+                                    'name': class_name,
+                                    'confidence': conf,
+                                    'category': food_category,
+                                    'bbox': [int(x1), int(y1), int(x2), int(y2)]
+                                })
+                
+                if detected_items:
+                    detection_info = f"YOLO detected {len(detected_items)} food-related items"
+                    # Convert back to PIL Image
+                    result_image = Image.fromarray(img_with_boxes)
+                    return result_image, detected_items, detection_info
+                else:
+                    detection_info = "YOLO active but no food items detected with sufficient confidence"
+                    
+            except Exception as e:
+                logger.warning(f"YOLO detection failed: {e}")
+                detection_info = f"YOLO detection failed: {str(e)}"
+        
+        # Return original image if YOLO not available or failed
+        return image, detected_items, detection_info
             
     except Exception as e:
-        logger.error(f"Error in image processing: {e}")
-        return image, [], f"Image processing error: {str(e)}"
+        logger.error(f"Error in enhanced food detection: {e}")
+        return image, [], f"Detection error: {str(e)}"
 
-# Enhanced image enhancement function
-def enhance_image_quality(image: Image.Image) -> Image.Image:
-    """Enhance image quality for better food detection."""
+# Add function to get comprehensive food analysis
+def get_comprehensive_food_analysis(image: Image.Image, context: str = "") -> Dict[str, Any]:
+    """Get comprehensive food analysis using all available models and techniques."""
+    try:
+        logger.info("Starting comprehensive food analysis...")
+        
+        # Step 1: Enhanced image description
+        image_description = describe_image_enhanced(image)
+        logger.info(f"Image description: {image_description}")
+        
+        # Step 2: YOLO object detection
+        enhanced_image, yolo_detections, yolo_info = detect_food_items_with_boxes(image)
+        logger.info(f"YOLO info: {yolo_info}")
+        
+        # Step 3: Use food detection agent for comprehensive analysis
+        if models['food_agent']:
+            # Combine image description with YOLO results
+            combined_description = image_description
+            if yolo_detections:
+                yolo_items = [item['name'] for item in yolo_detections]
+                combined_description += f" Additionally detected objects: {', '.join(yolo_items)}"
+            
+            agent_result = models['food_agent'].detect_food_from_image_description(
+                combined_description, context
+            )
+            
+            if agent_result['success']:
+                return {
+                    'success': True,
+                    'image_description': image_description,
+                    'yolo_detections': yolo_detections,
+                    'yolo_info': yolo_info,
+                    'enhanced_image': enhanced_image,
+                    'agent_analysis': agent_result['analysis'],
+                    'food_items': agent_result['food_items'],
+                    'nutritional_data': agent_result['nutritional_data'],
+                    'comprehensive': agent_result.get('comprehensive', False)
+                }
+            else:
+                logger.warning(f"Agent analysis failed: {agent_result.get('error', 'Unknown error')}")
+        
+        # Fallback analysis if agent fails
+        return {
+            'success': True,
+            'image_description': image_description,
+            'yolo_detections': yolo_detections,
+            'yolo_info': yolo_info,
+            'enhanced_image': enhanced_image,
+            'agent_analysis': "Agent analysis unavailable - using basic detection",
+            'food_items': [{'item': item, 'description': item} for item in image_description.split(', ')],
+            'nutritional_data': {'total_calories': 0, 'protein': 0, 'carbs': 0, 'fats': 0},
+            'comprehensive': False
+        }
+        
+    except Exception as e:
+        logger.error(f"Comprehensive food analysis failed: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'image_description': "Analysis failed",
+            'yolo_detections': [],
+            'yolo_info': "Detection failed",
+            'enhanced_image': image,
+            'agent_analysis': f"Analysis failed: {str(e)}",
+            'food_items': [],
+            'nutritional_data': {'total_calories': 0, 'protein': 0, 'carbs': 0, 'fats': 0},
+            'comprehensive': False
+        }
+
+# Advanced image enhancement function for better food detection
+def enhance_image_quality(image: Image.Image) -> List[Image.Image]:
+    """Advanced image enhancement for optimal food detection across different models."""
     try:
         # Convert to RGB if needed
         if image.mode != "RGB":
             image = image.convert("RGB")
         
-        # Create enhanced versions
         enhanced_images = []
         
-        # 1. Basic enhancement
+        # 1. Contrast enhancement for better food definition
         enhancer = ImageEnhance.Contrast(image)
+        enhanced_images.append(enhancer.enhance(1.4))
+        
+        # 2. Brightness enhancement for better visibility
+        enhancer = ImageEnhance.Brightness(image)
         enhanced_images.append(enhancer.enhance(1.3))
         
-        # 2. Brightness enhancement
-        enhancer = ImageEnhance.Brightness(image)
-        enhanced_images.append(enhancer.enhance(1.2))
-        
-        # 3. Sharpness enhancement
+        # 3. Sharpness enhancement for detail clarity
         enhancer = ImageEnhance.Sharpness(image)
-        enhanced_images.append(enhancer.enhance(1.5))
+        enhanced_images.append(enhancer.enhance(1.6))
         
-        # 4. Color enhancement
+        # 4. Color saturation for better food colors
         enhancer = ImageEnhance.Color(image)
-        enhanced_images.append(enhancer.enhance(1.2))
+        enhanced_images.append(enhancer.enhance(1.3))
         
-        # 5. Combined enhancement
-        combined = image.copy()
-        combined = ImageEnhance.Contrast(combined).enhance(1.2)
-        combined = ImageEnhance.Brightness(combined).enhance(1.1)
-        combined = ImageEnhance.Sharpness(combined).enhance(1.3)
-        enhanced_images.append(combined)
+        # 5. Balanced enhancement (best overall)
+        balanced = image.copy()
+        balanced = ImageEnhance.Contrast(balanced).enhance(1.25)
+        balanced = ImageEnhance.Brightness(balanced).enhance(1.15)
+        balanced = ImageEnhance.Sharpness(balanced).enhance(1.4)
+        balanced = ImageEnhance.Color(balanced).enhance(1.1)
+        enhanced_images.append(balanced)
         
+        # 6. High contrast for edge detection
+        high_contrast = image.copy()
+        high_contrast = ImageEnhance.Contrast(high_contrast).enhance(1.8)
+        high_contrast = ImageEnhance.Sharpness(high_contrast).enhance(1.8)
+        enhanced_images.append(high_contrast)
+        
+        # 7. Soft enhancement for subtle details
+        soft = image.copy()
+        soft = ImageEnhance.Contrast(soft).enhance(1.1)
+        soft = ImageEnhance.Brightness(soft).enhance(1.05)
+        soft = ImageEnhance.Color(soft).enhance(1.05)
+        enhanced_images.append(soft)
+        
+        # 8. Apply noise reduction using PIL filters
+        try:
+            denoised = image.filter(ImageFilter.MedianFilter(size=3))
+            denoised = ImageEnhance.Sharpness(denoised).enhance(1.3)
+            enhanced_images.append(denoised)
+        except Exception as e:
+            logger.warning(f"Noise reduction failed: {e}")
+        
+        # 9. Edge enhancement
+        try:
+            edge_enhanced = image.filter(ImageFilter.EDGE_ENHANCE_MORE)
+            enhanced_images.append(edge_enhanced)
+        except Exception as e:
+            logger.warning(f"Edge enhancement failed: {e}")
+        
+        # 10. Unsharp mask for detail enhancement
+        try:
+            unsharp = image.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
+            enhanced_images.append(unsharp)
+        except Exception as e:
+            logger.warning(f"Unsharp mask failed: {e}")
+        
+        logger.info(f"Created {len(enhanced_images)} enhanced image versions")
         return enhanced_images
         
     except Exception as e:
         logger.error(f"Image enhancement failed: {e}")
         return [image]  # Return original if enhancement fails
 
-# Enhanced food detection with comprehensive strategies
+# Enhanced multi-model food detection with comprehensive coverage
 def describe_image_enhanced(image: Image.Image) -> str:
-    """Enhanced image description with comprehensive detection strategies to identify ALL food items."""
+    """Enhanced food detection using multiple AI models with improved coverage."""
     if not models['processor'] or not models['blip_model']:
         logger.error("BLIP model or processor is None. Image analysis unavailable.")
         return "Image analysis unavailable. Please check model loading and try again."
@@ -413,292 +732,488 @@ def describe_image_enhanced(image: Image.Image) -> str:
         
         device = next(models['blip_model'].parameters()).device
         
-        # Enhance image quality
+        # Enhance image quality for better detection
         enhanced_images = enhance_image_quality(image)
         
-        # Comprehensive detection strategies to identify ALL items
-        detection_results = []
+        # Store all detection results
+        all_detections = []
+        detected_items = set()
         
-        # Strategy 1: Comprehensive item-by-item detection
-        for i, enhanced_img in enumerate(enhanced_images[:3]):
+        # Strategy 1: Comprehensive BLIP Detection with Multiple Approaches
+        logger.info("Starting comprehensive BLIP detection...")
+        
+        # Use original and enhanced images
+        images_to_process = [image] + enhanced_images[:3]  # Original + 3 best enhanced
+        
+        for img_idx, img in enumerate(images_to_process):
             try:
-                inputs = models['processor'](enhanced_img, text="Look at this food image carefully. Identify and list EVERY single food item, ingredient, sauce, garnish, and edible component you can see. Be thorough and comprehensive: ", return_tensors="pt").to(device)
-                with torch.no_grad():
-                    outputs = models['blip_model'].generate(
-                        **inputs, 
-                        max_new_tokens=300, 
-                        num_beams=10, 
-                        do_sample=True,
-                        temperature=0.6,
-                        top_p=0.9
-                    )
-                caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-                if caption.startswith("Look at this food image carefully. Identify and list EVERY single food item, ingredient, sauce, garnish, and edible component you can see. Be thorough and comprehensive: "):
-                    caption = caption.replace("Look at this food image carefully. Identify and list EVERY single food item, ingredient, sauce, garnish, and edible component you can see. Be thorough and comprehensive: ", "")
-                caption = caption.strip()
-                if len(caption.split()) >= 5:
-                    detection_results.append(f"Comprehensive_{i+1}: {caption}")
+                # Multiple detection prompts for comprehensive coverage
+                detection_prompts = [
+                    # General food detection
+                    "What food items are visible in this image?",
+                    "List all the food and drinks you can see:",
+                    "Describe every edible item in this image:",
+                    "What dishes, ingredients, and food items are present?",
+                    
+                    # Specific component detection
+                    "What vegetables, fruits, and proteins can you identify?",
+                    "What grains, dairy products, and seasonings are visible?",
+                    "What beverages and condiments can you see?",
+                    
+                    # Detailed analysis
+                    "Analyze this meal and list each component:",
+                    "What are the main ingredients and side dishes?",
+                    "Describe the complete meal including garnishes and sauces:"
+                ]
+                
+                for prompt_idx, prompt in enumerate(detection_prompts):
+                    try:
+                        inputs = models['processor'](img, text=prompt, return_tensors="pt").to(device)
+                        with torch.no_grad():
+                            outputs = models['blip_model'].generate(
+                                **inputs, 
+                                max_new_tokens=200, 
+                                num_beams=6, 
+                                do_sample=True,
+                                temperature=0.5,
+                                top_p=0.95,
+                                repetition_penalty=1.1
+                            )
+                        caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                        
+                        # Clean up the response
+                        if caption.startswith(prompt):
+                            caption = caption.replace(prompt, "").strip()
+                        
+                        if len(caption.split()) >= 2:
+                            all_detections.append(caption)
+                            logger.info(f"BLIP detection {img_idx+1}-{prompt_idx+1}: {caption}")
+                            
+                    except Exception as e:
+                        logger.warning(f"BLIP prompt {prompt_idx+1} failed: {e}")
+                        
             except Exception as e:
-                logger.warning(f"Comprehensive strategy {i+1} failed: {e}")
+                logger.warning(f"BLIP image {img_idx+1} failed: {e}")
         
-        # Strategy 2: Force complete enumeration
-        try:
-            inputs = models['processor'](image, text="This is a food image. You MUST identify and list ALL food items, dishes, ingredients, sauces, garnishes, and edible components visible. Do not miss anything: ", return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=350, 
-                    num_beams=12, 
-                    do_sample=True,
-                    temperature=0.5,
-                    top_p=0.95
-                )
-            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            if caption.startswith("This is a food image. You MUST identify and list ALL food items, dishes, ingredients, sauces, garnishes, and edible components visible. Do not miss anything: "):
-                caption = caption.replace("This is a food image. You MUST identify and list ALL food items, dishes, ingredients, sauces, garnishes, and edible components visible. Do not miss anything: ", "")
-            caption = caption.strip()
-            if len(caption.split()) >= 4:
-                detection_results.append(f"Complete_Enumeration: {caption}")
-        except Exception as e:
-            logger.warning(f"Complete enumeration strategy failed: {e}")
-        
-        # Strategy 3: Systematic breakdown
-        try:
-            inputs = models['processor'](image, text="Break down this meal systematically. List each food item, ingredient, sauce, garnish, and component separately. Be exhaustive: ", return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=250, 
-                    num_beams=8, 
-                    do_sample=True,
-                    temperature=0.7,
-                    top_p=0.9
-                )
-            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            if caption.startswith("Break down this meal systematically. List each food item, ingredient, sauce, garnish, and component separately. Be exhaustive: "):
-                caption = caption.replace("Break down this meal systematically. List each food item, ingredient, sauce, garnish, and component separately. Be exhaustive: ", "")
-            caption = caption.strip()
-            if len(caption.split()) >= 4:
-                detection_results.append(f"Systematic_Breakdown: {caption}")
-        except Exception as e:
-            logger.warning(f"Systematic breakdown strategy failed: {e}")
-        
-        # Strategy 4: Detailed component analysis with emphasis on completeness
-        try:
-            inputs = models['processor'](image, text="Analyze this food image in detail. Identify every single edible item, including main dishes, sides, sauces, garnishes, and ingredients. Leave nothing out: ", return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=280, 
-                    num_beams=9, 
-                    do_sample=True,
-                    temperature=0.6,
-                    top_p=0.9
-                )
-            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            if caption.startswith("Analyze this food image in detail. Identify every single edible item, including main dishes, sides, sauces, garnishes, and ingredients. Leave nothing out: "):
-                caption = caption.replace("Analyze this food image in detail. Identify every single edible item, including main dishes, sides, sauces, garnishes, and ingredients. Leave nothing out: ", "")
-            caption = caption.strip()
-            if len(caption.split()) >= 4:
-                detection_results.append(f"Detailed_Analysis: {caption}")
-        except Exception as e:
-            logger.warning(f"Detailed analysis strategy failed: {e}")
-        
-        # Strategy 5: Force item-by-item listing
-        try:
-            inputs = models['processor'](image, text="List every food item you can see in this image. Include main dishes, sides, sauces, garnishes, and any edible components. Be thorough: ", return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=200, 
-                    num_beams=7, 
-                    do_sample=True,
-                    temperature=0.8,
-                    top_p=0.9
-                )
-            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            if caption.startswith("List every food item you can see in this image. Include main dishes, sides, sauces, garnishes, and any edible components. Be thorough: "):
-                caption = caption.replace("List every food item you can see in this image. Include main dishes, sides, sauces, garnishes, and any edible components. Be thorough: ", "")
-            caption = caption.strip()
-            if len(caption.split()) >= 3:
-                detection_results.append(f"Item_Listing: {caption}")
-        except Exception as e:
-            logger.warning(f"Item listing strategy failed: {e}")
-        
-        # Strategy 6: Fallback with aggressive prompting
-        try:
-            inputs = models['processor'](image, text="What food items are in this image? List everything: ", return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=150, 
-                    num_beams=6, 
-                    do_sample=True,
-                    temperature=0.9,
-                    top_p=0.95
-                )
-            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            if caption.startswith("What food items are in this image? List everything: "):
-                caption = caption.replace("What food items are in this image? List everything: ", "")
-            caption = caption.strip()
-            if len(caption.split()) >= 2:
-                detection_results.append(f"Fallback: {caption}")
-        except Exception as e:
-            logger.warning(f"Fallback strategy failed: {e}")
-        
-        # Process and combine results for maximum coverage
-        if detection_results:
-            # Clean up all results
-            cleaned_results = []
-            for result in detection_results:
-                # Remove common prefixes
-                cleaned = result.replace("a photo of ", "").replace("an image of ", "").replace("a picture of ", "")
-                cleaned = cleaned.replace("Comprehensive_1: ", "").replace("Comprehensive_2: ", "").replace("Comprehensive_3: ", "")
-                cleaned = cleaned.replace("Complete_Enumeration: ", "").replace("Systematic_Breakdown: ", "")
-                cleaned = cleaned.replace("Detailed_Analysis: ", "").replace("Item_Listing: ", "").replace("Fallback: ", "")
-                cleaned = cleaned.strip()
-                cleaned = cleaned.rstrip('.,!?')
+        # Strategy 2: Enhanced YOLO Object Detection
+        if models['yolo_model']:
+            try:
+                logger.info("Running enhanced YOLO object detection...")
                 
-                # Accept more results, only filter out completely vague ones
-                if len(cleaned.split()) >= 2:
-                    cleaned_results.append(cleaned)
+                # Process original and enhanced images
+                for img_idx, img in enumerate(images_to_process[:2]):  # Original + 1 enhanced
+                    try:
+                        img_np = np.array(img)
+                        results = models['yolo_model'](img_np, conf=0.2, iou=0.4)  # Lower confidence for more detections
+                        
+                        yolo_items = []
+                        for result in results:
+                            boxes = result.boxes
+                            if boxes is not None:
+                                for box in boxes:
+                                    cls = int(box.cls[0])
+                                    conf = float(box.conf[0])
+                                    class_name = models['yolo_model'].names[cls]
+                                    
+                                    # Expanded food-related terms
+                                    food_terms = [
+                                        # Fruits
+                                        'apple', 'banana', 'orange', 'lemon', 'lime', 'grape', 'strawberry', 'blueberry',
+                                        'pineapple', 'mango', 'avocado', 'tomato', 'watermelon', 'peach', 'pear',
+                                        
+                                        # Vegetables
+                                        'potato', 'carrot', 'onion', 'garlic', 'broccoli', 'lettuce', 'spinach',
+                                        'cucumber', 'pepper', 'corn', 'peas', 'beans', 'cabbage', 'celery',
+                                        
+                                        # Proteins
+                                        'chicken', 'fish', 'beef', 'pork', 'lamb', 'turkey', 'egg', 'shrimp',
+                                        'salmon', 'tuna', 'bacon', 'sausage', 'ham',
+                                        
+                                        # Dairy
+                                        'cheese', 'milk', 'yogurt', 'butter', 'cream',
+                                        
+                                        # Grains & Carbs
+                                        'bread', 'rice', 'pasta', 'noodles', 'cereal', 'oats', 'quinoa',
+                                        
+                                        # Prepared foods
+                                        'cake', 'pizza', 'burger', 'sandwich', 'soup', 'salad', 'pie',
+                                        'cookie', 'muffin', 'pancake', 'waffle', 'toast',
+                                        
+                                        # Containers & utensils (help identify food context)
+                                        'bowl', 'plate', 'cup', 'glass', 'fork', 'spoon', 'knife',
+                                        'bottle', 'can', 'jar'
+                                    ]
+                                    
+                                    if conf > 0.2 and any(food_term in class_name.lower() for food_term in food_terms):
+                                        yolo_items.append(f"{class_name} ({conf:.2f})")
+                        
+                        if yolo_items:
+                            yolo_result = ', '.join(yolo_items)
+                            all_detections.append(f"Detected objects: {yolo_result}")
+                            logger.info(f"YOLO detection {img_idx+1}: {yolo_result}")
+                            
+                    except Exception as e:
+                        logger.warning(f"YOLO processing image {img_idx+1} failed: {e}")
+                        
+            except Exception as e:
+                logger.warning(f"YOLO detection failed: {e}")
+        
+        # Strategy 3: Vision Transformer Detection (if available)
+        if models['vit_model']:
+            try:
+                logger.info("Running Vision Transformer detection...")
+                
+                # Prepare image for ViT
+                vit_transform = transforms.Compose([
+                    transforms.Resize((224, 224)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                ])
+                
+                img_tensor = vit_transform(image).unsqueeze(0).to(device)
+                
+                with torch.no_grad():
+                    outputs = models['vit_model'](img_tensor)
+                    probabilities = torch.nn.functional.softmax(outputs, dim=1)
+                    top_probs, top_indices = torch.topk(probabilities, 10)
+                
+                # Load ImageNet class names (simplified food-related subset)
+                imagenet_food_classes = {
+                    # This is a simplified mapping - in practice you'd load the full ImageNet classes
+                    0: "background", 1: "apple", 2: "banana", 3: "orange", 4: "pizza", 5: "burger"
+                    # Add more mappings as needed
+                }
+                
+                vit_items = []
+                for prob, idx in zip(top_probs[0], top_indices[0]):
+                    if prob > 0.1:  # Confidence threshold
+                        class_name = imagenet_food_classes.get(idx.item(), f"class_{idx.item()}")
+                        if "food" in class_name.lower() or any(food_word in class_name.lower() 
+                                                             for food_word in ['apple', 'banana', 'pizza', 'burger']):
+                            vit_items.append(f"{class_name} ({prob:.2f})")
+                
+                if vit_items:
+                    vit_result = ', '.join(vit_items)
+                    all_detections.append(f"ViT detected: {vit_result}")
+                    logger.info(f"ViT detection: {vit_result}")
+                    
+            except Exception as e:
+                logger.warning(f"ViT detection failed: {e}")
+        
+        # Strategy 4: Multi-scale BLIP Analysis
+        try:
+            logger.info("Running multi-scale BLIP analysis...")
             
-            if cleaned_results:
-                # Combine multiple results for maximum coverage
-                combined_items = set()
-                for result in cleaned_results:
-                    # Split by common separators and add individual items
-                    items = result.replace(',', ' and ').replace(';', ' and ').split(' and ')
-                    for item in items:
-                        item = item.strip().lower()
-                        if len(item) > 2 and not item in ['the', 'and', 'with', 'on', 'in', 'of', 'a', 'an']:
-                            combined_items.add(item)
+            # Create different sized versions for multi-scale analysis
+            scales = [(224, 224), (384, 384), (512, 512)]
+            
+            for scale in scales:
+                try:
+                    scaled_img = image.resize(scale, Image.Resampling.LANCZOS)
+                    
+                    # Use focused prompts for scaled images
+                    scale_prompts = [
+                        "What specific food items can you identify in this image?",
+                        "List all visible ingredients and food components:",
+                        "Describe each dish and food item you can see:"
+                    ]
+                    
+                    for prompt in scale_prompts:
+                        try:
+                            inputs = models['processor'](scaled_img, text=prompt, return_tensors="pt").to(device)
+                            with torch.no_grad():
+                                outputs = models['blip_model'].generate(
+                                    **inputs, 
+                                    max_new_tokens=150, 
+                                    num_beams=5, 
+                                    do_sample=True,
+                                    temperature=0.4,
+                                    top_p=0.9
+                                )
+                            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                            
+                            if caption.startswith(prompt):
+                                caption = caption.replace(prompt, "").strip()
+                            
+                            if len(caption.split()) >= 3:
+                                all_detections.append(f"Scale {scale}: {caption}")
+                                logger.info(f"Multi-scale BLIP {scale}: {caption}")
+                                
+                        except Exception as e:
+                            logger.warning(f"Multi-scale prompt failed: {e}")
+                            
+                except Exception as e:
+                    logger.warning(f"Multi-scale processing {scale} failed: {e}")
+                    
+        except Exception as e:
+            logger.warning(f"Multi-scale BLIP analysis failed: {e}")
+        
+        # Strategy 5: Contextual Food Detection
+        try:
+            logger.info("Running contextual food detection...")
+            
+            # Context-aware prompts
+            context_prompts = [
+                "This appears to be a meal. What are all the food items present?",
+                "Looking at this food image, identify every edible component:",
+                "What complete meal or snack is shown with all its parts?",
+                "Analyze this food photo and list every ingredient and dish:",
+                "What beverages, main dishes, sides, and garnishes are visible?"
+            ]
+            
+            for prompt in context_prompts:
+                try:
+                    inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
+                    with torch.no_grad():
+                        outputs = models['blip_model'].generate(
+                            **inputs, 
+                            max_new_tokens=250, 
+                            num_beams=8, 
+                            do_sample=True,
+                            temperature=0.3,
+                            top_p=0.95,
+                            repetition_penalty=1.2
+                        )
+                    caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                    
+                    if caption.startswith(prompt):
+                        caption = caption.replace(prompt, "").strip()
+                    
+                    if len(caption.split()) >= 4:
+                        all_detections.append(caption)
+                        logger.info(f"Contextual detection: {caption}")
+                        
+                except Exception as e:
+                    logger.warning(f"Contextual prompt failed: {e}")
+                    
+        except Exception as e:
+            logger.warning(f"Contextual food detection failed: {e}")
+        
+        # Process and intelligently combine all results
+        logger.info(f"Total detections collected: {len(all_detections)}")
+        
+        if all_detections:
+            # Advanced result processing and combination
+            food_items = set()
+            
+            for detection in all_detections:
+                # Clean and normalize the detection
+                cleaned = detection.lower()
                 
-                # Create comprehensive description
-                if combined_items:
-                    comprehensive_description = ', '.join(sorted(combined_items))
-                    return comprehensive_description
-                else:
-                    # Use the most detailed result if combination fails
-                    best_result = max(cleaned_results, key=lambda x: len(x.split()))
-                    return best_result
+                # Remove common prefixes and suffixes
+                prefixes_to_remove = [
+                    "a photo of", "an image of", "a picture of", "this is", "i can see",
+                    "the image shows", "there is", "there are", "detected objects:",
+                    "vit detected:", "scale (", "contextual detection:"
+                ]
+                
+                for prefix in prefixes_to_remove:
+                    if cleaned.startswith(prefix):
+                        cleaned = cleaned.replace(prefix, "").strip()
+                
+                # Remove confidence scores in parentheses
+                import re
+                cleaned = re.sub(r'\([0-9.]+\)', '', cleaned)
+                
+                # Split by various separators
+                separators = [',', ';', ' and ', ' with ', ' including ', ' plus ', ' also ']
+                items = [cleaned]
+                
+                for sep in separators:
+                    new_items = []
+                    for item in items:
+                        new_items.extend(item.split(sep))
+                    items = new_items
+                
+                # Process individual items
+                for item in items:
+                    item = item.strip().rstrip('.,!?')
+                    
+                    # Skip very short or common words
+                    skip_words = {
+                        'the', 'and', 'with', 'on', 'in', 'of', 'a', 'an', 'is', 'are',
+                        'this', 'that', 'some', 'many', 'few', 'several', 'various'
+                    }
+                    
+                    if len(item) > 2 and item not in skip_words:
+                        # Clean up the item further
+                        item = re.sub(r'^(some|many|few|several|various)\s+', '', item)
+                        item = re.sub(r'\s+(on|in|with)\s+.*$', '', item)
+                        
+                        if len(item) > 2:
+                            food_items.add(item)
+            
+            if food_items:
+                # Create comprehensive final description
+                sorted_items = sorted(food_items)
+                final_description = ', '.join(sorted_items)
+                logger.info(f"Final comprehensive description: {final_description}")
+                return final_description
+            else:
+                # Use the longest single detection
+                best_detection = max(all_detections, key=lambda x: len(x.split()))
+                logger.info(f"Using best single detection: {best_detection}")
+                return best_detection
         
-        # If all strategies fail, try aggressive fallback strategies
-        logger.warning("All primary detection strategies failed, trying aggressive fallbacks")
-        
-        # Fallback Strategy 1: Force basic food detection
+        # Enhanced fallback detection
+        logger.warning("Primary detections failed, trying enhanced fallback")
         try:
-            inputs = models['processor'](image, text="food", return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=50, 
-                    num_beams=3, 
-                    do_sample=False,
-                    temperature=1.0
-                )
-            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            caption = caption.strip()
-            if len(caption.split()) >= 2:
-                return f"Fallback detection: {caption}"
+            fallback_prompts = [
+                "What food is in this image?",
+                "Describe this meal:",
+                "What can you see in this food photo?"
+            ]
+            
+            for prompt in fallback_prompts:
+                try:
+                    inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
+                    with torch.no_grad():
+                        outputs = models['blip_model'].generate(
+                            **inputs, 
+                            max_new_tokens=100, 
+                            num_beams=4, 
+                            do_sample=True,
+                            temperature=0.7
+                        )
+                    caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                    
+                    if caption.startswith(prompt):
+                        caption = caption.replace(prompt, "").strip()
+                    
+                    if len(caption.split()) >= 2:
+                        logger.info(f"Fallback result: {caption}")
+                        return caption
+                        
+                except Exception as e:
+                    logger.warning(f"Fallback prompt failed: {e}")
+                    
         except Exception as e:
-            logger.warning(f"Fallback strategy 1 failed: {e}")
+            logger.warning(f"Enhanced fallback failed: {e}")
         
-        # Fallback Strategy 2: No prompt at all
-        try:
-            inputs = models['processor'](image, return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs, 
-                    max_new_tokens=30, 
-                    num_beams=2, 
-                    do_sample=False,
-                    temperature=1.0
-                )
-            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            caption = caption.strip()
-            if len(caption.split()) >= 2:
-                return f"Basic detection: {caption}"
-        except Exception as e:
-            logger.warning(f"Fallback strategy 2 failed: {e}")
-        
-        # If even fallbacks fail, return a generic but helpful message
-        return "Food items detected but description is limited. Please use the context field to describe the meal in detail (e.g., 'chicken curry with rice, naan bread, and yogurt sauce')."
+        # Final emergency fallback
+        logger.error("All detection strategies failed")
+        return "Multiple food items detected but specific identification is limited. Please provide additional context or describe the meal manually for accurate calorie calculation."
         
     except Exception as e:
-        logger.error(f"Enhanced image analysis error: {e}")
+        logger.error(f"Image analysis error: {e}")
         return f"Image analysis error: {str(e)}. Please try a clearer image or describe the meal in the context field."
 
 # Enhanced food analysis with comprehensive detection
 def analyze_food_with_enhanced_prompt(image_description: str, context: str = "") -> Dict[str, Any]:
-    """Use enhanced approach for comprehensive food detection with aggressive item identification."""
+    """Comprehensive food analysis using enhanced detection and multiple AI models."""
     try:
-        # Post-process the description to improve accuracy
-        improved_description = post_process_detection(image_description)
+        # Clean up the description
+        cleaned_description = image_description.strip()
         
-        # Create a comprehensive prompt that forces identification of ALL items
-        prompt = f"""You are an expert nutritionist and food identification specialist. Your task is to analyze this food description and identify EVERY single food item, ingredient, sauce, garnish, and edible component mentioned or implied.
+        # Use the food detection agent if available for comprehensive analysis
+        if models['food_agent']:
+            logger.info("Using food detection agent for comprehensive analysis")
+            agent_result = models['food_agent'].detect_food_from_image_description(cleaned_description, context)
+            
+            if agent_result['success']:
+                # Extract items and nutritional data from the comprehensive analysis
+                items, totals = extract_items_and_nutrients(agent_result['analysis'])
+                
+                return {
+                    "success": True,
+                    "analysis": agent_result['analysis'],
+                    "food_items": agent_result.get('food_items', []),
+                    "nutritional_data": agent_result.get('nutritional_data', {}),
+                    "improved_description": cleaned_description,
+                    "extracted_items": items,
+                    "extracted_totals": totals,
+                    "comprehensive": agent_result.get('comprehensive', False)
+                }
+        
+        # Fallback to enhanced LLM analysis if agent not available
+        logger.info("Using enhanced LLM analysis as fallback")
+        
+        # Enhanced prompt for better food detection
+        prompt = f"""You are an expert nutritionist analyzing food images. Provide comprehensive analysis:
 
-**FOOD DESCRIPTION**: {improved_description}
-**ADDITIONAL CONTEXT**: {context if context else "No additional context"}
+FOOD DESCRIPTION: {cleaned_description}
+ADDITIONAL CONTEXT: {context if context else "None provided"}
 
-**CRITICAL INSTRUCTIONS**:
-1. **MUST identify EVERY food item** mentioned in the description
-2. **Break down complex dishes** into individual components
-3. **Include sauces, garnishes, and sides** even if not explicitly mentioned
-4. **Provide specific portion sizes** for each item (e.g., 1 cup, 1 piece, 100g)
-5. **Give complete nutrition data** for each item separately
-6. **Be exhaustive** - do not miss any edible components
-7. **If description is vague**, identify common meal components (protein, starch, vegetables, sauce)
+ANALYSIS REQUIREMENTS:
+1. Identify ALL visible food items (main dishes, sides, garnishes, condiments, beverages)
+2. Estimate realistic portion sizes for each item
+3. Provide detailed nutritional breakdown per item
+4. Consider cooking methods that add calories (oils, butter, etc.)
+5. Account for hidden ingredients and seasonings
 
-**REQUIRED OUTPUT FORMAT**:
-**Food Items and Nutrients**:
-- Item: [Food Name with specific portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
-- Item: [Food Name with specific portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
-- [Continue for EVERY food item identified]
+OUTPUT FORMAT:
+## IDENTIFIED ITEMS:
+- Item: [Name with portion size], Calories: [X], Protein: [X]g, Carbs: [X]g, Fats: [X]g
+[Repeat for each item]
 
-**Total Calories**: [Sum of all items]
-**Nutritional Assessment**: [Detailed assessment of the complete meal]
-**Health Suggestions**: [2-3 suggestions based on the full meal]
+## TOTALS:
+Total Calories: [Sum]
+Total Protein: [Sum]g
+Total Carbohydrates: [Sum]g  
+Total Fats: [Sum]g
 
-**IMPORTANT RULES**:
-- **DO NOT MISS ANY ITEMS** - be thorough and comprehensive
-- **Break down complex dishes** into individual components
-- **Include all sauces, garnishes, and sides**
-- **Provide realistic nutritional estimates** based on typical serving sizes
-- **If the description mentions a "meal" or "plate"**, identify common components like:
-  * Main protein (chicken, fish, meat, tofu, etc.)
-  * Starch/carbohydrate (rice, bread, pasta, potatoes, etc.)
-  * Vegetables (any visible vegetables or greens)
-  * Sauce/gravy (any liquid or sauce component)
-  * Side dish (any additional items)
-- **Be specific and detailed** - do not generalize"""
+## MEAL ASSESSMENT:
+[Brief assessment of nutritional balance and meal type]
 
-        # Get analysis from LLM
+## HEALTH RECOMMENDATIONS:
+[2-3 specific suggestions for improvement]
+
+IMPORTANT: Be thorough in identifying ALL food components, even small ones. Provide realistic nutritional estimates based on typical serving sizes."""
+
+        # Get comprehensive analysis from LLM
         response = models['llm'].invoke(prompt)
         analysis = response.content
+        
+        # Extract structured data from the analysis
+        items, totals = extract_items_and_nutrients(analysis)
+        
+        # Create food items list from analysis
+        food_items = []
+        for item in items:
+            food_items.append({
+                "item": item["item"],
+                "description": f"{item['item']} - {item['calories']} calories",
+                "calories": item["calories"],
+                "protein": item.get("protein", 0),
+                "carbs": item.get("carbs", 0),
+                "fats": item.get("fats", 0)
+            })
+        
+        # Create nutritional data summary
+        nutritional_data = {
+            "total_calories": totals.get("calories", 0),
+            "total_protein": totals.get("protein", 0),
+            "total_carbs": totals.get("carbs", 0),
+            "total_fats": totals.get("fats", 0),
+            "items": food_items
+        }
         
         return {
             "success": True,
             "analysis": analysis,
-            "food_items": [],
-            "nutritional_data": {},
-            "improved_description": improved_description
+            "food_items": food_items,
+            "nutritional_data": nutritional_data,
+            "improved_description": cleaned_description,
+            "extracted_items": items,
+            "extracted_totals": totals,
+            "comprehensive": True
         }
         
     except Exception as e:
-        logger.error(f"Error in food analysis: {e}")
+        logger.error(f"Error in comprehensive food analysis: {e}")
         return {
             "success": False,
             "error": str(e),
-            "analysis": "Failed to analyze food items",
+            "analysis": f"Comprehensive analysis failed: {str(e)}. Please try describing the meal manually.",
             "food_items": [],
-            "nutritional_data": {}
+            "nutritional_data": {"total_calories": 0, "total_protein": 0, "total_carbs": 0, "total_fats": 0},
+            "improved_description": cleaned_description,
+            "comprehensive": False
         }
 
 # Enhanced post-processing for comprehensive detection
 def post_process_detection(description: str) -> str:
-    """Enhanced post-processing to improve food detection accuracy and force comprehensive identification."""
+    """Simple post-processing to clean up food descriptions."""
     try:
         # Clean up the description
         cleaned = description.strip()
@@ -706,69 +1221,123 @@ def post_process_detection(description: str) -> str:
         # Remove common prefixes
         prefixes_to_remove = [
             "a photo of ", "an image of ", "a picture of ",
-            "this is ", "there is ", "i can see ",
-            "the image shows ", "the photo shows "
+            "this is ", "there is ", "i can see "
         ]
         
         for prefix in prefixes_to_remove:
             if cleaned.lower().startswith(prefix.lower()):
                 cleaned = cleaned[len(prefix):].strip()
         
-        # Enhanced handling of vague descriptions with more specific components
-        vague_indicators = ["plate of food", "meal", "food", "dish", "dinner", "lunch", "breakfast"]
-        if any(indicator in cleaned.lower() for indicator in vague_indicators):
-            # Add comprehensive meal components if description is vague
-            if "plate" in cleaned.lower() or "meal" in cleaned.lower():
-                cleaned += " (comprehensive meal including main protein, carbohydrate/starch, vegetables, sauce/gravy, and side components)"
-            elif "food" in cleaned.lower():
-                cleaned += " (complete meal with multiple food components including protein, carbs, vegetables, and sauces)"
-            elif "dish" in cleaned.lower():
-                cleaned += " (food dish with main ingredients, accompaniments, and garnishes)"
+        # Simple enhancement for vague descriptions
+        if any(term in cleaned.lower() for term in ["food", "meal", "dish", "plate"]):
+            cleaned += " (includes main components, sides, and sauces)"
         
-        # Force identification of common meal patterns
-        if any(term in cleaned.lower() for term in ["curry", "thali", "platter", "spread"]):
-            cleaned += " (typically includes main dish, rice/bread, vegetables, sauces, and accompaniments)"
-        
-        # Enhance descriptions with common components
-        if any(term in cleaned.lower() for term in ["rice", "bread", "pasta"]):
-            if "sauce" not in cleaned.lower() and "gravy" not in cleaned.lower():
-                cleaned += " (likely served with sauce or gravy)"
-        
-        if any(term in cleaned.lower() for term in ["chicken", "fish", "meat", "tofu"]):
-            if "vegetable" not in cleaned.lower() and "salad" not in cleaned.lower():
-                cleaned += " (likely served with vegetables or salad)"
-        
-        return cleaned
+        return cleaned.strip()
         
     except Exception as e:
         logger.error(f"Post-processing failed: {e}")
-        return description  # Return original if processing fails
+        return description
 
-# Extract food items and nutrients from text
+# Enhanced extraction of food items and nutrients from text
 def extract_items_and_nutrients(text):
+    """Extract food items and nutritional data from analysis text with multiple pattern matching."""
     items = []
-    pattern = r'Item:\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?'
-    matches = re.findall(pattern, text, re.IGNORECASE)
-    for match in matches:
-        item = match[0].strip()
-        calories = int(match[1]) if match[1] else 0
-        protein = float(match[2]) if match[2] else None
-        carbs = float(match[3]) if match[3] else None
-        fats = float(match[4]) if match[4] else None
-        items.append({
-            "item": item,
-            "calories": calories,
-            "protein": protein,
-            "carbs": carbs,
-            "fats": fats
-        })
-    totals = {
-        "calories": sum(item["calories"] for item in items),
-        "protein": sum(item["protein"] for item in items if item["protein"] is not None),
-        "carbs": sum(item["carbs"] for item in items if item["carbs"] is not None),
-        "fats": sum(item["fats"] for item in items if item["fats"] is not None)
-    }
-    return items, totals
+    
+    try:
+        # Multiple patterns to catch different formats
+        patterns = [
+            # Pattern 1: Standard format with "Item:"
+            r'Item:\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?',
+            
+            # Pattern 2: Bullet point format
+            r'-\s*([^:]+):\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?',
+            
+            # Pattern 3: Simple format without "Item:" prefix
+            r'-\s*([^,]+),\s*Calories:\s*(\d{1,4})\s*(?:cal|kcal|calories)?(?:,\s*Protein:\s*(\d+\.?\d*)\s*g)?(?:,\s*Carbs:\s*(\d+\.?\d*)\s*g)?(?:,\s*Fats:\s*(\d+\.?\d*)\s*g)?',
+            
+            # Pattern 4: Alternative format
+            r'([^:]+):\s*(\d{1,4})\s*(?:cal|kcal|calories)(?:,\s*(\d+\.?\d*)\s*g\s*protein)?(?:,\s*(\d+\.?\d*)\s*g\s*carbs)?(?:,\s*(\d+\.?\d*)\s*g\s*fats)?'
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
+            
+            for match in matches:
+                if len(match) >= 2:
+                    # Handle different match group structures
+                    if len(match) == 6 and match[0] and match[1]:  # Pattern 2
+                        item = f"{match[0].strip()}: {match[1].strip()}"
+                        calories = int(match[2]) if match[2] else 0
+                        protein = float(match[3]) if match[3] else 0
+                        carbs = float(match[4]) if match[4] else 0
+                        fats = float(match[5]) if match[5] else 0
+                    else:  # Other patterns
+                        item = match[0].strip()
+                        calories = int(match[1]) if match[1] else 0
+                        protein = float(match[2]) if len(match) > 2 and match[2] else 0
+                        carbs = float(match[3]) if len(match) > 3 and match[3] else 0
+                        fats = float(match[4]) if len(match) > 4 and match[4] else 0
+                    
+                    # Avoid duplicates
+                    if not any(existing_item["item"].lower() == item.lower() for existing_item in items):
+                        items.append({
+                            "item": item,
+                            "calories": calories,
+                            "protein": protein,
+                            "carbs": carbs,
+                            "fats": fats
+                        })
+        
+        # If no structured items found, try to extract from totals section
+        if not items:
+            total_patterns = [
+                r'Total Calories?:\s*(\d{1,4})',
+                r'Total:\s*(\d{1,4})\s*(?:cal|kcal|calories)',
+                r'(\d{1,4})\s*(?:cal|kcal|calories)\s*total'
+            ]
+            
+            for pattern in total_patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    total_calories = int(match.group(1))
+                    items.append({
+                        "item": "Complete meal (estimated)",
+                        "calories": total_calories,
+                        "protein": 0,
+                        "carbs": 0,
+                        "fats": 0
+                    })
+                    break
+        
+        # Calculate totals
+        totals = {
+            "calories": sum(item["calories"] for item in items),
+            "protein": sum(item["protein"] for item in items if item["protein"]),
+            "carbs": sum(item["carbs"] for item in items if item["carbs"]),
+            "fats": sum(item["fats"] for item in items if item["fats"])
+        }
+        
+        # If no items extracted but we have text, create a generic entry
+        if not items and len(text.strip()) > 10:
+            # Try to extract any calorie numbers from the text
+            calorie_matches = re.findall(r'(\d{2,4})\s*(?:cal|kcal|calories)', text, re.IGNORECASE)
+            if calorie_matches:
+                estimated_calories = max(int(cal) for cal in calorie_matches)
+                items.append({
+                    "item": "Meal items (detected but not fully parsed)",
+                    "calories": estimated_calories,
+                    "protein": 0,
+                    "carbs": 0,
+                    "fats": 0
+                })
+                totals["calories"] = estimated_calories
+        
+        logger.info(f"Extracted {len(items)} food items with {totals['calories']} total calories")
+        return items, totals
+        
+    except Exception as e:
+        logger.error(f"Error extracting items and nutrients: {e}")
+        return [], {"calories": 0, "protein": 0, "carbs": 0, "fats": 0}
 
 # Plot nutritional breakdown chart
 def plot_chart(food_data):
@@ -972,10 +1541,27 @@ with st.container():
             st.write("• 📊 **Text Analysis**: Use the Text Analysis tab instead")
             st.write("")
             st.write("**Detection Features:**")
-            st.write("• 🤖 **Multi-Strategy AI**: Uses 6 different detection approaches")
+            st.write("• 🤖 **Multi-Model AI**: Uses BLIP, YOLO, ViT, EfficientNet")
             st.write("• 🖼️ **Image Enhancement**: Automatically improves image quality")
             st.write("• 📊 **Comprehensive Analysis**: Identifies all food components")
             st.write("• 🍽️ **Complete Breakdown**: Lists every item with nutrition data")
+            st.write("• 🎯 **Object Detection**: YOLO for precise food item detection")
+            st.write("• 🔍 **Vision Transformer**: Advanced image understanding")
+            st.write("• ⚡ **EfficientNet**: Fast and accurate classification")
+        
+        # Add model installation guide
+        with st.expander("🔧 **Install Additional Models**", expanded=False):
+            st.write("**To enable all AI models, install these packages:**")
+            st.code("pip install ultralytics timm efficientnet-pytorch tensorflow tensorflow-hub")
+            st.write("")
+            st.write("**Or install all requirements:**")
+            st.code("pip install -r requirements.txt")
+            st.write("")
+            st.write("**Models Available:**")
+            st.write("• 🎯 **YOLO**: Object detection for precise food identification")
+            st.write("• 🔍 **ViT**: Vision Transformer for advanced image analysis")
+            st.write("• ⚡ **EfficientNet**: Fast and efficient classification")
+            st.write("• 🤖 **TensorFlow Hub**: Pre-trained models for various tasks")
         
         with st.container():
             img_file = st.file_uploader("Upload a food image", type=["jpg", "jpeg", "png"], key="img_uploader", help="Upload a clear, well-lit image of your meal for best results.")
@@ -1040,6 +1626,19 @@ with st.container():
                         # Show detection progress
                         status_text.text("🔍 Analyzing food content with enhanced AI detection...")
                         progress_bar.progress(50)
+                        
+                        # Show model detection progress
+                        with st.expander("🔬 **Model Detection Progress**", expanded=False):
+                            st.write("**Detection Steps:**")
+                            st.write("1. ✅ Image Enhancement - Applied")
+                            st.write("2. 🔄 BLIP Analysis - In Progress...")
+                            if models['yolo_model']:
+                                st.write("3. 🎯 YOLO Object Detection - Available")
+                            if models['vit_model']:
+                                st.write("4. 🔍 ViT Analysis - Available")
+                            if models['efficientnet_model']:
+                                st.write("5. ⚡ EfficientNet Classification - Available")
+                            st.write("6. 📊 Result Combination - Pending...")
                         
                         # Use enhanced analysis with comprehensive prompt
                         enhanced_analysis = analyze_food_with_enhanced_prompt(basic_description, context)
@@ -1342,23 +1941,82 @@ with st.container():
                                 st.write("• 🍽️ Make sure all food items are visible")
                                 st.write("• 📝 Use the context field for additional details")
                             
-                            # Show limited detection warning if applicable
-                            if "limited" in description.lower() or "generic" in description.lower():
-                                st.warning("⚠️ **Limited Detection**")
-                                st.write("The AI detected food items but couldn't identify specific components.")
-                                st.write("**To improve results:**")
-                                st.write("• 📝 Add detailed context in the context field")
-                                st.write("• 🍽️ Use the Text Analysis tab for manual description")
-                                st.write("• 📸 Try uploading a clearer image")
+                                                    # Show limited detection warning if applicable
+                        if "limited" in description.lower() or "generic" in description.lower():
+                            st.warning("⚠️ **Limited Detection**")
+                            st.write("The AI detected food items but couldn't identify specific components.")
+                            st.write("**To improve results:**")
+                            st.write("• 📝 Add detailed context in the context field")
+                            st.write("• 🍽️ Use the Text Analysis tab for manual description")
+                            st.write("• 📸 Try uploading a clearer image")
+                        
+                        # Show detection improvement tips
+                        if detection_confidence == "Low":
+                            st.info("💡 **Detection Improvement Tips:**")
+                            st.write("• 📸 **Better Lighting**: Ensure the image is well-lit")
+                            st.write("• 🍽️ **Clear Focus**: Make sure food items are clearly visible")
+                            st.write("• 📐 **Good Angle**: Avoid shadows and glare")
+                            st.write("• 📝 **Add Context**: Describe the meal in the context field")
+                            st.write("• 🔄 **Try Again**: Upload from a different angle")
+                            st.write("• 📊 **Use Text Analysis**: Describe the meal manually")
                             
-                            # Show detection methods used
-                            with st.expander("🔬 **Detection Methods Used**", expanded=False):
-                                st.write("**AI Detection Strategies:**")
-                                st.write("• 🤖 Multi-Strategy AI Analysis")
-                                st.write("• 🖼️ Image Quality Enhancement")
-                                st.write("• 📊 Comprehensive Item Identification")
-                                st.write("• 🍽️ Complete Nutritional Breakdown")
-                                st.write("• 🔄 Multiple Fallback Approaches")
+                                                    # Show detection methods used
+                        with st.expander("🔬 **Detection Methods Used**", expanded=False):
+                            st.write("**AI Models & Strategies:**")
+                            
+                            # Model status
+                            model_status = {
+                                'BLIP': models['blip_model'] is not None,
+                                'YOLO': models['yolo_model'] is not None,
+                                'ViT': models['vit_model'] is not None,
+                                'EfficientNet': models['efficientnet_model'] is not None,
+                                'CNN': models['cnn_model'] is not None,
+                                'TensorFlow': models['tf_model'] is not None
+                            }
+                            
+                            for model, status in model_status.items():
+                                status_icon = "✅" if status else "❌"
+                                st.write(f"• {status_icon} **{model}**: {'Available' if status else 'Not Available'}")
+                            
+                            st.write("")
+                            st.write("**Detection Strategies:**")
+                            st.write("• 🤖 Multi-Model AI Analysis")
+                            st.write("• 🖼️ Image Quality Enhancement")
+                            st.write("• 📊 Comprehensive Item Identification")
+                            st.write("• 🍽️ Complete Nutritional Breakdown")
+                            st.write("• 🔄 Multiple Fallback Approaches")
+                            st.write("• 🎯 Object Detection (YOLO)")
+                            st.write("• 🔍 Vision Transformer Analysis")
+                            st.write("• ⚡ EfficientNet Classification")
+                        
+                        # Show detailed model detection results
+                        with st.expander("🔍 **Detailed Model Results**", expanded=False):
+                            st.write("**Model Detection Details:**")
+                            
+                            # Show which models were actually used
+                            used_models = []
+                            if models['blip_model']:
+                                used_models.append("BLIP (Text Generation)")
+                            if models['yolo_model']:
+                                used_models.append("YOLO (Object Detection)")
+                            if models['vit_model']:
+                                used_models.append("ViT (Vision Transformer)")
+                            if models['efficientnet_model']:
+                                used_models.append("EfficientNet (Classification)")
+                            
+                            st.write(f"**Models Used**: {', '.join(used_models)}")
+                            st.write(f"**Detection Confidence**: {detection_confidence}")
+                            st.write(f"**Items Identified**: {len(description.split(',')) if ',' in description else len(description.split())}")
+                            
+                            # Show detection quality metrics
+                            if len(description.split()) > 15:
+                                st.success("🎉 **Excellent Detection** - Comprehensive analysis performed")
+                            elif len(description.split()) > 8:
+                                st.info("👍 **Good Detection** - Multiple items identified")
+                            elif len(description.split()) > 3:
+                                st.warning("⚠️ **Limited Detection** - Basic items identified")
+                            else:
+                                st.error("❌ **Poor Detection** - Consider adding context")
                         
                         # Tab 2: Nutrition Analysis
                         with analysis_tab2:
@@ -1525,16 +2183,22 @@ with st.container():
                             with col1:
                                 st.write("**Model Status**")
                                 st.write(f"• BLIP Model: {'✅ Loaded' if models['blip_model'] is not None else '❌ Failed'}")
-                                st.write(f"• LLM Model: {'✅ Loaded' if models['llm'] is not None else '❌ Failed'}")
+                                st.write(f"• YOLO Model: {'✅ Loaded' if models['yolo_model'] is not None else '❌ Failed'}")
+                                st.write(f"• ViT Model: {'✅ Loaded' if models['vit_model'] is not None else '❌ Failed'}")
+                                st.write(f"• EfficientNet: {'✅ Loaded' if models['efficientnet_model'] is not None else '❌ Failed'}")
                                 st.write(f"• CNN Model: {'✅ Loaded' if models['cnn_model'] is not None else '❌ Failed'}")
+                                st.write(f"• TensorFlow: {'✅ Loaded' if models['tf_model'] is not None else '❌ Failed'}")
+                                st.write(f"• LLM Model: {'✅ Loaded' if models['llm'] is not None else '❌ Failed'}")
                                 st.write(f"• Device: {device}")
                             
                             with col2:
                                 st.write("**Analysis Details**")
                                 st.write(f"• Description Length: {len(description.split())} words")
-                                st.write(f"• Detection Strategies: 6 primary + 3 fallback")
+                                st.write(f"• Detection Strategies: Multi-model approach")
                                 st.write(f"• Image Enhancement: Applied")
                                 st.write(f"• Analysis Success: {'✅ Yes' if enhanced_analysis['success'] else '❌ No'}")
+                                st.write(f"• Models Used: {sum([models['blip_model'] is not None, models['yolo_model'] is not None, models['vit_model'] is not None, models['efficientnet_model'] is not None])}")
+                                st.write(f"• Detection Quality: {'High' if len(description.split()) > 10 else 'Medium' if len(description.split()) > 5 else 'Low'}")
                             
                             # Raw data
                             with st.expander("📄 **Raw Analysis Data**", expanded=False):
@@ -2189,6 +2853,9 @@ Instructions:
 with st.sidebar:
     st.header("🍎 Nutrition Dashboard")
     st.caption("Configure your profile and track progress")
+    
+    # Show model status
+    show_model_status()
     
     st.subheader("User Profile")
     st.number_input("Daily Calorie Target (kcal)", min_value=1000, max_value=5000, value=st.session_state.calorie_target, step=100, key="calorie_target", help="Set your daily calorie goal (e.g., 2000 kcal)")

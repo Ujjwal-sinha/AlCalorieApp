@@ -30,69 +30,276 @@ class FoodDetectionAgent:
             return f"Search failed: {str(e)}"
     
     def detect_food_from_image_description(self, image_description: str, context: str = "") -> Dict[str, Any]:
-        """Main method to detect food items from image description using enhanced analysis."""
+        """Enhanced food detection from image description with comprehensive analysis."""
         try:
-            # Create a comprehensive prompt for food analysis
-            prompt = f"""You are an expert food identification and nutrition analysis specialist. Analyze the following food description and provide detailed information.
+            # Enhanced prompt for better food detection and analysis
+            prompt = f"""You are an expert nutritionist and food identification specialist. Analyze this food description comprehensively:
 
-Image Description: {image_description}
-Additional Context: {context if context else "No additional context provided"}
+FOOD DESCRIPTION: {image_description}
+ADDITIONAL CONTEXT: {context if context else "None provided"}
 
-Please provide a comprehensive analysis including:
+TASK: Provide a detailed analysis following this exact format:
 
-1. **Food Items Identified**: List all food items, dishes, ingredients, sauces, and components you can identify
-2. **Detailed Descriptions**: Describe each food item in detail (what it is, how it's prepared, typical ingredients)
-3. **Portion Sizes**: Provide estimated portion sizes for each item (e.g., 100g chicken, 1 cup rice, 2 rotis)
-4. **Nutritional Information**: For each item, provide:
-   - Calories
-   - Protein (grams)
-   - Carbohydrates (grams)
-   - Fats (grams)
-5. **Total Meal Analysis**: Sum up the total calories and macronutrients
-6. **Health Assessment**: Provide 2-3 health suggestions based on the meal
+## IDENTIFIED FOOD ITEMS:
+[List every food item you can identify, even if mentioned briefly. Include:]
+- Main dishes
+- Side dishes  
+- Beverages
+- Condiments/sauces
+- Garnishes
+- Individual ingredients visible
 
-**Instructions:**
-- Be comprehensive and identify every food item mentioned or implied
-- If you encounter unknown items, make educated guesses based on the description
-- Provide realistic portion sizes and nutritional data
-- Support all cuisines (Indian, international, etc.)
-- Break down complex dishes into individual components
+## DETAILED NUTRITIONAL BREAKDOWN:
+For each identified item, provide:
+- Item: [Name with estimated portion size]
+- Calories: [Amount]
+- Protein: [Amount in grams]  
+- Carbohydrates: [Amount in grams]
+- Fats: [Amount in grams]
+- Key nutrients: [Vitamins, minerals, fiber]
 
-**Output Format:**
-**Food Items and Nutrients:**
-- Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
-- Item: [Food Name with portion size], Calories: [X] cal, Protein: [X] g, Carbs: [X] g, Fats: [X] g
+## MEAL TOTALS:
+- Total Calories: [Sum]
+- Total Protein: [Sum in grams]
+- Total Carbohydrates: [Sum in grams] 
+- Total Fats: [Sum in grams]
 
-**Total Calories**: [X] cal
-**Nutritional Assessment**: [Detailed assessment of the meal]
-**Health Suggestions**: [2-3 tailored suggestions]
+## MEAL ASSESSMENT:
+- Meal type: [Breakfast/Lunch/Dinner/Snack]
+- Cuisine style: [If identifiable]
+- Nutritional balance: [Assessment of macro balance]
+- Portion size: [Small/Medium/Large/Extra Large]
 
-Please provide a complete and detailed analysis."""
+## HEALTH INSIGHTS:
+- Positive aspects: [What's nutritionally good]
+- Areas for improvement: [Suggestions]
+- Missing nutrients: [What could be added]
 
-            # Get analysis from LLM
+## RECOMMENDATIONS:
+- Healthier alternatives: [If applicable]
+- Portion adjustments: [If needed]
+- Complementary foods: [What would complete the meal]
+
+IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or condiments. Provide realistic portion estimates and accurate nutritional values."""
+
+            # Get comprehensive analysis from LLM
             response = self.llm.invoke(prompt)
             analysis = response.content
             
-            # Extract food items and nutritional data
-            food_items = self.extract_food_items(analysis)
-            nutritional_data = self.extract_nutritional_data(analysis)
+            # Enhanced extraction of food items and nutritional data
+            food_items = self.extract_food_items_enhanced(analysis)
+            nutritional_data = self.extract_nutritional_data_enhanced(analysis)
+            
+            # Search for additional information on unidentified items
+            if len(food_items) < 3:  # If we didn't identify many items, search for more
+                search_results = self.search_additional_food_info(image_description)
+                if search_results:
+                    analysis += f"\n\nADDITIONAL RESEARCH:\n{search_results}"
             
             return {
                 "success": True,
                 "analysis": analysis,
                 "food_items": food_items,
-                "nutritional_data": nutritional_data
+                "nutritional_data": nutritional_data,
+                "comprehensive": True
             }
             
         except Exception as e:
-            logger.error(f"Error in food detection agent: {e}")
+            logger.error(f"Error in enhanced food detection agent: {e}")
             return {
                 "success": False,
                 "error": str(e),
-                "analysis": "Failed to analyze food items",
+                "analysis": "Failed to analyze food items comprehensively",
                 "food_items": [],
-                "nutritional_data": {}
+                "nutritional_data": {},
+                "comprehensive": False
             }
+    
+    def extract_food_items_enhanced(self, analysis: str) -> List[Dict[str, str]]:
+        """Enhanced extraction of food items from analysis."""
+        try:
+            lines = analysis.split('\n')
+            food_items = []
+            in_food_section = False
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Check if we're in the food items section
+                if "IDENTIFIED FOOD ITEMS" in line.upper() or "FOOD ITEMS" in line.upper():
+                    in_food_section = True
+                    continue
+                elif line.startswith("##") and in_food_section:
+                    in_food_section = False
+                    continue
+                
+                # Extract food items
+                if in_food_section and (line.startswith('-') or line.startswith('•') or line.startswith('*')):
+                    item = line[1:].strip()
+                    if item and len(item) > 2:
+                        food_items.append({
+                            "item": item,
+                            "description": item,
+                            "category": self.categorize_food_item(item)
+                        })
+                
+                # Also look for "Item:" format in nutritional breakdown
+                elif line.lower().startswith("- item:") or line.lower().startswith("item:"):
+                    item = line.split(":", 1)[1].strip()
+                    if item and len(item) > 2:
+                        food_items.append({
+                            "item": item,
+                            "description": item,
+                            "category": self.categorize_food_item(item)
+                        })
+            
+            # If no items found in structured format, try to extract from text
+            if not food_items:
+                food_items = self.extract_food_items(analysis)
+            
+            return food_items
+            
+        except Exception as e:
+            logger.error(f"Error in enhanced food item extraction: {e}")
+            return self.extract_food_items(analysis)  # Fallback to original method
+    
+    def extract_nutritional_data_enhanced(self, analysis: str) -> Dict[str, Any]:
+        """Enhanced extraction of nutritional data from analysis."""
+        try:
+            import re
+            
+            nutritional_data = {
+                "total_calories": 0,
+                "total_protein": 0,
+                "total_carbs": 0,
+                "total_fats": 0,
+                "items": [],
+                "meal_assessment": "",
+                "health_insights": ""
+            }
+            
+            lines = analysis.split('\n')
+            
+            # Extract totals
+            for line in lines:
+                line = line.strip().lower()
+                
+                # Extract total calories
+                if "total calories" in line or "total calorie" in line:
+                    calories = re.findall(r'\d+', line)
+                    if calories:
+                        nutritional_data["total_calories"] = int(calories[0])
+                
+                # Extract total protein
+                elif "total protein" in line:
+                    protein = re.findall(r'\d+\.?\d*', line)
+                    if protein:
+                        nutritional_data["total_protein"] = float(protein[0])
+                
+                # Extract total carbs
+                elif "total carbohydrate" in line or "total carbs" in line:
+                    carbs = re.findall(r'\d+\.?\d*', line)
+                    if carbs:
+                        nutritional_data["total_carbs"] = float(carbs[0])
+                
+                # Extract total fats
+                elif "total fats" in line or "total fat" in line:
+                    fats = re.findall(r'\d+\.?\d*', line)
+                    if fats:
+                        nutritional_data["total_fats"] = float(fats[0])
+            
+            # Extract meal assessment
+            assessment_section = ""
+            in_assessment = False
+            for line in lines:
+                if "MEAL ASSESSMENT" in line.upper():
+                    in_assessment = True
+                    continue
+                elif line.startswith("##") and in_assessment:
+                    break
+                elif in_assessment:
+                    assessment_section += line + " "
+            
+            nutritional_data["meal_assessment"] = assessment_section.strip()
+            
+            # Extract health insights
+            insights_section = ""
+            in_insights = False
+            for line in lines:
+                if "HEALTH INSIGHTS" in line.upper():
+                    in_insights = True
+                    continue
+                elif line.startswith("##") and in_insights:
+                    break
+                elif in_insights:
+                    insights_section += line + " "
+            
+            nutritional_data["health_insights"] = insights_section.strip()
+            
+            return nutritional_data
+            
+        except Exception as e:
+            logger.error(f"Error in enhanced nutritional data extraction: {e}")
+            return self.extract_nutritional_data(analysis)  # Fallback to original method
+    
+    def categorize_food_item(self, item: str) -> str:
+        """Categorize food items for better organization."""
+        item_lower = item.lower()
+        
+        # Protein sources
+        if any(protein in item_lower for protein in ['chicken', 'beef', 'pork', 'fish', 'egg', 'tofu', 'beans', 'lentils', 'turkey', 'lamb', 'shrimp', 'salmon']):
+            return "protein"
+        
+        # Vegetables
+        elif any(veg in item_lower for veg in ['lettuce', 'tomato', 'onion', 'carrot', 'broccoli', 'spinach', 'pepper', 'cucumber', 'cabbage']):
+            return "vegetable"
+        
+        # Fruits
+        elif any(fruit in item_lower for fruit in ['apple', 'banana', 'orange', 'berry', 'grape', 'lemon', 'lime', 'mango', 'pineapple']):
+            return "fruit"
+        
+        # Grains/Carbs
+        elif any(grain in item_lower for grain in ['rice', 'bread', 'pasta', 'noodle', 'potato', 'quinoa', 'oats', 'cereal']):
+            return "grain/carb"
+        
+        # Dairy
+        elif any(dairy in item_lower for dairy in ['milk', 'cheese', 'yogurt', 'butter', 'cream']):
+            return "dairy"
+        
+        # Beverages
+        elif any(drink in item_lower for drink in ['water', 'juice', 'coffee', 'tea', 'soda', 'beer', 'wine', 'smoothie']):
+            return "beverage"
+        
+        else:
+            return "other"
+    
+    def search_additional_food_info(self, description: str) -> str:
+        """Search for additional information about food items that might have been missed."""
+        try:
+            # Create a focused search query
+            search_query = f"food ingredients nutrition {description}"
+            search_results = self.search_tool.run(search_query)
+            
+            # Process search results to extract additional food information
+            prompt = f"""
+Based on this food description: "{description}"
+And these search results: {search_results}
+
+Identify any additional food items, ingredients, or components that might have been missed in the initial analysis. Focus on:
+1. Hidden ingredients or components
+2. Common accompaniments for this type of food
+3. Typical garnishes or sides
+4. Cooking methods that might add calories (oils, butter, etc.)
+
+Provide a brief summary of additional items to consider.
+"""
+            
+            response = self.llm.invoke(prompt)
+            return response.content
+            
+        except Exception as e:
+            logger.error(f"Error searching for additional food info: {e}")
+            return ""
     
     def extract_food_items(self, analysis: str) -> List[Dict[str, str]]:
         """Extract food items from analysis."""
