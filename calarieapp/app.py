@@ -1134,6 +1134,53 @@ with st.sidebar:
         st.success("History cleared!")
         st.rerun()
 
-# Footer
+# Footer - Clean and Professional
 st.markdown("---")
-st.markdown("🍱 **AI Calorie Tracker** - Powered by BLIP, YOLO, and Groq LLM")
+
+# Create footer using Streamlit components for better rendering
+col1, col2, col3 = st.columns([1, 2, 1])
+
+with col2:
+    st.markdown("""
+    <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 10px; margin-top: 20px;">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">🍱 AI Calorie Tracker</h3>
+        <p style="color: #495057; font-size: 14px; margin-bottom: 15px;">
+            🔬 AI Visualizations: Edge Detection • Grad-CAM • SHAP • LIME
+        </p>
+        <p style="color: #495057; font-size: 16px; font-weight: 600; margin-bottom: 15px;">
+            Developed by <strong style="color: #4CAF50;">Ujjwal Sinha</strong>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Social links using Streamlit columns
+    social_col1, social_col2 = st.columns(2)
+    
+    with social_col1:
+        st.markdown("""
+        <a href="https://github.com/Ujjwal-sinha" target="_blank" style="text-decoration: none;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 10px 20px; background-color: #4CAF50; color: white; border-radius: 8px; font-weight: 500; text-align: center;">
+                📱 GitHub
+            </div>
+        </a>
+        """, unsafe_allow_html=True)
+    
+    with social_col2:
+        st.markdown("""
+        <a href="https://www.linkedin.com/in/sinhaujjwal01/" target="_blank" style="text-decoration: none;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 10px 20px; background-color: #4CAF50; color: white; border-radius: 8px; font-weight: 500; text-align: center;">
+                💼 LinkedIn
+            </div>
+        </a>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+        <p style="color: #6c757d; font-size: 12px; margin: 0;">
+            © 2024 Ujjwal Sinha • Built with ❤️ using Streamlit & Advanced AI
+        </p>
+        <p style="color: #6c757d; font-size: 11px; margin: 5px 0 0 0;">
+            🚀 Enhanced Food Detection • 🔬 AI Interpretability • 📊 Nutrition Analysis
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
