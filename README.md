@@ -1,182 +1,244 @@
-# 🍱 AI Calorie Tracker
+# 🍱 AI Calorie App - Next.js Frontend
 
-A Streamlit-based web application that leverages AI to analyze food images or text descriptions, providing detailed nutritional breakdowns, calorie tracking, and personalized health suggestions. Powered by the BLIP model for image captioning and Groq's LLaMA3-8b for nutritional analysis, this app helps users monitor their diet with ease.
+A beautiful, modern Next.js application with TypeScript that integrates with your existing Python food detection system. This app provides a comprehensive dashboard and seamless food analysis experience powered by advanced AI models.
 
----
+## 🚀 Features
 
-## Features
+### ✨ **Modern UI/UX**
+- **Beautiful Landing Page** with animated components
+- **Interactive Dashboard** with real-time charts and statistics
+- **Drag & Drop Food Analysis** with progress tracking
+- **Responsive Design** that works on all devices
+- **Dark/Light Mode** support with smooth transitions
 
-- **Image Analysis:** Upload food photos to receive a nutritional breakdown including calories, protein, carbs, and fats.
-- **Text Input:** Describe meals manually for a detailed nutritional analysis.
-- **History Tracking:** View past meal analyses and monitor daily calorie intake.
-- **PDF Reports:** Generate downloadable reports with nutritional summaries, charts, and images.
-- **Weekly Dashboard:** Visualize daily trends for calories and macronutrients.
-- **Follow-Up Questions:** Ask specific questions about meals for deeper insights.
-- **Responsive UI:** Intuitive tabs, charts, and metrics for a seamless user experience.
+### 🤖 **AI Integration**
+- **Seamless Python Backend Integration** via FastAPI bridge
+- **Real-time Analysis Progress** with step-by-step feedback
+- **Comprehensive Results Display** with detailed nutritional breakdown
+- **AI Visualizations** (Edge Detection, Grad-CAM, SHAP, LIME)
+- **Multi-Model Support** (BLIP, YOLO, CNN, LLM)
 
---
+### 📊 **Dashboard Features**
+- **Weekly Nutrition Charts** with interactive visualizations
+- **Macro Distribution** pie charts
+- **Quick Stats** with progress indicators
+- **Recent Analysis History** with accuracy metrics
+- **AI Model Status** monitoring
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Frontend:** Streamlit
-- **AI Models:**
-  - BLIP (Salesforce/blip-image-captioning-base) for image captioning
-  - Groq (LLaMA3-8b-8192) for nutritional analysis
-- **Libraries:**
-  - `langchain-groq` for LLM integration
-  - `transformers` for BLIP model
-  - `PIL` for image processing
-  - `matplotlib` for data visualization
-  - `fpdf` for PDF generation
-  - `torch` for deep learning framework
-  - `python-dotenv` for environment variable management
-- **Hardware:** Supports CPU and GPU (CUDA) for model inference
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Styling**: Tailwind CSS with custom components
+- **Animations**: Framer Motion
+- **Charts**: Recharts
+- **Icons**: Heroicons
+- **File Upload**: React Dropzone
+- **HTTP Client**: Axios
+- **Backend Bridge**: FastAPI + Python
 
----
+## 📦 Installation & Setup
 
-## Prerequisites
+### Prerequisites
+- Node.js 18+ and npm/yarn
+- Python 3.8+ with your existing food detection system
+- All dependencies from your `calarieapp/requirements.txt`
 
-- Python 3.8 or higher
-- A Groq API key (sign up at Groq to obtain one)
-- Optional: NVIDIA GPU with CUDA for faster image processing
+### 1. Install Frontend Dependencies
+```bash
+# Install Node.js dependencies
+npm install
+# or
+yarn install
+```
 
----
+### 2. Install Python API Bridge
+```bash
+# Install FastAPI bridge dependencies
+pip install -r requirements_api.txt
+```
 
-## Installation
+### 3. Environment Setup
+Create a `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_NAME="AI Calorie App"
+```
 
-1. **Clone the Repository:** git clone https://github.com/Ujjwal-sinha/ai-calorie-tracker.git
-cd ai-calorie-tracker
+### 4. Start the Development Servers
 
+#### Terminal 1: Start Python API Bridge
+```bash
+# This bridges your existing Python code with the Next.js frontend
+python python_api_bridge.py
+```
+The API will be available at: http://localhost:8000
 
-2. **Create a Virtual Environment:**
-python -m venv venv
-source venv/bin/activate # On Windows: venv\Scripts\activate
+#### Terminal 2: Start Next.js Frontend
+```bash
+# Start the Next.js development server
+npm run dev
+# or
+yarn dev
+```
+The frontend will be available at: http://localhost:3000
 
-3. **Install Dependencies:**
-pip install -r requirements.txt
-
-4. **Set Up Environment Variables:**
-
-Create a `.env` file in the project root and add your Groq API key:
-
-echo "GROQ_API_KEY=your_groq_api_key" > .env
-
-5. **Download Pretrained Models:**
-
-The BLIP model will be automatically downloaded from Hugging Face on the first run. Ensure you have an internet connection and sufficient disk space (~1GB).
-
----
-# Architecture
-![alt text](<ChatGPT Image Apr 26, 2025, 02_37_12 PM.png>)
-
-## Usage
-
-1. **Run the Application:**
-
+#### Terminal 3: (Optional) Keep your Streamlit app running
+```bash
+# Your existing Streamlit app (for reference/testing)
+cd calarieapp
 streamlit run app.py
+```
+The Streamlit app will be available at: http://localhost:8501
 
-This will launch the app in your default browser at `http://localhost:8501`.
+## 🏗️ Project Structure
 
-2. **Analyze Meals:**
+```
+├── app/                          # Next.js App Router
+│   ├── globals.css              # Global styles with Tailwind
+│   ├── layout.tsx               # Root layout with metadata
+│   ├── page.tsx                 # Landing page with animations
+│   ├── dashboard/               # Dashboard pages
+│   │   └── page.tsx            # Main dashboard
+│   ├── analyze/                 # Food analysis pages
+│   │   └── page.tsx            # Image upload & analysis
+│   └── api/                     # API routes
+│       └── analyze-food/        # Food analysis endpoint
+│           └── route.ts
+├── components/                   # Reusable React components
+├── lib/                         # Utility functions
+│   └── api.ts                  # API client and utilities
+├── types/                       # TypeScript type definitions
+│   └── index.ts                # Main type definitions
+├── calarieapp/                  # Your existing Python code
+│   ├── app.py                  # Original Streamlit app
+│   ├── agents.py               # AI agents
+│   └── requirements.txt        # Python dependencies
+├── python_api_bridge.py        # FastAPI bridge server
+├── requirements_api.txt        # API bridge dependencies
+├── package.json                # Node.js dependencies
+├── tailwind.config.js          # Tailwind CSS configuration
+├── tsconfig.json               # TypeScript configuration
+└── next.config.js              # Next.js configuration
+```
 
-- **Image Analysis Tab:** Upload a food image (JPG/PNG) and optionally add context (e.g., "Identify each item"). The app generates a nutritional breakdown and visualizes macronutrients.
-- **Text Input Tab:** Describe a meal in natural language (e.g., "Grilled chicken with rice and broccoli") for nutritional analysis.
-- **Follow-Up Questions:** Ask specific questions about the meal (e.g., "Is this good for weight loss?") for tailored insights.
+## 🔄 How It Works
 
-3. **Track and Export:**
+### Integration Flow
+1. **Next.js Frontend** → User uploads image via beautiful UI
+2. **FastAPI Bridge** → Receives image and calls your existing Python functions
+3. **Python Backend** → Uses your existing `describe_image_enhanced()` and `analyze_food_with_enhanced_prompt()`
+4. **Response Chain** → Results flow back through FastAPI → Next.js → User
 
-- **History Tab:** View past analyses and today’s calorie total. Generate a PDF report for the latest analysis.
-- **Sidebar:** Monitor weekly nutrient trends and clear history if needed.
+### Key Integration Points
+- `python_api_bridge.py` imports your existing functions from `calarieapp/app.py`
+- FastAPI endpoints wrap your Python functions with web API interface
+- Next.js frontend calls these APIs for seamless integration
+- All your existing AI models (BLIP, YOLO, etc.) work unchanged
+
+## 🎨 UI Components
+
+### Landing Page
+- Hero section with animated text and call-to-action
+- Feature showcase with icons and descriptions
+- Statistics section with animated counters
+- Responsive design with smooth transitions
+
+### Dashboard
+- Real-time nutrition charts and statistics
+- Quick action buttons for food analysis
+- Recent analysis history with accuracy metrics
+- AI model status monitoring
+- Weekly overview with interactive charts
+
+### Food Analysis Page
+- Drag & drop image upload with preview
+- Real-time analysis progress with step indicators
+- Comprehensive results display with nutrition breakdown
+- AI visualizations placeholder (ready for integration)
+- Error handling with helpful messages
+
+## 🔧 Customization
+
+### Styling
+- Modify `tailwind.config.js` for custom colors and themes
+- Update `app/globals.css` for global styles
+- Component styles use Tailwind utility classes
+
+### API Integration
+- Update `lib/api.ts` to modify API calls
+- Customize `python_api_bridge.py` for different Python integration
+- Add new endpoints in `app/api/` directory
+
+### Features
+- Add new pages in `app/` directory
+- Create reusable components in `components/`
+- Define new types in `types/index.ts`
+
+## 🚀 Deployment
+
+### Frontend (Vercel/Netlify)
+```bash
+npm run build
+npm start
+```
+
+### Backend (Docker/Cloud)
+```bash
+# Build and run the FastAPI bridge
+uvicorn python_api_bridge:app --host 0.0.0.0 --port 8000
+```
+
+## 🤝 Integration with Existing Code
+
+This Next.js app is designed to work seamlessly with your existing Python food detection system:
+
+- ✅ **Zero Changes Required** to your existing `calarieapp/app.py`
+- ✅ **All AI Models Preserved** (BLIP, YOLO, CNN, LLM)
+- ✅ **Same Detection Logic** using your `describe_image_enhanced()` function
+- ✅ **Same Analysis Logic** using your `analyze_food_with_enhanced_prompt()` function
+- ✅ **Visualizations Ready** for your existing Grad-CAM, SHAP, LIME functions
+
+## 📱 Screenshots
+
+### Landing Page
+- Modern hero section with gradient backgrounds
+- Feature cards with hover animations
+- Statistics section with animated counters
+- Professional footer with social links
+
+### Dashboard
+- Interactive charts showing weekly nutrition data
+- Quick stats with progress indicators
+- Recent analysis history
+- AI model status monitoring
+
+### Food Analysis
+- Drag & drop image upload interface
+- Real-time progress tracking
+- Comprehensive nutrition results
+- Beautiful error handling
+
+## 🎯 Next Steps
+
+1. **Run the setup** following the installation instructions
+2. **Test the integration** by uploading a food image
+3. **Customize the UI** to match your brand/preferences
+4. **Add AI visualizations** by integrating your existing visualization functions
+5. **Deploy to production** using your preferred hosting platform
+
+## 🔗 Links
+
+- **Frontend**: http://localhost:3000
+- **API Bridge**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Original Streamlit**: http://localhost:8501
+
+## 👨‍💻 Developer
+
+**Ujjwal Sinha**
+- GitHub: [Ujjwal-sinha](https://github.com/Ujjwal-sinha)
+- LinkedIn: [sinhaujjwal01](https://www.linkedin.com/in/sinhaujjwal01/)
 
 ---
 
-## Example
-
-### Image Analysis
-
-Upload a photo of a plate with grilled salmon, quinoa, and avocado. Add context: "Identify each item and estimate portion sizes."
-
-**Output:**
-
-- **Food Items and Nutrients:**
-- Grilled Salmon (150g): 250 cal, Protein: 25g, Carbs: 0g, Fats: 15g
-- Quinoa (100g): 120 cal, Protein: 4g, Carbs: 21g, Fats: 2g
-- Avocado (70g): 160 cal, Protein: 1g, Carbs: 6g, Fats: 15g
-
-- **Total Calories:** 530 cal
-
-- **Nutritional Assessment:** Balanced meal with high protein and healthy fats.
-
-- **Health Suggestions:** Consider adding leafy greens for micronutrients.
-
-View a bar chart and ask follow-up questions like "How much omega-3 is in the salmon?"
-
-### Text Input
-
-Enter: "Large pepperoni pizza slice and a cola."
-
-Output: Similar structured analysis with calories, macronutrients, and suggestions.
-
----
-
-
----
-
-## Dependencies
-
-Key packages listed in `requirements.txt`:
-
-
----
-
-## Troubleshooting
-
-- **Groq API Key Error:** Ensure `GROQ_API_KEY` is set correctly in `.env`. Verify your key at Groq Console.
-- **BLIP Model Fails to Load:** Check internet connectivity and disk space. Try running on CPU by setting `device="cpu"` in model loading.
-- **Low GPU Memory:** If using CUDA, ensure your GPU has at least 4GB VRAM. The app falls back to CPU if CUDA is unavailable.
-- **PDF Generation Fails:** Ensure write permissions in the project directory and sufficient disk space.
-- **Vague Analysis:** Provide detailed context with image uploads (e.g., "List all items") to improve LLM accuracy.
-
----
-
-## Contributing
-
-Contributions are welcome! To contribute:
-
-1. Fork the repository.
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Commit your changes: `git commit -m "Add new feature"`
-4. Push to the branch: `git push origin feature/new-feature`
-5. Open a pull request.
-
-Please include tests and update documentation as needed.
-
----
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
-
----
-
-## Acknowledgments
-
-Built with ❤️ by Ujjwal Sinha.
-
----
-
-## Notes
-
-- You can customize the repository URL, contact details, or license as needed.
-- The BLIP model is downloaded automatically on first run.
-- For advanced deployment or additional features like database support or user authentication, the README can be extended accordingly.
-
----
-
-If you want me to add demo GIFs, deployment instructions (e.g., Heroku, Docker), or sections like "Future Improvements," just let me know!
-
-
-
-
-
-
+Built with ❤️ using Next.js, TypeScript, and Advanced AI Models

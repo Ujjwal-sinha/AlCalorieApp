@@ -1,0 +1,6 @@
+{
+  "/api/analyze-food/route": "app/api/analyze-food/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/page": "app/page.js",
+  "/analyze/page": "app/analyze/page.js"
+}
