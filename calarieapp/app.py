@@ -146,26 +146,51 @@ cnn_transform = transforms.Compose([
 
 # Visualization functions
 def visualize_food_features(image):
-    """Edge detection visualization."""
+    """Edge detection visualization with enhanced error handling."""
     try:
-        img_np = np.array(image.convert("RGB").resize((224, 224)))
-        edges = cv2.Canny(cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY), 100, 200)
-        plt.figure(figsize=(6, 6))
+        logger.info("Starting edge detection visualization...")
+        
+        # Ensure image is in correct format
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        
+        # Resize and convert to numpy array
+        img_np = np.array(image.resize((224, 224)))
+        logger.info(f"Image shape: {img_np.shape}")
+        
+        # Convert to grayscale for edge detection
+        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+        
+        # Apply edge detection
+        edges = cv2.Canny(gray, 100, 200)
+        
+        # Create matplotlib figure
+        plt.figure(figsize=(8, 8))
         plt.imshow(edges, cmap="gray")
-        edge_path = f"edge_output_{uuid.uuid4().hex}.png"
+        plt.title("Edge Detection - Food Boundaries")
         plt.axis("off")
-        plt.savefig(edge_path, bbox_inches="tight")
+        
+        # Save to temporary file
+        edge_path = f"temp_edge_{uuid.uuid4().hex}.png"
+        plt.savefig(edge_path, bbox_inches="tight", dpi=150, facecolor='white')
         plt.close()
+        
+        logger.info(f"Edge detection completed, saved to: {edge_path}")
         return edge_path
+        
     except Exception as e:
         logger.error(f"Edge detection failed: {e}")
+        plt.close()  # Ensure plot is closed even on error
         return None
 
 def apply_gradcam(image_tensor, model, target_class):
-    """Grad-CAM visualization."""
+    """Grad-CAM visualization with enhanced error handling."""
     if model is None:
+        logger.warning("No model provided for Grad-CAM")
         return None
+        
     try:
+        logger.info("Starting Grad-CAM visualization...")
         model.eval()
         gradients, activations = [], []
         
@@ -176,13 +201,19 @@ def apply_gradcam(image_tensor, model, target_class):
         def forward_hook(module, input, output):
             activations.append(output.detach())
         
+        # Register hooks
         last_conv = model.features.norm5
         handle_fwd = last_conv.register_forward_hook(forward_hook)
         handle_bwd = last_conv.register_backward_hook(backward_hook)
         
+        # Forward pass
         image_tensor = image_tensor.clone().detach().to(device).requires_grad_(True)
         output = model(image_tensor)
         model.zero_grad()
+        
+        # Use the top predicted class if target_class is 0
+        if target_class == 0:
+            target_class = output.argmax(dim=1).item()
         
         class_loss = output[0, target_class]
         class_loss.backward()
@@ -190,8 +221,10 @@ def apply_gradcam(image_tensor, model, target_class):
         if not gradients or not activations:
             handle_fwd.remove()
             handle_bwd.remove()
+            logger.warning("No gradients or activations captured")
             return None
         
+        # Generate CAM
         grads_val = gradients[0]
         activations_val = activations[0]
         
@@ -200,87 +233,146 @@ def apply_gradcam(image_tensor, model, target_class):
         cam = F.relu(cam)
         cam = F.interpolate(cam, size=(224, 224), mode='bilinear', align_corners=False)
         
+        # Normalize CAM
         cam = cam - cam.min()
         cam = cam / (cam.max() + 1e-8)
         cam_np = cam.squeeze().detach().cpu().numpy()
         
+        # Denormalize image
         image_np = image_tensor.permute(0, 2, 3, 1).squeeze().detach().cpu().numpy()
         image_np = (image_np * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])).clip(0, 1)
         
-        plt.figure(figsize=(8, 6))
+        # Create visualization
+        plt.figure(figsize=(8, 8))
         plt.imshow(image_np)
-        plt.imshow(cam_np, cmap="jet", alpha=0.5)
-        gradcam_path = f"gradcam_{uuid.uuid4().hex}.png"
+        plt.imshow(cam_np, cmap="jet", alpha=0.6)
+        plt.title("Grad-CAM - AI Model Focus Areas")
         plt.axis("off")
-        plt.savefig(gradcam_path, bbox_inches="tight")
+        
+        gradcam_path = f"temp_gradcam_{uuid.uuid4().hex}.png"
+        plt.savefig(gradcam_path, bbox_inches="tight", dpi=150, facecolor='white')
         plt.close()
         
+        # Clean up hooks
         handle_fwd.remove()
         handle_bwd.remove()
+        
+        logger.info(f"Grad-CAM completed, saved to: {gradcam_path}")
         return gradcam_path
+        
     except Exception as e:
         logger.error(f"Grad-CAM failed: {e}")
+        plt.close()  # Ensure plot is closed
+        try:
+            handle_fwd.remove()
+            handle_bwd.remove()
+        except:
+            pass
         return None
 
 def apply_shap(image_tensor, model):
-    """SHAP visualization."""
+    """SHAP visualization with enhanced error handling."""
     if model is None:
+        logger.warning("No model provided for SHAP")
         return None
+        
     try:
+        logger.info("Starting SHAP analysis...")
         model.eval()
+        
+        # Create SHAP explainer
         gradient_shap = GradientShap(model)
         baseline = torch.zeros_like(image_tensor).to(device)
         image_tensor = image_tensor.clone().detach().requires_grad_(True).to(device)
-        attributions = gradient_shap.attribute(image_tensor, baselines=baseline, target=0)
+        
+        # Generate attributions
+        attributions = gradient_shap.attribute(image_tensor, baselines=baseline, target=0, n_samples=50)
         attr_np = attributions.sum(dim=1).squeeze().detach().cpu().numpy()
+        
+        # Denormalize image
         image_np = image_tensor.permute(0, 2, 3, 1).squeeze().detach().cpu().numpy()
         image_np = (image_np * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])).clip(0, 1)
         
-        plt.figure(figsize=(8, 6))
-        plt.imshow(np.abs(attr_np), cmap="viridis", alpha=0.5)
-        plt.imshow(image_np, alpha=0.5)
-        shap_path = f"shap_{uuid.uuid4().hex}.png"
+        # Create visualization
+        plt.figure(figsize=(8, 8))
+        plt.imshow(image_np, alpha=0.7)
+        plt.imshow(np.abs(attr_np), cmap="viridis", alpha=0.6)
+        plt.title("SHAP Analysis - Feature Importance")
+        plt.colorbar(label="Attribution Magnitude")
         plt.axis("off")
-        plt.savefig(shap_path, bbox_inches="tight")
+        
+        shap_path = f"temp_shap_{uuid.uuid4().hex}.png"
+        plt.savefig(shap_path, bbox_inches="tight", dpi=150, facecolor='white')
         plt.close()
+        
+        logger.info(f"SHAP analysis completed, saved to: {shap_path}")
         return shap_path
+        
     except Exception as e:
         logger.error(f"SHAP failed: {e}")
+        plt.close()  # Ensure plot is closed
         return None
 
 def apply_lime(image, model, classes):
-    """LIME visualization."""
+    """LIME visualization with enhanced error handling."""
     if model is None:
+        logger.warning("No model provided for LIME")
         return None
+        
     try:
+        logger.info("Starting LIME explanation...")
         explainer = LimeImageExplainer()
         
         def predict_fn(images):
+            # Convert images to tensor format
             images = torch.tensor(images, dtype=torch.float32).permute(0, 3, 1, 2).to(device)
+            # Normalize
             images = (images - torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(device)) / torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(device)
+            
             with torch.no_grad():
                 outputs = model(images)
             return F.softmax(outputs, dim=1).cpu().numpy()
         
-        image_np = np.array(image.convert("RGB").resize((224, 224)))
+        # Prepare image
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        image_np = np.array(image.resize((224, 224)))
+        
+        # Generate explanation
         explanation = explainer.explain_instance(
-            image_np, predict_fn, top_labels=2, num_samples=200, segmentation_fn=None
-        )
-        temp, mask = explanation.get_image_and_mask(
-            explanation.top_labels[0], positive_only=True, num_features=5, hide_rest=False
+            image_np, 
+            predict_fn, 
+            top_labels=2, 
+            num_samples=100,  # Reduced for speed
+            segmentation_fn=None
         )
         
-        plt.figure(figsize=(6, 6))
-        plt.imshow(image_np)
-        plt.imshow(mask, cmap="viridis", alpha=0.5)
-        plt.colorbar(label="Importance")
+        # Get explanation visualization
+        temp, mask = explanation.get_image_and_mask(
+            explanation.top_labels[0], 
+            positive_only=True, 
+            num_features=8, 
+            hide_rest=False
+        )
+        
+        # Create visualization
+        plt.figure(figsize=(8, 8))
+        plt.imshow(temp)
+        plt.imshow(mask, cmap="viridis", alpha=0.4)
+        plt.title("LIME Explanation - Local Interpretability")
+        plt.colorbar(label="Feature Importance")
         plt.axis("off")
-        lime_path = f"lime_{uuid.uuid4().hex}.png"
-        plt.savefig(lime_path, bbox_inches="tight", dpi=150)
+        
+        lime_path = f"temp_lime_{uuid.uuid4().hex}.png"
+        plt.savefig(lime_path, bbox_inches="tight", dpi=150, facecolor='white')
         plt.close()
+        
+        logger.info(f"LIME explanation completed, saved to: {lime_path}")
         return lime_path
+        
     except Exception as e:
         logger.error(f"LIME failed: {e}")
+        plt.close()  # Ensure plot is closed
         return None
 
 # Extract food items from text - Enhanced version
@@ -989,63 +1081,73 @@ with tab1:
                         st.write(analysis_result["analysis"])
                         st.info("💡 **Tip**: For more detailed analysis, try uploading a clearer image or add specific food descriptions in the context field.")
                 
-                # Add optional visualizations (faster loading)
-                with st.expander("🔬 AI Visualizations (Click to Generate)"):
-                    if st.button("Generate Visualizations", key="gen_viz"):
-                            st.write("**AI Model Interpretability Visualizations**")
-                            
-                            if models['cnn_model']:
-                                with st.spinner("Generating visualizations..."):
-                                    try:
-                                        # Prepare image for CNN
-                                        image_rgb = image.convert("RGB")
-                                        image_tensor = cnn_transform(image_rgb).unsqueeze(0).to(device)
-                                        
-                                        # Generate visualizations
-                                        col1, col2 = st.columns(2)
-                                        
-                                        with col1:
-                                            st.write("**Edge Detection**")
-                                            edge_path = visualize_food_features(image)
-                                            if edge_path:
-                                                edge_img = Image.open(edge_path)
-                                                st.image(edge_img, caption="Edge Detection - Food Boundaries", use_container_width=True)
-                                                os.remove(edge_path)
-                                            
-                                            st.write("**SHAP Analysis**")
-                                            shap_path = apply_shap(image_tensor, models['cnn_model'])
-                                            if shap_path:
-                                                shap_img = Image.open(shap_path)
-                                                st.image(shap_img, caption="SHAP - Feature Importance", use_container_width=True)
-                                                os.remove(shap_path)
-                                        
-                                        with col2:
-                                            st.write("**Grad-CAM**")
-                                            gradcam_path = apply_gradcam(image_tensor, models['cnn_model'], 0)
-                                            if gradcam_path:
-                                                gradcam_img = Image.open(gradcam_path)
-                                                st.image(gradcam_img, caption="Grad-CAM - Model Focus Areas", use_container_width=True)
-                                                os.remove(gradcam_path)
-                                            
-                                            st.write("**LIME Explanation**")
-                                            lime_path = apply_lime(image, models['cnn_model'], ["food"])
-                                            if lime_path:
-                                                lime_img = Image.open(lime_path)
-                                                st.image(lime_img, caption="LIME - Local Interpretability", use_container_width=True)
-                                                os.remove(lime_path)
-                                        
-                                        st.info("💡 **Visualization Guide:**")
-                                        st.write("• **Edge Detection**: Shows food boundaries and textures")
-                                        st.write("• **Grad-CAM**: Highlights areas the AI focuses on")
-                                        st.write("• **SHAP**: Shows feature importance for predictions")
-                                        st.write("• **LIME**: Explains local decision-making regions")
-                                        
-                                    except Exception as e:
-                                        st.warning(f"Visualization generation failed: {e}")
-                            else:
-                                st.info("CNN model not available for visualizations.")
+                # AI Visualizations - Always Generated
+                with st.expander("🔬 AI Visualizations", expanded=True):
+                    st.write("**AI Model Interpretability Visualizations**")
+                    
+                    if models['cnn_model']:
+                        with st.spinner("Generating AI visualizations..."):
+                            try:
+                                # Prepare image for CNN
+                                image_rgb = image.convert("RGB")
+                                image_tensor = cnn_transform(image_rgb).unsqueeze(0).to(device)
+                                
+                                # Generate all visualizations
+                                col1, col2 = st.columns(2)
+                                
+                                with col1:
+                                    st.write("**Edge Detection**")
+                                    edge_path = visualize_food_features(image)
+                                    if edge_path:
+                                        edge_img = Image.open(edge_path)
+                                        st.image(edge_img, caption="Edge Detection - Food Boundaries", use_container_width=True)
+                                        os.remove(edge_path)
+                                    else:
+                                        st.warning("Edge detection failed")
+                                    
+                                    st.write("**SHAP Analysis**")
+                                    shap_path = apply_shap(image_tensor, models['cnn_model'])
+                                    if shap_path:
+                                        shap_img = Image.open(shap_path)
+                                        st.image(shap_img, caption="SHAP - Feature Importance", use_container_width=True)
+                                        os.remove(shap_path)
+                                    else:
+                                        st.warning("SHAP analysis failed")
+                                
+                                with col2:
+                                    st.write("**Grad-CAM**")
+                                    gradcam_path = apply_gradcam(image_tensor, models['cnn_model'], 0)
+                                    if gradcam_path:
+                                        gradcam_img = Image.open(gradcam_path)
+                                        st.image(gradcam_img, caption="Grad-CAM - Model Focus Areas", use_container_width=True)
+                                        os.remove(gradcam_path)
+                                    else:
+                                        st.warning("Grad-CAM failed")
+                                    
+                                    st.write("**LIME Explanation**")
+                                    lime_path = apply_lime(image, models['cnn_model'], ["food"])
+                                    if lime_path:
+                                        lime_img = Image.open(lime_path)
+                                        st.image(lime_img, caption="LIME - Local Interpretability", use_container_width=True)
+                                        os.remove(lime_path)
+                                    else:
+                                        st.warning("LIME explanation failed")
+                                
+                                st.info("💡 **Visualization Guide:**")
+                                st.write("• **Edge Detection**: Shows food boundaries and textures")
+                                st.write("• **Grad-CAM**: Highlights areas the AI focuses on")
+                                st.write("• **SHAP**: Shows feature importance for predictions")
+                                st.write("• **LIME**: Explains local decision-making regions")
+                                
+                            except Exception as e:
+                                st.error(f"Visualization generation failed: {str(e)}")
+                                st.info("This might be due to:")
+                                st.write("• Missing dependencies (captum, lime)")
+                                st.write("• GPU/CPU compatibility issues")
+                                st.write("• Image processing errors")
                     else:
-                        st.info("Click the button above to generate AI visualizations (takes ~10-15 seconds)")
+                        st.warning("CNN model not available for visualizations.")
+                        st.info("The CNN model is required for generating AI visualizations.")
                 
                 # Save to history
                 entry = {
