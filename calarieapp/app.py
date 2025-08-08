@@ -30,9 +30,9 @@ try:
     from modern_ui import (
         load_css, create_modern_header, create_metric_card, create_feature_card,
         create_ai_analysis_box, create_food_item_card, create_timeline_item,
-        create_modern_footer, create_modern_sidebar, create_upload_section,
-        create_analysis_results, create_modern_chart_container, create_loading_animation,
-        create_empty_state
+        create_modern_footer, create_modern_sidebar, create_model_status_display,
+        create_upload_section, create_analysis_results, create_modern_chart_container,
+        create_loading_animation, create_empty_state
     )
     MODERN_UI_AVAILABLE = True
 except ImportError:
@@ -1319,20 +1319,24 @@ def main():
 
     # Modern Sidebar Content
     with st.sidebar:
-        # Model status
-        st.markdown("""
-        <h4>🤖 AI Models Status</h4>
-        """, unsafe_allow_html=True)
-        
+        # Model status with fine-tuned labels
         model_status = {
             'BLIP': models['blip_model'] is not None,
             'YOLO': models['yolo_model'] is not None,
             'LLM': models['llm'] is not None
         }
         
-        for model, status in model_status.items():
-            status_icon = "✅" if status else "❌"
-            st.write(f"{status_icon} **{model}**: {'Available' if status else 'Not Available'}")
+        if MODERN_UI_AVAILABLE:
+            create_model_status_display(model_status)
+        else:
+            # Fallback to basic model status display
+            st.markdown("""
+            <h4>🤖 AI Models Status</h4>
+            """, unsafe_allow_html=True)
+            
+            for model, status in model_status.items():
+                status_icon = "✅" if status else "❌"
+                st.write(f"🔧 **Fine-tuned {model}**: {'Available' if status else 'Not Available'}")
         
         st.markdown("---")
         
@@ -1355,13 +1359,17 @@ def main():
         today_cals = st.session_state.daily_calories.get(today, 0)
         progress = min(today_cals / st.session_state.calorie_target, 1.0) if st.session_state.calorie_target > 0 else 0
         
-        # Modern progress display
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">🔥 {today_cals}</div>
-            <div class="metric-label">calories today</div>
-        </div>
-        """, unsafe_allow_html=True)
+        if MODERN_UI_AVAILABLE:
+            # Modern progress display
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">🔥 {today_cals}</div>
+                <div class="metric-label">calories today</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            # Fallback progress display
+            st.metric("Today's Calories", f"{today_cals} kcal")
         
         st.progress(progress)
         st.caption(f"Progress: {progress*100:.1f}% of target")
