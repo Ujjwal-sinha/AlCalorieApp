@@ -6,10 +6,9 @@ Test script for modern UI components
 import streamlit as st
 from modern_ui import (
     load_css, create_modern_header, create_metric_card, create_feature_card,
-    create_ai_analysis_box, create_food_item_card, create_timeline_item,
-    create_modern_footer, create_modern_sidebar, create_upload_section,
-    create_analysis_results, create_modern_chart_container, create_loading_animation,
-    create_empty_state
+    create_ai_analysis_box, create_timeline_item, create_modern_footer, 
+    create_modern_sidebar, create_upload_section, create_analysis_results, 
+    create_modern_chart_container, create_loading_animation, create_empty_state
 )
 
 def main():
@@ -52,9 +51,15 @@ def main():
     with col2:
         create_feature_card("📊", "Visualizations", "Beautiful charts and graphs")
     
-    # Test food item card
-    st.markdown("## 🍽️ Test Food Item Card")
-    create_food_item_card("Grilled Chicken Breast", 250, 35.0, 0.0, 12.0)
+    # Test analysis results (without food items breakdown)
+    st.markdown("## 📊 Test Analysis Results")
+    sample_nutrition = {
+        "total_calories": 850,
+        "total_protein": 45.2,
+        "total_carbs": 78.5,
+        "total_fats": 32.1
+    }
+    create_analysis_results(sample_nutrition, "This is a sample AI analysis showing detailed nutritional insights and recommendations for your meal.")
     
     # Test timeline item
     st.markdown("## 📅 Test Timeline Item")

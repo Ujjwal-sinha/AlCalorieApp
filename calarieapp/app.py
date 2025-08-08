@@ -3,24 +3,82 @@ from PIL import Image
 from dotenv import load_dotenv
 import os
 from datetime import datetime, date
-from langchain_groq import ChatGroq
-from langchain.schema import HumanMessage
-from transformers import BlipForConditionalGeneration, BlipProcessor
-import torch
-import torchvision.models as torchvision_models
-from torchvision import transforms
-import numpy as np
 import logging
-from PIL import ImageEnhance, ImageFilter
 import re
 from typing import Dict, Any, List
-import matplotlib.pyplot as plt
-import cv2
-import torch.nn.functional as F
-from captum.attr import GradientShap
-from lime.lime_image import LimeImageExplainer
 import uuid
-import os
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Try to import AI/ML libraries with error handling
+try:
+    from langchain_groq import ChatGroq
+    from langchain.schema import HumanMessage
+    GROQ_AVAILABLE = True
+except ImportError as e:
+    st.error(f"LangChain Groq library not available: {e}")
+    GROQ_AVAILABLE = False
+
+try:
+    from transformers import BlipForConditionalGeneration, BlipProcessor
+    TRANSFORMERS_AVAILABLE = True
+except ImportError as e:
+    st.error(f"Transformers library not available: {e}")
+    TRANSFORMERS_AVAILABLE = False
+
+try:
+    import torch
+    import torchvision.models as torchvision_models
+    from torchvision import transforms
+    import torch.nn.functional as F
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    st.error(f"PyTorch library not available: {e}")
+    TORCH_AVAILABLE = False
+
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError as e:
+    st.error(f"NumPy library not available: {e}")
+    NUMPY_AVAILABLE = False
+
+try:
+    from PIL import ImageEnhance, ImageFilter
+    PIL_AVAILABLE = True
+except ImportError as e:
+    st.error(f"PIL advanced features not available: {e}")
+    PIL_AVAILABLE = False
+
+try:
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except ImportError as e:
+    st.error(f"Matplotlib library not available: {e}")
+    MATPLOTLIB_AVAILABLE = False
+
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError as e:
+    st.error(f"OpenCV library not available: {e}")
+    CV2_AVAILABLE = False
+
+try:
+    from captum.attr import GradientShap
+    CAPTUM_AVAILABLE = True
+except ImportError as e:
+    st.warning(f"Captum library not available (AI interpretability features disabled): {e}")
+    CAPTUM_AVAILABLE = False
+
+try:
+    from lime.lime_image import LimeImageExplainer
+    LIME_AVAILABLE = True
+except ImportError as e:
+    st.warning(f"LIME library not available (AI interpretability features disabled): {e}")
+    LIME_AVAILABLE = False
 
 # Import visualization module
 from visualizations import display_visualization_dashboard, create_quick_summary_charts
@@ -66,11 +124,14 @@ st.markdown("""
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
 if not groq_api_key:
-    st.error("GROQ_API_KEY not found in .env file.")
-    st.stop()
+    st.warning("GROQ_API_KEY not found in .env file. LLM features will be disabled.")
+    groq_api_key = None
 
 # Device configuration
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if TORCH_AVAILABLE:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+else:
+    device = None
 
 # Initialize models
 @st.cache_resource
@@ -78,22 +139,31 @@ def load_models():
     models = {}
     
     # Load LLM
-    try:
-        models['llm'] = ChatGroq(model_name="llama3-8b-8192", api_key=groq_api_key)
-        logger.info("LLM loaded successfully")
-    except Exception as e:
-        logger.error(f"Failed to load LLM: {e}")
+    if GROQ_AVAILABLE:
+        try:
+            models['llm'] = ChatGroq(model_name="llama3-8b-8192", api_key=groq_api_key)
+            logger.info("LLM loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load LLM: {e}")
+            models['llm'] = None
+    else:
+        logger.warning("LangChain Groq not available - LLM features disabled")
         models['llm'] = None
     
     # Load BLIP
-    try:
-        models['processor'] = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-        models['blip_model'] = BlipForConditionalGeneration.from_pretrained(
-            "Salesforce/blip-image-captioning-base"
-        ).to(device).eval()
-        logger.info("BLIP loaded successfully")
-    except Exception as e:
-        logger.error(f"Failed to load BLIP: {e}")
+    if TRANSFORMERS_AVAILABLE and TORCH_AVAILABLE:
+        try:
+            models['processor'] = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+            models['blip_model'] = BlipForConditionalGeneration.from_pretrained(
+                "Salesforce/blip-image-captioning-base"
+            ).to(device).eval()
+            logger.info("BLIP loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load BLIP: {e}")
+            models['processor'] = None
+            models['blip_model'] = None
+    else:
+        logger.warning("Transformers or PyTorch not available - BLIP features disabled")
         models['processor'] = None
         models['blip_model'] = None
     
@@ -1093,7 +1163,7 @@ def main():
                     
                     # Show nutrition summary using modern cards
                     nutrition = analysis_result["nutritional_data"]
-                    create_analysis_results(nutrition, analysis_result["food_items"], analysis_result["analysis"])
+                    create_analysis_results(nutrition, analysis_result["analysis"])
                     
                     # Advanced Analytics Dashboard
                     st.markdown("---")

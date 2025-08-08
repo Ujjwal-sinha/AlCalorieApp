@@ -485,12 +485,6 @@ def display_visualization_dashboard(nutrition_data, daily_calories, food_items, 
             if bar_fig:
                 st.pyplot(bar_fig)
                 plt.close()
-            
-            # Food items breakdown
-            meal_fig = visualizer.create_meal_analysis_chart(food_items)
-            if meal_fig:
-                st.pyplot(meal_fig)
-                plt.close()
     
     with tab2:
         st.write("**Daily Calorie Trends and Progress**")

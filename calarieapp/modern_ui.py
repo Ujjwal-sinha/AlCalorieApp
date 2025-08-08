@@ -923,7 +923,7 @@ def create_upload_section():
     
     return uploaded_file
 
-def create_analysis_results(nutrition_data, food_items, analysis_text):
+def create_analysis_results(nutrition_data, analysis_text):
     """Display analysis results in modern format"""
     st.markdown("""
     <div class="modern-card">
@@ -942,24 +942,7 @@ def create_analysis_results(nutrition_data, food_items, analysis_text):
     with col4:
         create_metric_card(f"{nutrition_data.get('total_fats', 0):.1f}g", "Fats", "🥑")
     
-    # Food items breakdown
-    if food_items:
-        st.markdown("""
-        <div class="modern-card">
-            <h3>🍽️ Food Items Breakdown</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        for item in food_items:
-            create_food_item_card(
-                item.get('item', 'Unknown'),
-                item.get('calories', 0),
-                item.get('protein', 0),
-                item.get('carbs', 0),
-                item.get('fats', 0)
-            )
-    
-    # AI Analysis
+    # AI Analysis (only this section, no food items breakdown)
     if analysis_text:
         create_ai_analysis_box("AI Analysis Report", analysis_text)
 
@@ -998,7 +981,6 @@ __all__ = [
     'create_metric_card',
     'create_feature_card',
     'create_ai_analysis_box',
-    'create_food_item_card',
     'create_timeline_item',
     'create_modern_footer',
     'create_modern_sidebar',

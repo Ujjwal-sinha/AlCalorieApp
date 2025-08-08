@@ -1,0 +1,429 @@
+🔍 HARDCODED VALUES REPORT
+==================================================
+
+📁 File: test_no_breakdown.py
+------------------------------
+  🔸 NUMBERS - retry_counts:
+    Line 30: 5
+    Line 31: 3
+
+  Total issues in file: 2
+
+📁 File: test_modern_ui.py
+------------------------------
+  🔸 NUMBERS - timeouts:
+    Line 66: 30
+
+  🔸 NUMBERS - retry_counts:
+    Line 59: 5
+
+  🔸 NUMBERS - dimensions:
+    Line 66: 12
+
+  🔸 STRINGS - dates:
+    Line 66: 2024
+
+  Total issues in file: 4
+
+📁 File: agents.py
+------------------------------
+  🔸 NUMBERS - retry_counts:
+    Line 94: 3
+    Line 291: 3
+    Line 315: 3
+    Line 396: 3
+    Line 398: 5
+    Line 427: 3
+    Line 429: 5
+
+  🔸 STRINGS - model_names:
+    Line 17: llama3-8b-8192
+    Line 376: llama3-8b-8192
+
+  Total issues in file: 9
+
+📁 File: visualizations.py
+------------------------------
+  🔸 NUMBERS - calorie_targets:
+    Line 124: 2000
+    Line 167: 2000
+    Line 255: 2000
+    Line 352: 2000
+    Line 353: 2000
+    Line 363: 2000
+    Line 509: 2000
+    Line 510: 2000
+
+  🔸 NUMBERS - timeouts:
+    Line 257: 300
+    Line 259: 30
+
+  🔸 NUMBERS - retry_counts:
+    Line 103: 10
+    Line 114: 3
+    Line 137: 3
+    Line 148: 3
+    Line 151: 3
+    Line 157: 3
+    Line 182: 10
+    Line 200: 3
+    Line 201: 5
+    Line 241: 3
+    Line 341: 3
+    Line 407: 5
+    Line 408: 5
+    Line 430: 5
+    Line 431: 5
+    Line 432: 5
+    Line 433: 5
+    Line 441: 3
+
+  🔸 NUMBERS - dimensions:
+    Line 72: 6
+    Line 81: 16
+    Line 103: 10
+    Line 112: 16
+    Line 113: 12
+    Line 134: 12
+    Line 153: 16
+    Line 154: 12
+    Line 155: 12
+    Line 182: 10
+    Line 209: 100
+    Line 210: 100
+    Line 230: 12
+    Line 239: 16
+    Line 240: 12
+    Line 253: 100
+    Line 256: 100
+    Line 258: 100
+    Line 264: 100
+    Line 265: 100
+    Line 266: 100
+    Line 267: 100
+    Line 268: 100
+    Line 290: 100
+    Line 295: 16
+    Line 370: 100
+    Line 382: 6
+    Line 383: 6
+    Line 510: 100
+
+  🔸 COLORS - hex_colors:
+    Line 36: #4CAF50
+    Line 37: #2196F3
+    Line 38: #FF9800
+    Line 39: #F44336
+    Line 40: #4CAF50
+    Line 41: #FFC107
+    Line 42: #00BCD4
+    Line 43: #F5F5F5
+    Line 44: #212121
+    Line 49: #FF6B6B
+    Line 50: #4ECDC4
+    Line 51: #45B7D1
+    Line 52: #96CEB4
+    Line 53: #FFEAA7
+
+  Total issues in file: 71
+
+📁 File: demo_visualizations.py
+------------------------------
+  🔸 NUMBERS - timeouts:
+    Line 33: 1800
+    Line 46: 30
+
+  🔸 NUMBERS - retry_counts:
+    Line 16: 5
+    Line 18: 3
+    Line 23: 5
+    Line 24: 3
+    Line 26: 5
+    Line 37: 5
+    Line 44: 5
+    Line 45: 10
+    Line 47: 10
+
+  🔸 NUMBERS - dimensions:
+    Line 18: 12
+    Line 22: 12
+    Line 24: 6
+    Line 26: 6
+    Line 43: 100
+    Line 45: 10
+    Line 47: 10
+
+  Total issues in file: 18
+
+📁 File: modern_ui.py
+------------------------------
+  🔸 NUMBERS - calorie_targets:
+    Line 46: 2000
+    Line 589: 2000
+    Line 680: 1000
+
+  🔸 NUMBERS - timeouts:
+    Line 69: 300
+    Line 126: 30
+    Line 210: 30
+    Line 488: 30
+
+  🔸 NUMBERS - retry_counts:
+    Line 46: 10
+    Line 47: 3
+    Line 53: 3
+    Line 56: 3
+    Line 80: 3
+    Line 288: 3
+    Line 297: 3
+    Line 306: 3
+    Line 315: 3
+    Line 326: 3
+    Line 348: 3
+    Line 435: 3
+    Line 455: 3
+    Line 476: 3
+    Line 589: 10
+    Line 590: 3
+    Line 660: 3
+    Line 685: 3
+    Line 692: 3
+    Line 708: 3
+    Line 724: 3
+
+  🔸 NUMBERS - dimensions:
+    Line 19: 100
+    Line 24: 100
+    Line 30: 100
+    Line 46: 100
+    Line 90: 100
+    Line 91: 100
+    Line 92: 100
+    Line 98: 100
+    Line 108: 100
+    Line 127: 100
+    Line 132: 100
+    Line 157: 100
+    Line 174: 100
+    Line 175: 100
+    Line 176: 100
+    Line 182: 100
+    Line 188: 100
+    Line 211: 100
+    Line 216: 100
+    Line 227: 100
+    Line 234: 100
+    Line 239: 100
+    Line 269: 100
+    Line 283: 100
+    Line 292: 100
+    Line 301: 100
+    Line 310: 100
+    Line 331: 100
+    Line 388: 100
+    Line 394: 100
+    Line 419: 100
+    Line 444: 100
+    Line 489: 100
+    Line 494: 100
+    Line 505: 100
+    Line 554: 100
+    Line 572: 100
+    Line 589: 100
+    Line 625: 100
+    Line 626: 100
+    Line 627: 100
+    Line 633: 100
+    Line 670: 100
+
+  🔸 STRINGS - urls:
+    Line 46: http://www.w3.org/2000/svg
+    Line 589: http://www.w3.org/2000/svg
+    Line 806: https://github.com/Ujjwal-sinha
+    Line 807: https://www.linkedin.com/in/sinhaujjwal01/
+
+  🔸 STRINGS - dates:
+    Line 810: 2025
+
+  🔸 STRINGS - names:
+    Line 804: Ujjwal Sinha
+    Line 810: Ujjwal Sinha
+
+  🔸 STRINGS - github_links:
+    Line 806: github.com/Ujjwal-sinha
+
+  🔸 STRINGS - linkedin_links:
+    Line 807: linkedin.com/in/sinhaujjwal01
+
+  🔸 COLORS - hex_colors:
+    Line 19: #667eea
+    Line 24: #f5f7fa
+    Line 30: #667eea
+    Line 108: #667eea
+    Line 157: #667eea
+    Line 188: #5a6fd8
+    Line 197: #667eea
+    Line 220: #764ba2
+    Line 227: #667eea
+    Line 234: #667eea
+    Line 239: #667eea
+    Line 263: #667eea
+    Line 269: #667eea
+    Line 283: #4CAF50
+    Line 292: #f44336
+    Line 301: #ff9800
+    Line 310: #2196F3
+    Line 331: #667eea
+    Line 388: #667eea
+    Line 394: #5a6fd8
+    Line 505: #667eea
+    Line 527: #667eea
+    Line 540: #667eea
+    Line 554: #667eea
+    Line 572: #667eea
+    Line 615: #4CAF50
+    Line 658: #FFD700
+    Line 670: #667eea
+    Line 700: #667eea
+    Line 716: #667eea
+    Line 731: #667eea
+    Line 891: #FFD700
+    Line 894: #4CAF50
+    Line 962: #667eea
+    Line 973: #667eea
+
+  🔸 COLORS - gradients:
+    Line 19: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 24: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)
+    Line 30: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 93: linear-gradient(90deg, transparent, rgba(255,255,255,0.2)
+    Line 108: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 126: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1)
+    Line 157: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 177: linear-gradient(90deg, transparent, rgba(255,255,255,0.2)
+    Line 188: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)
+    Line 210: linear-gradient(45deg, transparent 30%, rgba(102, 126, 234, 0.05)
+    Line 227: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 234: linear-gradient(180deg, #667eea 0%, #764ba2 100%)
+    Line 239: linear-gradient(180deg, #667eea 0%, #764ba2 100%)
+    Line 269: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 283: linear-gradient(135deg, #4CAF50 0%, #45a049 100%)
+    Line 292: linear-gradient(135deg, #f44336 0%, #d32f2f 100%)
+    Line 301: linear-gradient(135deg, #ff9800 0%, #f57c00 100%)
+    Line 310: linear-gradient(135deg, #2196F3 0%, #1976D2 100%)
+    Line 331: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 348: linear-gradient(90deg, transparent, rgba(255,255,255,0.3)
+    Line 388: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 394: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)
+    Line 488: linear-gradient(45deg, transparent 30%, rgba(102, 126, 234, 0.05)
+    Line 505: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 554: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 572: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    Line 628: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.1)
+    Line 670: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+
+  Total issues in file: 143
+
+📁 File: app.py
+------------------------------
+  🔸 NUMBERS - calorie_targets:
+    Line 200: 2000
+    Line 1418: 1000
+
+  🔸 NUMBERS - timeouts:
+    Line 565: 300
+    Line 824: 300
+    Line 1135: 30
+
+  🔸 NUMBERS - retry_counts:
+    Line 213: 3
+    Line 218: 3
+    Line 318: 3
+    Line 329: 3
+    Line 380: 3
+    Line 415: 3
+    Line 417: 3
+    Line 552: 3
+    Line 566: 10
+    Line 568: 3
+    Line 611: 3
+    Line 615: 3
+    Line 651: 3
+    Line 665: 3
+    Line 719: 3
+    Line 724: 3
+    Line 726: 5
+    Line 732: 3
+    Line 734: 5
+    Line 767: 3
+    Line 781: 5
+    Line 792: 10
+    Line 802: 3
+    Line 828: 5
+    Line 837: 10
+    Line 839: 5
+    Line 888: 3
+    Line 890: 3
+    Line 953: 3
+    Line 965: 5
+    Line 1031: 3
+    Line 1127: 10
+    Line 1333: 10
+    Line 1382: 3
+
+  🔸 NUMBERS - dimensions:
+    Line 252: 100
+    Line 335: 6
+    Line 386: 6
+    Line 433: 100
+    Line 566: 6
+    Line 665: 100
+    Line 727: 6
+    Line 792: 10
+    Line 826: 100
+    Line 827: 100
+    Line 837: 10
+    Line 844: 100
+    Line 1127: 10
+    Line 1146: 100
+    Line 1319: 100
+    Line 1333: 10
+    Line 1419: 100
+    Line 1445: 100
+
+  🔸 STRINGS - model_names:
+    Line 144: llama3-8b-8192
+    Line 156: Salesforce/blip-image-captioning-base
+    Line 158: Salesforce/blip-image-captioning-base
+    Line 173: yolov8n.pt
+
+  🔸 STRINGS - api_keys:
+    Line 125: GROQ_API_KEY
+    Line 127: GROQ_API_KEY
+
+  🔸 STRINGS - file_paths:
+    Line 173: yolov8n.pt
+
+  🔸 COLORS - hex_colors:
+    Line 117: #ffffff
+    Line 118: #4CAF50
+    Line 119: #f8f9fa
+    Line 1334: #667eea
+
+  Total issues in file: 68
+
+==================================================
+📊 SUMMARY: 315 hardcoded values found
+
+💡 RECOMMENDATIONS:
+1. Use config.py for all configuration values
+2. Use environment variables for sensitive data
+3. Use constants for magic numbers
+4. Use configuration files for model paths
+
+
+CONFIG.PY USAGE STATUS:
+  app_config_imported: ✅ Used
+  model_config_imported: ✅ Used
+  nutrition_config_imported: ✅ Used
+  ui_config_imported: ✅ Used
