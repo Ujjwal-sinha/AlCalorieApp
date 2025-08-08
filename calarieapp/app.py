@@ -22,6 +22,9 @@ from lime.lime_image import LimeImageExplainer
 import uuid
 import os
 
+# Import visualization module
+from visualizations import display_visualization_dashboard, create_quick_summary_charts
+
 # Additional model imports
 try:
     from ultralytics import YOLO
@@ -976,10 +979,11 @@ st.title("🍱 AI Calorie Tracker")
 st.caption("Track your nutrition with AI-powered food analysis")
 
 # Simplified tabs
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "📷 Food Analysis",
     "📊 History", 
-    "📅 Daily Summary"
+    "📅 Daily Summary",
+    "📈 Advanced Analytics"
 ])
 
 # Food Analysis Tab
@@ -1080,6 +1084,15 @@ with tab1:
                         st.markdown("### 📊 **Basic Analysis**")
                         st.write(analysis_result["analysis"])
                         st.info("💡 **Tip**: For more detailed analysis, try uploading a clearer image or add specific food descriptions in the context field.")
+                
+                # Advanced Analytics Dashboard
+                st.markdown("---")
+                display_visualization_dashboard(
+                    nutrition_data=analysis_result["nutritional_data"],
+                    daily_calories=st.session_state.daily_calories,
+                    food_items=analysis_result["food_items"],
+                    history_data=st.session_state.history
+                )
                 
                 # AI Visualizations - Always Generated
                 with st.expander("🔬 AI Visualizations", expanded=True):
@@ -1232,6 +1245,43 @@ with tab3:
         ax.set_title('Daily Calorie Intake (Last 7 Days)')
         plt.xticks(rotation=45)
         st.pyplot(fig)
+
+# Advanced Analytics Tab
+with tab4:
+    st.subheader("📈 Advanced Analytics Dashboard")
+    st.write("Comprehensive nutrition analytics and insights from your food tracking data.")
+    
+    if not st.session_state.history:
+        st.info("📊 No data available yet. Analyze some meals first to see advanced analytics!")
+    else:
+        # Display comprehensive analytics dashboard
+        display_visualization_dashboard(
+            nutrition_data={
+                "total_calories": sum(entry.get('nutritional_data', {}).get('total_calories', 0) for entry in st.session_state.history),
+                "total_protein": sum(entry.get('nutritional_data', {}).get('total_protein', 0) for entry in st.session_state.history),
+                "total_carbs": sum(entry.get('nutritional_data', {}).get('total_carbs', 0) for entry in st.session_state.history),
+                "total_fats": sum(entry.get('nutritional_data', {}).get('total_fats', 0) for entry in st.session_state.history),
+                "total_fiber": sum(entry.get('nutritional_data', {}).get('total_fiber', 0) for entry in st.session_state.history)
+            },
+            daily_calories=st.session_state.daily_calories,
+            food_items=[],  # Will be populated from history
+            history_data=st.session_state.history
+        )
+        
+        # Additional insights
+        st.subheader("🔍 Data Insights")
+        
+        if st.session_state.history:
+            total_meals = len(st.session_state.history)
+            avg_calories = sum(entry.get('nutritional_data', {}).get('total_calories', 0) for entry in st.session_state.history) / total_meals
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Meals Tracked", total_meals)
+            with col2:
+                st.metric("Average Calories/Meal", f"{avg_calories:.0f}")
+            with col3:
+                st.metric("Days of Data", len(st.session_state.daily_calories))
 
 # Sidebar
 with st.sidebar:
