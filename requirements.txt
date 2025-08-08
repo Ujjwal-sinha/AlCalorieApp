@@ -31,3 +31,4 @@ tensorflow-hub
 seaborn
 plotly
 numpy
+streamlit-option-menu

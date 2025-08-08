@@ -25,6 +25,20 @@ import os
 # Import visualization module
 from visualizations import display_visualization_dashboard, create_quick_summary_charts
 
+# Import modern UI components
+try:
+    from modern_ui import (
+        load_css, create_modern_header, create_metric_card, create_feature_card,
+        create_ai_analysis_box, create_food_item_card, create_timeline_item,
+        create_modern_footer, create_modern_sidebar, create_upload_section,
+        create_analysis_results, create_modern_chart_container, create_loading_animation,
+        create_empty_state
+    )
+    MODERN_UI_AVAILABLE = True
+except ImportError:
+    MODERN_UI_AVAILABLE = False
+    print("Warning: Modern UI components not available. Using basic UI.")
+
 # Additional model imports
 try:
     from ultralytics import YOLO
@@ -974,396 +988,396 @@ Due to technical limitations, a detailed analysis could not be completed.
             "detailed": False
         }
 
-# Main UI
-st.title("🍱 AI Calorie Tracker")
-st.caption("Track your nutrition with AI-powered food analysis")
-
-# Simplified tabs
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📷 Food Analysis",
-    "📊 History", 
-    "📅 Daily Summary",
-    "📈 Advanced Analytics"
-])
-
-# Food Analysis Tab
-with tab1:
-    st.subheader("📷 Food Analysis")
-    st.write("Upload a food image for AI-powered calorie and nutrition analysis.")
-    
-    with st.expander("💡 Tips for Better Results"):
-        st.write("• Take clear photos in good lighting")
-        st.write("• Include all food items in the frame") 
-        st.write("• Add context description if needed")
-        st.write("• Try different angles if detection is incomplete")
-    
-    # Simple upload interface
-    img_file = st.file_uploader("Upload a food image", type=["jpg", "jpeg", "png"])
-    context = st.text_area("Additional Context (Optional)", 
-                          placeholder="Describe the meal if needed (e.g., 'chicken curry with rice')", 
-                          height=80)
-    
-    if st.button("🔍 Analyze Food", disabled=not img_file):
-        # Create progress tracking
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+# Main UI function
+def main():
+    if MODERN_UI_AVAILABLE:
+        # Load modern CSS styling
+        load_css()
         
-        try:
-            status_text.text("📷 Loading image...")
-            progress_bar.progress(10)
-            
-            image = Image.open(img_file)
-            
-            # Display image immediately
-            st.image(image, caption="Uploaded Image", use_container_width=True)
-            
-            status_text.text("🔍 Detecting food items...")
-            progress_bar.progress(30)
-            
-            # Get food description (optimized)
-            food_description = describe_image_enhanced(image)
-            
-            status_text.text("📊 Analyzing nutrition...")
-            progress_bar.progress(70)
-            
-            # Analyze the food (optimized)
-            analysis_result = analyze_food_with_enhanced_prompt(food_description, context)
-            
-            progress_bar.progress(100)
-            status_text.text("✅ Analysis complete!")
-            
-            # Clear progress indicators
-            progress_bar.empty()
-            status_text.empty()
-            
-            if analysis_result["success"]:
-                st.success("✅ Food analysis completed!")
-                
-                # Show detected food items
-                st.subheader("🍽️ Detected Food Items")
-                st.write(f"**Foods found:** {food_description}")
-                
-                # Show nutrition summary
-                nutrition = analysis_result["nutritional_data"]
-                
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Calories", f"{nutrition['total_calories']}")
-                with col2:
-                    st.metric("Protein", f"{nutrition['total_protein']:.1f}g")
-                with col3:
-                    st.metric("Carbs", f"{nutrition['total_carbs']:.1f}g")
-                with col4:
-                    st.metric("Fats", f"{nutrition['total_fats']:.1f}g")
-                
-                # Show detailed analysis with better formatting
-                with st.expander("📊 Comprehensive Nutritional Analysis", expanded=True):
-                    # Check if we have detailed analysis
-                    if analysis_result.get("detailed", False):
-                        st.markdown("### 🔬 **Complete Analysis Report**")
-                        st.markdown(analysis_result["analysis"])
-                        
-                        # Show individual food items if available
-                        if analysis_result["food_items"] and len(analysis_result["food_items"]) > 1:
-                            st.markdown("### 📋 **Individual Food Items Breakdown**")
-                            
-                            for i, item in enumerate(analysis_result["food_items"], 1):
-                                with st.container():
-                                    col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
-                                    with col1:
-                                        st.write(f"**{i}. {item['item']}**")
-                                    with col2:
-                                        st.write(f"{item['calories']} cal")
-                                    with col3:
-                                        st.write(f"{item['protein']:.1f}g protein")
-                                    with col4:
-                                        st.write(f"{item['carbs']:.1f}g carbs")
-                                    with col5:
-                                        st.write(f"{item['fats']:.1f}g fats")
-                    else:
-                        st.markdown("### 📊 **Basic Analysis**")
-                        st.write(analysis_result["analysis"])
-                        st.info("💡 **Tip**: For more detailed analysis, try uploading a clearer image or add specific food descriptions in the context field.")
-                
-                # Advanced Analytics Dashboard
-                st.markdown("---")
-                display_visualization_dashboard(
-                    nutrition_data=analysis_result["nutritional_data"],
-                    daily_calories=st.session_state.daily_calories,
-                    food_items=analysis_result["food_items"],
-                    history_data=st.session_state.history
-                )
-                
-                # AI Visualizations - Always Generated
-                with st.expander("🔬 AI Visualizations", expanded=True):
-                    st.write("**AI Model Interpretability Visualizations**")
-                    
-                    if models['cnn_model']:
-                        with st.spinner("Generating AI visualizations..."):
-                            try:
-                                # Prepare image for CNN
-                                image_rgb = image.convert("RGB")
-                                image_tensor = cnn_transform(image_rgb).unsqueeze(0).to(device)
-                                
-                                # Generate all visualizations
-                                col1, col2 = st.columns(2)
-                                
-                                with col1:
-                                    st.write("**Edge Detection**")
-                                    edge_path = visualize_food_features(image)
-                                    if edge_path:
-                                        edge_img = Image.open(edge_path)
-                                        st.image(edge_img, caption="Edge Detection - Food Boundaries", use_container_width=True)
-                                        os.remove(edge_path)
-                                    else:
-                                        st.warning("Edge detection failed")
-                                    
-                                    st.write("**SHAP Analysis**")
-                                    shap_path = apply_shap(image_tensor, models['cnn_model'])
-                                    if shap_path:
-                                        shap_img = Image.open(shap_path)
-                                        st.image(shap_img, caption="SHAP - Feature Importance", use_container_width=True)
-                                        os.remove(shap_path)
-                                    else:
-                                        st.warning("SHAP analysis failed")
-                                
-                                with col2:
-                                    st.write("**Grad-CAM**")
-                                    gradcam_path = apply_gradcam(image_tensor, models['cnn_model'], 0)
-                                    if gradcam_path:
-                                        gradcam_img = Image.open(gradcam_path)
-                                        st.image(gradcam_img, caption="Grad-CAM - Model Focus Areas", use_container_width=True)
-                                        os.remove(gradcam_path)
-                                    else:
-                                        st.warning("Grad-CAM failed")
-                                    
-                                    st.write("**LIME Explanation**")
-                                    lime_path = apply_lime(image, models['cnn_model'], ["food"])
-                                    if lime_path:
-                                        lime_img = Image.open(lime_path)
-                                        st.image(lime_img, caption="LIME - Local Interpretability", use_container_width=True)
-                                        os.remove(lime_path)
-                                    else:
-                                        st.warning("LIME explanation failed")
-                                
-                                st.info("💡 **Visualization Guide:**")
-                                st.write("• **Edge Detection**: Shows food boundaries and textures")
-                                st.write("• **Grad-CAM**: Highlights areas the AI focuses on")
-                                st.write("• **SHAP**: Shows feature importance for predictions")
-                                st.write("• **LIME**: Explains local decision-making regions")
-                                
-                            except Exception as e:
-                                st.error(f"Visualization generation failed: {str(e)}")
-                                st.info("This might be due to:")
-                                st.write("• Missing dependencies (captum, lime)")
-                                st.write("• GPU/CPU compatibility issues")
-                                st.write("• Image processing errors")
-                    else:
-                        st.warning("CNN model not available for visualizations.")
-                        st.info("The CNN model is required for generating AI visualizations.")
-                
-                # Save to history
-                entry = {
-                    "timestamp": datetime.now(),
-                    "type": "image",
-                    "description": food_description,
-                    "analysis": analysis_result["analysis"],
-                    "nutritional_data": analysis_result["nutritional_data"],
-                    "context": context
-                }
-                st.session_state.history.append(entry)
-                
-                # Update daily calories
-                today = date.today().isoformat()
-                if today not in st.session_state.daily_calories:
-                    st.session_state.daily_calories[today] = 0
-                st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
-                
-            else:
-                st.warning("Analysis had issues. Try adding more context or describing the meal manually.")
-                
-        except Exception as e:
-            st.error(f"Analysis failed: {str(e)}")
-            st.info("Try uploading a clearer image or add more context description.")
-
-# History Tab  
-with tab2:
-    st.subheader("📊 Analysis History")
-    st.write("View your previous food analyses and track your nutrition over time.")
-    
-    if not st.session_state.history:
-        st.info("No meal analyses recorded yet. Try analyzing a meal in the Food Analysis tab!")
-    else:
-        for i, entry in enumerate(reversed(st.session_state.history)):
-            with st.expander(f"📅 {entry['timestamp'].strftime('%Y-%m-%d %H:%M')} - {entry.get('description', 'Meal Analysis')}"):
-                
-                # Show nutrition summary
-                nutrition = entry.get('nutritional_data', {})
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Calories", f"{nutrition.get('total_calories', 0)}")
-                with col2:
-                    st.metric("Protein", f"{nutrition.get('total_protein', 0):.1f}g")
-                with col3:
-                    st.metric("Carbs", f"{nutrition.get('total_carbs', 0):.1f}g")
-                with col4:
-                    st.metric("Fats", f"{nutrition.get('total_fats', 0):.1f}g")
-                
-                # Show analysis
-                if entry.get('analysis'):
-                    with st.expander("📝 Full Analysis"):
-                        st.write(entry['analysis'])
-
-# Daily Summary Tab
-with tab3:
-    st.subheader("📅 Daily Nutrition Summary")
-    
-    today = date.today().isoformat()
-    today_cals = st.session_state.daily_calories.get(today, 0)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Today's Calories", f"{today_cals} kcal")
-    with col2:
-        st.metric("Target", f"{st.session_state.calorie_target} kcal")
-    
-    # Progress bar
-    progress = min(today_cals / st.session_state.calorie_target, 1.0) if st.session_state.calorie_target > 0 else 0
-    st.progress(progress)
-    st.caption(f"Progress: {progress*100:.1f}%")
-    
-    # Weekly summary
-    if st.session_state.daily_calories:
-        st.subheader("📈 Weekly Summary")
-        dates = sorted(st.session_state.daily_calories.keys())[-7:]
-        cals = [st.session_state.daily_calories.get(d, 0) for d in dates]
+        # Modern Header
+        create_modern_header()
         
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.bar(dates, cals, color='#4CAF50')
-        ax.set_ylabel('Calories')
-        ax.set_title('Daily Calorie Intake (Last 7 Days)')
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-# Advanced Analytics Tab
-with tab4:
-    st.subheader("📈 Advanced Analytics Dashboard")
-    st.write("Comprehensive nutrition analytics and insights from your food tracking data.")
-    
-    if not st.session_state.history:
-        st.info("📊 No data available yet. Analyze some meals first to see advanced analytics!")
+        # Modern Sidebar Navigation
+        selected_tab = create_modern_sidebar()
     else:
-        # Display comprehensive analytics dashboard
-        display_visualization_dashboard(
-            nutrition_data={
-                "total_calories": sum(entry.get('nutritional_data', {}).get('total_calories', 0) for entry in st.session_state.history),
-                "total_protein": sum(entry.get('nutritional_data', {}).get('total_protein', 0) for entry in st.session_state.history),
-                "total_carbs": sum(entry.get('nutritional_data', {}).get('total_carbs', 0) for entry in st.session_state.history),
-                "total_fats": sum(entry.get('nutritional_data', {}).get('total_fats', 0) for entry in st.session_state.history),
-                "total_fiber": sum(entry.get('nutritional_data', {}).get('total_fiber', 0) for entry in st.session_state.history)
-            },
-            daily_calories=st.session_state.daily_calories,
-            food_items=[],  # Will be populated from history
-            history_data=st.session_state.history
+        # Fallback to basic UI
+        st.title("🍱 AI Calorie Tracker")
+        st.caption("Track your nutrition with AI-powered food analysis")
+        
+        # Simple tabs
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "📷 Food Analysis",
+            "📊 History", 
+            "📅 Daily Summary",
+            "📈 Advanced Analytics"
+        ])
+        selected_tab = "📷 Food Analysis"  # Default tab
+    
+    # Main content based on selected tab
+    if selected_tab == "📷 Food Analysis":
+        # Food Analysis Tab
+        st.markdown("""
+        <div class="modern-card">
+            <h2>📷 Food Analysis</h2>
+            <p>Upload a food image for AI-powered calorie and nutrition analysis.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Tips section
+        with st.expander("💡 Tips for Better Results", expanded=False):
+            st.markdown("""
+            <div class="modern-card">
+                <ul>
+                    <li>📸 Take clear photos in good lighting</li>
+                    <li>🍽️ Include all food items in the frame</li>
+                    <li>📝 Add context description if needed</li>
+                    <li>🔄 Try different angles if detection is incomplete</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Upload section
+        uploaded_file = create_upload_section()
+        
+        # Context input
+        context = st.text_area(
+            "Additional Context (Optional)", 
+            placeholder="Describe the meal if needed (e.g., 'chicken curry with rice')", 
+            height=80
         )
         
-        # Additional insights
-        st.subheader("🔍 Data Insights")
-        
-        if st.session_state.history:
-            total_meals = len(st.session_state.history)
-            avg_calories = sum(entry.get('nutritional_data', {}).get('total_calories', 0) for entry in st.session_state.history) / total_meals
+        # Analyze button
+        if st.button("🔍 Analyze Food", disabled=not uploaded_file):
+            # Create progress tracking
+            progress_bar = st.progress(0)
+            status_text = st.empty()
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Total Meals Tracked", total_meals)
-            with col2:
-                st.metric("Average Calories/Meal", f"{avg_calories:.0f}")
-            with col3:
-                st.metric("Days of Data", len(st.session_state.daily_calories))
+            try:
+                status_text.text("📷 Loading image...")
+                progress_bar.progress(10)
+                
+                image = Image.open(uploaded_file)
+                
+                # Display image immediately
+                st.image(image, caption="Uploaded Image", use_container_width=True)
+                
+                status_text.text("🔍 Detecting food items...")
+                progress_bar.progress(30)
+                
+                # Get food description (optimized)
+                food_description = describe_image_enhanced(image)
+                
+                status_text.text("📊 Analyzing nutrition...")
+                progress_bar.progress(70)
+                
+                # Analyze the food (optimized)
+                analysis_result = analyze_food_with_enhanced_prompt(food_description, context)
+                
+                progress_bar.progress(100)
+                status_text.text("✅ Analysis complete!")
+                
+                # Clear progress indicators
+                progress_bar.empty()
+                status_text.empty()
+                
+                if analysis_result["success"]:
+                    st.success("✅ Food analysis completed!")
+                    
+                    # Show detected food items
+                    st.markdown("""
+                    <div class="modern-card">
+                        <h3>🍽️ Detected Food Items</h3>
+                        <p><strong>Foods found:</strong> {}</p>
+                    </div>
+                    """.format(food_description), unsafe_allow_html=True)
+                    
+                    # Show nutrition summary using modern cards
+                    nutrition = analysis_result["nutritional_data"]
+                    create_analysis_results(nutrition, analysis_result["food_items"], analysis_result["analysis"])
+                    
+                    # Advanced Analytics Dashboard
+                    st.markdown("---")
+                    display_visualization_dashboard(
+                        nutrition_data=analysis_result["nutritional_data"],
+                        daily_calories=st.session_state.daily_calories,
+                        food_items=analysis_result["food_items"],
+                        history_data=st.session_state.history
+                    )
+                    
+                    # AI Visualizations
+                    with st.expander("🔬 AI Visualizations", expanded=True):
+                        st.write("**AI Model Interpretability Visualizations**")
+                        
+                        if models['cnn_model']:
+                            with st.spinner("Generating AI visualizations..."):
+                                try:
+                                    # Prepare image for CNN
+                                    image_rgb = image.convert("RGB")
+                                    image_tensor = cnn_transform(image_rgb).unsqueeze(0).to(device)
+                                    
+                                    # Generate all visualizations
+                                    col1, col2 = st.columns(2)
+                                    
+                                    with col1:
+                                        st.write("**Edge Detection**")
+                                        edge_path = visualize_food_features(image)
+                                        if edge_path:
+                                            edge_img = Image.open(edge_path)
+                                            st.image(edge_img, caption="Edge Detection - Food Boundaries", use_container_width=True)
+                                            os.remove(edge_path)
+                                        else:
+                                            st.warning("Edge detection failed")
+                                        
+                                        st.write("**SHAP Analysis**")
+                                        shap_path = apply_shap(image_tensor, models['cnn_model'])
+                                        if shap_path:
+                                            shap_img = Image.open(shap_path)
+                                            st.image(shap_img, caption="SHAP - Feature Importance", use_container_width=True)
+                                            os.remove(shap_path)
+                                        else:
+                                            st.warning("SHAP analysis failed")
+                                    
+                                    with col2:
+                                        st.write("**Grad-CAM**")
+                                        gradcam_path = apply_gradcam(image_tensor, models['cnn_model'], 0)
+                                        if gradcam_path:
+                                            gradcam_img = Image.open(gradcam_path)
+                                            st.image(gradcam_img, caption="Grad-CAM - Model Focus Areas", use_container_width=True)
+                                            os.remove(gradcam_path)
+                                        else:
+                                            st.warning("Grad-CAM failed")
+                                        
+                                        st.write("**LIME Explanation**")
+                                        lime_path = apply_lime(image, models['cnn_model'], ["food"])
+                                        if lime_path:
+                                            lime_img = Image.open(lime_path)
+                                            st.image(lime_img, caption="LIME - Local Interpretability", use_container_width=True)
+                                            os.remove(lime_path)
+                                        else:
+                                            st.warning("LIME explanation failed")
+                                    
+                                    st.info("💡 **Visualization Guide:**")
+                                    st.write("• **Edge Detection**: Shows food boundaries and textures")
+                                    st.write("• **Grad-CAM**: Highlights areas the AI focuses on")
+                                    st.write("• **SHAP**: Shows feature importance for predictions")
+                                    st.write("• **LIME**: Explains local decision-making regions")
+                                    
+                                except Exception as e:
+                                    st.error(f"Visualization generation failed: {str(e)}")
+                                    st.info("This might be due to:")
+                                    st.write("• Missing dependencies (captum, lime)")
+                                    st.write("• GPU/CPU compatibility issues")
+                                    st.write("• Image processing errors")
+                        else:
+                            st.warning("CNN model not available for visualizations.")
+                            st.info("The CNN model is required for generating AI visualizations.")
+                    
+                    # Save to history
+                    entry = {
+                        "timestamp": datetime.now(),
+                        "type": "image",
+                        "description": food_description,
+                        "analysis": analysis_result["analysis"],
+                        "nutritional_data": analysis_result["nutritional_data"],
+                        "context": context
+                    }
+                    st.session_state.history.append(entry)
+                    
+                    # Update daily calories
+                    today = date.today().isoformat()
+                    if today not in st.session_state.daily_calories:
+                        st.session_state.daily_calories[today] = 0
+                    st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
+                    
+                else:
+                    st.warning("Analysis had issues. Try adding more context or describing the meal manually.")
+                    
+            except Exception as e:
+                st.error(f"Analysis failed: {str(e)}")
+                st.info("Try uploading a clearer image or add more context description.")
 
-# Sidebar
-with st.sidebar:
-    st.header("🍎 Nutrition Dashboard")
-    
-    # Model status
-    st.subheader("🤖 AI Models Status")
-    model_status = {
-        'BLIP': models['blip_model'] is not None,
-        'YOLO': models['yolo_model'] is not None,
-        'LLM': models['llm'] is not None
-    }
-    
-    for model, status in model_status.items():
-        status_icon = "✅" if status else "❌"
-        st.write(f"{status_icon} **{model}**: {'Available' if status else 'Not Available'}")
-    
-    st.subheader("User Profile")
-    st.number_input("Daily Calorie Target (kcal)", min_value=1000, max_value=5000, 
-                   value=st.session_state.calorie_target, step=100, key="calorie_target")
-    
-    st.subheader("Today's Progress")
-    today = date.today().isoformat()
-    today_cals = st.session_state.daily_calories.get(today, 0)
-    progress = min(today_cals / st.session_state.calorie_target, 1.0) if st.session_state.calorie_target > 0 else 0
-    st.progress(progress)
-    st.caption(f"{today_cals}/{st.session_state.calorie_target} kcal ({progress*100:.1f}%)")
-    
-    # Clear history button
-    if st.button("🗑️ Clear History"):
-        st.session_state.history.clear()
-        st.session_state.daily_calories.clear()
-        st.success("History cleared!")
-        st.rerun()
-
-# Footer - Clean and Professional
-st.markdown("---")
-
-# Create footer using Streamlit components for better rendering
-col1, col2, col3 = st.columns([1, 2, 1])
-
-with col2:
-    st.markdown("""
-    <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 10px; margin-top: 20px;">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">🍱 AI Calorie Tracker</h3>
-        <p style="color: #495057; font-size: 14px; margin-bottom: 15px;">
-            🔬 AI Visualizations: Edge Detection • Grad-CAM • SHAP • LIME
-        </p>
-        <p style="color: #495057; font-size: 16px; font-weight: 600; margin-bottom: 15px;">
-            Developed by <strong style="color: #4CAF50;">Ujjwal Sinha</strong>
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Social links using Streamlit columns
-    social_col1, social_col2 = st.columns(2)
-    
-    with social_col1:
+    elif selected_tab == "📊 History":
+        # History Tab
         st.markdown("""
-        <a href="https://github.com/Ujjwal-sinha" target="_blank" style="text-decoration: none;">
-            <div style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 10px 20px; background-color: #4CAF50; color: white; border-radius: 8px; font-weight: 500; text-align: center;">
-                📱 GitHub
-            </div>
-        </a>
+        <div class="modern-card">
+            <h2>📊 Analysis History</h2>
+            <p>View your previous food analyses and track your nutrition over time.</p>
+        </div>
         """, unsafe_allow_html=True)
-    
-    with social_col2:
+        
+        if not st.session_state.history:
+            create_empty_state(
+                "📊", 
+                "No Analysis History", 
+                "You haven't analyzed any meals yet.", 
+                "Try analyzing a meal in the Food Analysis tab!"
+            )
+        else:
+            for i, entry in enumerate(reversed(st.session_state.history)):
+                create_timeline_item(
+                    entry['timestamp'].strftime('%Y-%m-%d %H:%M'),
+                    entry.get('description', 'Meal Analysis'),
+                    f"Calories: {entry.get('nutritional_data', {}).get('total_calories', 0)} | Protein: {entry.get('nutritional_data', {}).get('total_protein', 0):.1f}g | Carbs: {entry.get('nutritional_data', {}).get('total_carbs', 0):.1f}g | Fats: {entry.get('nutritional_data', {}).get('total_fats', 0):.1f}g"
+                )
+                
+                # Show analysis in expander
+                with st.expander("📝 Full Analysis", expanded=False):
+                    st.write(entry.get('analysis', 'No analysis available'))
+
+    elif selected_tab == "📅 Daily Summary":
+        # Daily Summary Tab
         st.markdown("""
-        <a href="https://www.linkedin.com/in/sinhaujjwal01/" target="_blank" style="text-decoration: none;">
-            <div style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 10px 20px; background-color: #4CAF50; color: white; border-radius: 8px; font-weight: 500; text-align: center;">
-                💼 LinkedIn
-            </div>
-        </a>
+        <div class="modern-card">
+            <h2>📅 Daily Nutrition Summary</h2>
+            <p>Track your daily nutrition progress and goals.</p>
+        </div>
         """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
-        <p style="color: #6c757d; font-size: 12px; margin: 0;">
-            © 2024 Ujjwal Sinha • Built with ❤️ using Streamlit & Advanced AI
-        </p>
-        <p style="color: #6c757d; font-size: 11px; margin: 5px 0 0 0;">
-            🚀 Enhanced Food Detection • 🔬 AI Interpretability • 📊 Nutrition Analysis
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+        
+        today = date.today().isoformat()
+        today_cals = st.session_state.daily_calories.get(today, 0)
+        
+        # Progress metrics
+        col1, col2 = st.columns(2)
+        with col1:
+            create_metric_card(f"{today_cals} kcal", "Today's Calories", "🔥")
+        with col2:
+            create_metric_card(f"{st.session_state.calorie_target} kcal", "Target", "🎯")
+        
+        # Progress bar
+        progress = min(today_cals / st.session_state.calorie_target, 1.0) if st.session_state.calorie_target > 0 else 0
+        st.progress(progress)
+        st.caption(f"Progress: {progress*100:.1f}%")
+        
+        # Weekly summary
+        if st.session_state.daily_calories:
+            st.markdown("""
+            <div class="modern-card">
+                <h3>📈 Weekly Summary</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            dates = sorted(st.session_state.daily_calories.keys())[-7:]
+            cals = [st.session_state.daily_calories.get(d, 0) for d in dates]
+            
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(figsize=(10, 4))
+            ax.bar(dates, cals, color='#667eea')
+            ax.set_ylabel('Calories')
+            ax.set_title('Daily Calorie Intake (Last 7 Days)')
+            plt.xticks(rotation=45)
+            st.pyplot(fig)
+
+    elif selected_tab == "📈 Analytics":
+        # Advanced Analytics Tab
+        st.markdown("""
+        <div class="modern-card">
+            <h2>📈 Advanced Analytics Dashboard</h2>
+            <p>Comprehensive nutrition analytics and insights from your food tracking data.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if not st.session_state.history:
+            create_empty_state(
+                "📊", 
+                "No Data Available", 
+                "Analyze some meals first to see advanced analytics!", 
+                "Go to Food Analysis tab to get started"
+            )
+        else:
+            # Display comprehensive analytics dashboard
+            display_visualization_dashboard(
+                nutrition_data={
+                    "total_calories": sum(entry.get('nutritional_data', {}).get('total_calories', 0) for entry in st.session_state.history),
+                    "total_protein": sum(entry.get('nutritional_data', {}).get('total_protein', 0) for entry in st.session_state.history),
+                    "total_carbs": sum(entry.get('nutritional_data', {}).get('total_carbs', 0) for entry in st.session_state.history),
+                    "total_fats": sum(entry.get('nutritional_data', {}).get('total_fats', 0) for entry in st.session_state.history),
+                    "total_fiber": sum(entry.get('nutritional_data', {}).get('total_fiber', 0) for entry in st.session_state.history)
+                },
+                daily_calories=st.session_state.daily_calories,
+                food_items=[],  # Will be populated from history
+                history_data=st.session_state.history
+            )
+            
+            # Additional insights
+            st.markdown("""
+            <div class="modern-card">
+                <h3>🔍 Data Insights</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.session_state.history:
+                total_meals = len(st.session_state.history)
+                avg_calories = sum(entry.get('nutritional_data', {}).get('total_calories', 0) for entry in st.session_state.history) / total_meals
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    create_metric_card(total_meals, "Total Meals Tracked", "🍽️")
+                with col2:
+                    create_metric_card(f"{avg_calories:.0f}", "Average Calories/Meal", "📊")
+                with col3:
+                    create_metric_card(len(st.session_state.daily_calories), "Days of Data", "📅")
+
+    # Modern Sidebar Content
+    with st.sidebar:
+        # Model status
+        st.markdown("""
+        <h4>🤖 AI Models Status</h4>
+        """, unsafe_allow_html=True)
+        
+        model_status = {
+            'BLIP': models['blip_model'] is not None,
+            'YOLO': models['yolo_model'] is not None,
+            'LLM': models['llm'] is not None
+        }
+        
+        for model, status in model_status.items():
+            status_icon = "✅" if status else "❌"
+            st.write(f"{status_icon} **{model}**: {'Available' if status else 'Not Available'}")
+        
+        st.markdown("---")
+        
+        # User Profile
+        st.markdown("""
+        <h4>👤 User Profile</h4>
+        """, unsafe_allow_html=True)
+        
+        st.number_input("Daily Calorie Target (kcal)", min_value=1000, max_value=5000, 
+                       value=st.session_state.calorie_target, step=100, key="calorie_target")
+        
+        st.markdown("---")
+        
+        # Today's Progress
+        st.markdown("""
+        <h4>📊 Today's Progress</h4>
+        """, unsafe_allow_html=True)
+        
+        today = date.today().isoformat()
+        today_cals = st.session_state.daily_calories.get(today, 0)
+        progress = min(today_cals / st.session_state.calorie_target, 1.0) if st.session_state.calorie_target > 0 else 0
+        
+        # Modern progress display
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">🔥 {today_cals}</div>
+            <div class="metric-label">calories today</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.progress(progress)
+        st.caption(f"Progress: {progress*100:.1f}% of target")
+        
+        st.markdown("---")
+        
+        # Clear history button
+        if st.button("🗑️ Clear History"):
+            st.session_state.history.clear()
+            st.session_state.daily_calories.clear()
+            st.success("History cleared!")
+            st.rerun()
+
+    # Modern Footer
+    create_modern_footer()
+
+# Run the main function
+if __name__ == "__main__":
+    main()
