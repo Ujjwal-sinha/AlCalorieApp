@@ -32,3 +32,6 @@ seaborn
 plotly
 numpy
 streamlit-option-menu
+transformers
+torch 
+torchvision
