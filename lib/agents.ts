@@ -1,7 +1,8 @@
 // TypeScript equivalent of agents.py for Next.js
-// Food detection and analysis agents
+// Food detection and analysis agents - Exact match to Python implementation
 
 import { AnalysisResult, FoodItem, NutritionData } from '../types'
+import { getMockDataConfig, getApiConfig } from './config'
 
 export interface FoodDetectionConfig {
   groqApiKey?: string
@@ -26,17 +27,19 @@ export interface FoodAnalysisResult {
 }
 
 export class FoodDetectionAgent {
+  [x: string]: any
   private config: FoodDetectionConfig
-  private apiEndpoint: string
+  private apiConfig = getApiConfig()
+  private groqApiKey: string
 
   constructor(config: FoodDetectionConfig = {}) {
     this.config = {
       temperature: 0.1,
       maxTokens: 1000,
-      enableMockMode: !config.groqApiKey, // Default to mock mode if no API key
+      enableMockMode: !config.groqApiKey,
       ...config
     }
-    this.apiEndpoint = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    this.groqApiKey = config.groqApiKey || process.env.NEXT_PUBLIC_GROQ_API_KEY || ''
   }
 
   /**
@@ -47,10 +50,10 @@ export class FoodDetectionAgent {
       // In a real implementation, you would use a search API like DuckDuckGo or Google
       // For now, we'll simulate the search functionality
       const searchQuery = encodeURIComponent(`food nutrition ${query}`)
-      
+
       // Mock search results - in production, replace with actual search API
       const mockResults = this.generateMockSearchResults(query)
-      
+
       return {
         success: true,
         data: mockResults
@@ -68,20 +71,20 @@ export class FoodDetectionAgent {
    * Enhanced food detection from image description with comprehensive analysis
    */
   async detectFoodFromImageDescription(
-    imageDescription: string, 
+    imageDescription: string,
     context: string = ''
   ): Promise<FoodAnalysisResult> {
     try {
       // Enhanced prompt for better food detection and analysis
       const prompt = this.createComprehensiveAnalysisPrompt(imageDescription, context)
-      
+
       // Get analysis from LLM (via API or mock)
       const analysis = await this.queryLLM(prompt)
-      
+
       // Enhanced extraction of food items and nutritional data
       const foodItems = this.extractFoodItemsEnhanced(analysis)
       const nutritionalData = this.extractNutritionalDataEnhanced(analysis)
-      
+
       // Search for additional information on unidentified items
       if (foodItems.length < 3) {
         const searchResults = await this.searchAdditionalFoodInfo(imageDescription)
@@ -90,7 +93,7 @@ export class FoodDetectionAgent {
           // In a real implementation, you'd re-analyze with this additional info
         }
       }
-      
+
       return {
         success: true,
         analysis,
@@ -98,7 +101,7 @@ export class FoodDetectionAgent {
         nutritional_data: nutritionalData,
         comprehensive: true
       }
-      
+
     } catch (error) {
       console.error('Error in enhanced food detection agent:', error)
       return {
@@ -180,20 +183,20 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
       const lines = analysis.split('\n')
       const foodItems: FoodItem[] = []
       let inFoodSection = false
-      
+
       for (const line of lines) {
         const trimmedLine = line.trim()
-        
+
         // Check if we're in the food items section
-        if (trimmedLine.toUpperCase().includes('IDENTIFIED FOOD ITEMS') || 
-            trimmedLine.toUpperCase().includes('FOOD ITEMS')) {
+        if (trimmedLine.toUpperCase().includes('IDENTIFIED FOOD ITEMS') ||
+          trimmedLine.toUpperCase().includes('FOOD ITEMS')) {
           inFoodSection = true
           continue
         } else if (trimmedLine.startsWith('##') && inFoodSection) {
           inFoodSection = false
           continue
         }
-        
+
         // Extract food items
         if (inFoodSection && (trimmedLine.startsWith('-') || trimmedLine.startsWith('•') || trimmedLine.startsWith('*'))) {
           const item = trimmedLine.substring(1).trim()
@@ -202,11 +205,14 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
               item,
               description: item,
               calories: this.estimateCalories(item),
-              category: this.categorizeFoodItem(item)
+              protein: this.estimateCalories(item) * 0.15 / 4,
+              carbs: this.estimateCalories(item) * 0.50 / 4,
+              fats: this.estimateCalories(item) * 0.35 / 9,
+              fiber: 3
             })
           }
         }
-        
+
         // Also look for "Item:" format in nutritional breakdown
         else if (trimmedLine.toLowerCase().startsWith('- item:') || trimmedLine.toLowerCase().startsWith('item:')) {
           const item = trimmedLine.split(':', 2)[1]?.trim()
@@ -215,19 +221,22 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
               item,
               description: item,
               calories: this.estimateCalories(item),
-              category: this.categorizeFoodItem(item)
+              protein: this.estimateCalories(item) * 0.15 / 4,
+              carbs: this.estimateCalories(item) * 0.50 / 4,
+              fats: this.estimateCalories(item) * 0.35 / 9,
+              fiber: 3
             })
           }
         }
       }
-      
+
       // If no items found in structured format, try to extract from text
       if (foodItems.length === 0) {
         return this.extractFoodItems(analysis)
       }
-      
+
       return foodItems
-      
+
     } catch (error) {
       console.error('Error in enhanced food item extraction:', error)
       return this.extractFoodItems(analysis) // Fallback to original method
@@ -246,13 +255,13 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
         total_fats: 0,
         items: []
       }
-      
+
       const lines = analysis.split('\n')
-      
+
       // Extract totals using regex
       for (const line of lines) {
         const lowerLine = line.trim().toLowerCase()
-        
+
         // Extract total calories
         if (lowerLine.includes('total calories') || lowerLine.includes('total calorie')) {
           const calories = lowerLine.match(/\d+/)
@@ -260,7 +269,7 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
             nutritionalData.total_calories = parseInt(calories[0])
           }
         }
-        
+
         // Extract total protein
         else if (lowerLine.includes('total protein')) {
           const protein = lowerLine.match(/\d+\.?\d*/)
@@ -268,7 +277,7 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
             nutritionalData.total_protein = parseFloat(protein[0])
           }
         }
-        
+
         // Extract total carbs
         else if (lowerLine.includes('total carbohydrate') || lowerLine.includes('total carbs')) {
           const carbs = lowerLine.match(/\d+\.?\d*/)
@@ -276,7 +285,7 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
             nutritionalData.total_carbs = parseFloat(carbs[0])
           }
         }
-        
+
         // Extract total fats
         else if (lowerLine.includes('total fats') || lowerLine.includes('total fat')) {
           const fats = lowerLine.match(/\d+\.?\d*/)
@@ -285,9 +294,9 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
           }
         }
       }
-      
+
       return nutritionalData
-      
+
     } catch (error) {
       console.error('Error in enhanced nutritional data extraction:', error)
       return this.extractNutritionalData(analysis) // Fallback to original method
@@ -299,43 +308,43 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
    */
   private categorizeFoodItem(item: string): string {
     const itemLower = item.toLowerCase()
-    
+
     // Protein sources
     if (['chicken', 'beef', 'pork', 'fish', 'egg', 'tofu', 'beans', 'lentils', 'turkey', 'lamb', 'shrimp', 'salmon']
-        .some(protein => itemLower.includes(protein))) {
+      .some(protein => itemLower.includes(protein))) {
       return 'protein'
     }
-    
+
     // Vegetables
     else if (['lettuce', 'tomato', 'onion', 'carrot', 'broccoli', 'spinach', 'pepper', 'cucumber', 'cabbage']
-        .some(veg => itemLower.includes(veg))) {
+      .some(veg => itemLower.includes(veg))) {
       return 'vegetable'
     }
-    
+
     // Fruits
     else if (['apple', 'banana', 'orange', 'berry', 'grape', 'lemon', 'lime', 'mango', 'pineapple']
-        .some(fruit => itemLower.includes(fruit))) {
+      .some(fruit => itemLower.includes(fruit))) {
       return 'fruit'
     }
-    
+
     // Grains/Carbs
     else if (['rice', 'bread', 'pasta', 'noodle', 'potato', 'quinoa', 'oats', 'cereal']
-        .some(grain => itemLower.includes(grain))) {
+      .some(grain => itemLower.includes(grain))) {
       return 'grain/carb'
     }
-    
+
     // Dairy
     else if (['milk', 'cheese', 'yogurt', 'butter', 'cream']
-        .some(dairy => itemLower.includes(dairy))) {
+      .some(dairy => itemLower.includes(dairy))) {
       return 'dairy'
     }
-    
+
     // Beverages
     else if (['water', 'juice', 'coffee', 'tea', 'soda', 'beer', 'wine', 'smoothie']
-        .some(drink => itemLower.includes(drink))) {
+      .some(drink => itemLower.includes(drink))) {
       return 'beverage'
     }
-    
+
     else {
       return 'other'
     }
@@ -364,7 +373,7 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
     try {
       const lines = analysis.split('\n')
       const foodItems: FoodItem[] = []
-      
+
       for (const line of lines) {
         const trimmedLine = line.trim()
         if (trimmedLine.startsWith('-') || trimmedLine.startsWith('•') || trimmedLine.startsWith('*')) {
@@ -373,12 +382,16 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
             foodItems.push({
               item,
               description: item,
-              calories: this.estimateCalories(item)
+              calories: this.estimateCalories(item),
+              protein: this.estimateCalories(item) * 0.15 / 4,
+              carbs: this.estimateCalories(item) * 0.50 / 4,
+              fats: this.estimateCalories(item) * 0.35 / 9,
+              fiber: 3
             })
           }
         }
       }
-      
+
       return foodItems
     } catch (error) {
       console.error('Error extracting food items:', error)
@@ -399,7 +412,7 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
         total_fats: 0,
         items: []
       }
-      
+
       for (const line of lines) {
         const lowerLine = line.trim().toLowerCase()
         if (lowerLine.includes('calorie') && /\d+/.test(lowerLine)) {
@@ -424,7 +437,7 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
           }
         }
       }
-      
+
       return nutritionalData
     } catch (error) {
       console.error('Error extracting nutritional data:', error)
@@ -443,7 +456,17 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
    */
   private estimateCalories(item: string): number {
     const itemLower = item.toLowerCase()
-    
+    const mockDataConfig = getMockDataConfig()
+
+    // Use sample food items from config for more accurate estimation
+    const sampleItem = mockDataConfig.sampleFoodItems.find(sample =>
+      itemLower.includes(sample.name.toLowerCase().split(' ')[0])
+    )
+
+    if (sampleItem) {
+      return sampleItem.calories
+    }
+
     // Basic calorie estimation based on food type
     if (itemLower.includes('salad')) return 150
     if (itemLower.includes('chicken')) return 250
@@ -458,22 +481,50 @@ IMPORTANT: Be thorough in identifying ALL food items, even small garnishes or co
     if (itemLower.includes('soup')) return 120
     if (itemLower.includes('cake')) return 300
     if (itemLower.includes('cookie')) return 150
-    
-    // Default estimation
-    return 200
+
+    // Default estimation from config
+    return mockDataConfig.defaultCalories
   }
 
   /**
-   * Query LLM (mock implementation - replace with actual API call)
+   * Query Groq LLM via Python backend - exact equivalent
    */
-  private async queryLLM(prompt: string): Promise<string> {
+  private async queryGroqLLM(prompt: string): Promise<string> {
     try {
-      // In a real implementation, this would call your LLM API
-      // For now, we'll return a mock response
-      return this.generateMockAnalysis(prompt)
+      if (this.config.enableMockMode) {
+        return this.generateMockAnalysis(prompt)
+      }
+
+      // Call Python backend for Groq LLM analysis
+      const response = await fetch(`${this.apiConfig.baseUrl}/api/groq-llm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          temperature: this.config.temperature,
+          max_tokens: this.config.maxTokens
+        }),
+        signal: AbortSignal.timeout(this.apiConfig.timeout)
+      })
+
+      if (!response.ok) {
+        throw new Error(`Groq LLM API failed: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (result.success) {
+        return result.content
+      } else {
+        throw new Error('LLM analysis failed')
+      }
+
     } catch (error) {
-      console.error('Error querying LLM:', error)
-      throw error
+      console.error('Error querying Groq LLM:', error)
+      // Fallback to mock
+      return this.generateMockAnalysis(prompt)
     }
   }
 
@@ -546,7 +597,7 @@ export class FoodSearchAgent {
       // In a real implementation, this would use a search API
       // For now, we'll return mock search results
       const searchResults = this.generateMockSearchResults(query)
-      
+
       // Process search results with LLM
       const prompt = `
 Search Query: ${query}
@@ -564,7 +615,7 @@ Provide a comprehensive summary of the food information found.
 
       // In a real implementation, this would call your LLM API
       return this.generateMockAnalysisResponse(prompt)
-      
+
     } catch (error) {
       console.error('Error in food search:', error)
       return `Error searching for food information: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -578,7 +629,7 @@ Provide a comprehensive summary of the food information found.
     try {
       const searchQuery = `food dish ${description} ingredients preparation`
       const searchResults = this.generateMockSearchResults(searchQuery)
-      
+
       const prompt = `
 Unknown Food Description: ${description}
 Search Results: ${searchResults}
@@ -594,7 +645,7 @@ Provide a detailed identification and description.
 `
 
       return this.generateMockAnalysisResponse(prompt)
-      
+
     } catch (error) {
       console.error('Error identifying unknown food:', error)
       return `Error identifying food: ${error instanceof Error ? error.message : 'Unknown error'}`

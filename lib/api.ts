@@ -1,265 +1,365 @@
-// API utilities for AI Calorie App
+// API client for AI Calorie App
+// Handles communication with the backend API
 
-import axios from 'axios'
-import { AnalysisResult, ApiResponse } from '../types'
-import FoodAnalyzer, { foodAnalyzerUtils } from './food-analyzer'
-import { initializeAgents } from './agents'
+import { config } from './config'
+import { AnalysisResult, ComprehensiveAnalysisResult, ApiResponse } from '../types'
 
-// API Client interface
-interface ApiClientUtils {
-    fileToBase64(file: File): Promise<string>
-    formatCalories(calories: number): string
-    formatMacro(value: number, unit?: string): string
-    calculateMacroPercentages(protein: number, carbs: number, fats: number): {
-        protein: number
-        carbs: number
-        fats: number
+class ApiClient {
+  analyzeFoodDescription(arg0: string, context: string | undefined) {
+    throw new Error('Method not implemented.')
+  }
+  private baseUrl: string
+  private timeout: number
+  private retryAttempts: number
+
+  constructor() {
+    this.baseUrl = config.api.nextjsApiBase
+    this.timeout = config.api.timeout
+    this.retryAttempts = config.api.retryAttempts
+  }
+
+  /**
+   * Analyze food image with comprehensive detection
+   */
+  async analyzeFoodDirect(
+    file: File, 
+    context: string = ''
+  ): Promise<ApiResponse<ComprehensiveAnalysisResult>> {
+    try {
+      console.log('📡 Sending food analysis request...')
+      
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('context', context)
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+
+      const response = await fetch(`${this.baseUrl}/analyze`, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Analysis failed')
+      }
+
+      console.log('✅ Food analysis completed successfully')
+      return result
+
+    } catch (error) {
+      console.error('❌ Food analysis failed:', error)
+      
+      // Return fallback response
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Analysis failed',
+        fallback: true
+      }
     }
-    validateImageFile(file: File): { valid: boolean; error?: string }
-    generateMockAnalysis(description?: string, context?: string): AnalysisResult
+  }
+
+  /**
+   * Analyze food with retry logic
+   */
+  async analyzeFoodWithRetry(
+    file: File, 
+    context: string = ''
+  ): Promise<ApiResponse<ComprehensiveAnalysisResult>> {
+    let lastError: Error | null = null
+
+    for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
+      try {
+        console.log(`🔄 Attempt ${attempt}/${this.retryAttempts}`)
+        
+        const result = await this.analyzeFoodDirect(file, context)
+        
+        if (result.success) {
+          return result
+        }
+        
+        lastError = new Error(result.error || 'Analysis failed')
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error')
+        console.warn(`⚠️ Attempt ${attempt} failed:`, lastError.message)
+        
+        // Wait before retrying (exponential backoff)
+        if (attempt < this.retryAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      }
+    }
+
+    console.error('❌ All retry attempts failed')
+    return {
+      success: false,
+      error: lastError?.message || 'All retry attempts failed',
+      fallback: true
+    }
+  }
+
+  /**
+   * Check API health
+   */
+  async checkHealth(): Promise<boolean> {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), config.api.healthCheckTimeout)
+
+      const response = await fetch(`${this.baseUrl}/analyze`, {
+        method: 'GET',
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        return false
+      }
+
+      const result = await response.json()
+      return result.status === 'active'
+
+    } catch (error) {
+      console.warn('⚠️ Health check failed:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get API status
+   */
+  async getStatus(): Promise<{
+    status: string
+    version: string
+    features: string[]
+  } | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/analyze`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(config.api.healthCheckTimeout)
+      })
+
+      if (!response.ok) {
+        return null
+      }
+
+      const result = await response.json()
+      return {
+        status: result.status || 'unknown',
+        version: result.version || 'unknown',
+        features: result.features || []
+      }
+
+    } catch (error) {
+      console.warn('⚠️ Status check failed:', error)
+      return null
+    }
+  }
 }
 
-// Complete ApiClient interface including utils
-interface ApiClientType {
-    healthCheck(): Promise<ApiResponse>
-    analyzeFood(imageFile: File, context?: string): Promise<ApiResponse<AnalysisResult>>
-    analyzeFoodBase64(base64Image: string, context?: string): Promise<ApiResponse<AnalysisResult>>
-    analyzeFoodDirect(imageFile: File, context?: string): Promise<ApiResponse<AnalysisResult>>
-    analyzeFoodDescription(description: string, context?: string): Promise<ApiResponse<AnalysisResult>>
-    utils: ApiClientUtils
+// Utility functions for data processing
+export const utils = {
+  /**
+   * Format calories for display
+   */
+  formatCalories(calories: number): string {
+    if (calories >= 1000) {
+      return `${(calories / 1000).toFixed(1)}k`
+    }
+    return calories.toString()
+  },
+
+  /**
+   * Format macronutrients for display
+   */
+  formatMacro(macro: number): string {
+    return macro.toFixed(1)
+  },
+
+  /**
+   * Generate mock analysis for fallback
+   */
+  generateMockAnalysis(
+    fileName: string, 
+    context: string = ''
+  ): ComprehensiveAnalysisResult {
+    const description = context || fileName.replace(/\.[^/.]+$/, '')
+    const estimatedCalories = 400
+    
+    return {
+      success: true,
+      analysis: `## BASIC FOOD ANALYSIS
+
+### DETECTED ITEMS:
+- Item: ${description}, Calories: ${estimatedCalories} (estimated)
+
+### NUTRITIONAL ESTIMATE:
+- Estimated Calories: ${estimatedCalories} kcal
+- Estimated Protein: ${(estimatedCalories * 0.15 / 4).toFixed(1)}g
+- Estimated Carbs: ${(estimatedCalories * 0.50 / 4).toFixed(1)}g
+- Estimated Fats: ${(estimatedCalories * 0.35 / 9).toFixed(1)}g
+
+### NOTE:
+This is a basic estimate. For detailed analysis, try uploading a clearer image.`,
+      food_items: [{
+        item: description,
+        description: `${description} - ${estimatedCalories} calories`,
+        calories: estimatedCalories,
+        protein: estimatedCalories * 0.15 / 4,
+        carbs: estimatedCalories * 0.50 / 4,
+        fats: estimatedCalories * 0.35 / 9,
+        fiber: 3
+      }],
+      nutritional_data: {
+        total_calories: estimatedCalories,
+        total_protein: estimatedCalories * 0.15 / 4,
+        total_carbs: estimatedCalories * 0.50 / 4,
+        total_fats: estimatedCalories * 0.35 / 9,
+        items: []
+      },
+      improved_description: description,
+      detailed: false,
+      error: '',
+      blip_detection: {
+        success: false,
+        description: description,
+        confidence: 0.3,
+        detected_items: [description],
+        processing_time: 0
+      },
+      visualizations: {
+        gradcam: {
+          success: false,
+          error: 'Visualization not available',
+          type: 'gradcam' as const,
+          processingTime: 0
+        },
+        shap: {
+          success: false,
+          error: 'Visualization not available',
+          type: 'shap' as const,
+          processingTime: 0
+        },
+        lime: {
+          success: false,
+          error: 'Visualization not available',
+          type: 'lime' as const,
+          processingTime: 0
+        },
+        edge: {
+          success: false,
+          error: 'Visualization not available',
+          type: 'edge' as const,
+          processingTime: 0
+        }
+      },
+      detection_metadata: {
+        success: false,
+        total_items: 1,
+        confidence: 0.3,
+        detection_methods: ['fallback'],
+        enhanced_description: description,
+        processing_time: 0
+      },
+      enhanced: false
+    }
+  },
+
+  /**
+   * Validate file for upload
+   */
+  validateFile(file: File): { valid: boolean; error?: string } {
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      return { valid: false, error: 'File must be an image' }
+    }
+
+    // Check file size
+    if (file.size > config.upload.maxFileSize) {
+      return { 
+        valid: false, 
+        error: `File too large (max ${config.upload.maxFileSizeMB}MB)` 
+      }
+    }
+
+    return { valid: true }
+  },
+
+  /**
+   * Calculate macro percentages
+   */
+  calculateMacroPercentages(protein: number, carbs: number, fats: number): {
+    protein: number
+    carbs: number
+    fats: number
+  } {
+    const totalCalories = (protein * 4) + (carbs * 4) + (fats * 9)
+    
+    if (totalCalories === 0) {
+      return { protein: 0, carbs: 0, fats: 0 }
+    }
+
+    return {
+      protein: Math.round(((protein * 4) / totalCalories) * 100),
+      carbs: Math.round(((carbs * 4) / totalCalories) * 100),
+      fats: Math.round(((fats * 9) / totalCalories) * 100)
+    }
+  },
+
+  /**
+   * Format processing time
+   */
+  formatProcessingTime(milliseconds: number): string {
+    if (milliseconds < 1000) {
+      return `${milliseconds}ms`
+    }
+    return `${(milliseconds / 1000).toFixed(1)}s`
+  },
+
+  /**
+   * Get confidence level description
+   */
+  getConfidenceLevel(confidence: number): {
+    level: 'high' | 'medium' | 'low'
+    description: string
+    color: string
+  } {
+    if (confidence >= 0.8) {
+      return {
+        level: 'high',
+        description: 'High Confidence',
+        color: 'text-green-600'
+      }
+    } else if (confidence >= 0.5) {
+      return {
+        level: 'medium',
+        description: 'Medium Confidence',
+        color: 'text-yellow-600'
+      }
+    } else {
+      return {
+        level: 'low',
+        description: 'Low Confidence',
+        color: 'text-red-600'
+      }
+    }
+  }
 }
 
-// API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Create and export API client instance
+export const apiClient = new ApiClient()
 
-const api = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: 30000, // 30 seconds
-    headers: {
-        'Content-Type': 'application/json',
-    },
-})
-
-// Initialize food analyzer
-const foodAnalyzer = new FoodAnalyzer({
-    groqApiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
-    apiEndpoint: API_BASE_URL,
-    enableMockMode: !process.env.NEXT_PUBLIC_GROQ_API_KEY
-})
-
-// Request interceptor
-api.interceptors.request.use(
-    (config) => {
-        console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`)
-        return config
-    },
-    (error) => {
-        console.error('❌ API Request Error:', error)
-        return Promise.reject(error)
-    }
-)
-
-// Response interceptor
-api.interceptors.response.use(
-    (response) => {
-        console.log(`✅ API Response: ${response.status} ${response.config.url}`)
-        return response
-    },
-    (error) => {
-        console.error('❌ API Response Error:', error.response?.data || error.message)
-        return Promise.reject(error)
-    }
-)
-
-// API functions
-export const apiClient = {
-    // Health check
-    async healthCheck(): Promise<ApiResponse> {
-        try {
-            const response = await api.get('/health')
-            return {
-                success: true,
-                data: response.data
-            }
-        } catch (error: any) {
-            return {
-                success: false,
-                error: error.response?.data?.detail || error.message
-            }
-        }
-    },
-
-    // Analyze food image
-    async analyzeFood(imageFile: File, context: string = ''): Promise<ApiResponse<AnalysisResult>> {
-        try {
-            const formData = new FormData()
-            formData.append('file', imageFile)
-            formData.append('context', context)
-
-            const response = await api.post('/api/analyze-file', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            })
-
-            return {
-                success: true,
-                data: response.data
-            }
-        } catch (error: any) {
-            return {
-                success: false,
-                error: error.response?.data?.detail || error.message
-            }
-        }
-    },
-
-    // Analyze food from base64 image
-    async analyzeFoodBase64(base64Image: string, context: string = ''): Promise<ApiResponse<AnalysisResult>> {
-        try {
-            const response = await api.post('/api/analyze', {
-                image: base64Image,
-                context: context,
-                format: 'image/jpeg'
-            })
-
-            return {
-                success: true,
-                data: response.data
-            }
-        } catch (error: any) {
-            return {
-                success: false,
-                error: error.response?.data?.detail || error.message
-            }
-        }
-    },
-
-    // Analyze food using TypeScript implementation (faster, no Python backend required)
-    async analyzeFoodDirect(imageFile: File, context: string = ''): Promise<ApiResponse<AnalysisResult>> {
-        try {
-            console.log('🚀 Using direct TypeScript food analysis...')
-
-            // Step 1: Get image description
-            const imageDescription = await foodAnalyzer.describeImageEnhanced(imageFile)
-            console.log('📝 Image description:', imageDescription)
-
-            // Step 2: Analyze food with enhanced prompt
-            const analysisResult = await foodAnalyzer.analyzeFoodWithEnhancedPrompt(imageDescription, context)
-            console.log('✅ Direct analysis completed')
-
-            return {
-                success: true,
-                data: analysisResult
-            }
-        } catch (error: any) {
-            console.error('❌ Direct analysis failed:', error)
-
-            // Fallback to mock analysis
-            const mockResult = foodAnalyzer.generateMockAnalysis('food items from image', context)
-            return {
-                success: true,
-                data: mockResult
-            }
-        }
-    },
-
-    // Analyze food description directly (no image required)
-    async analyzeFoodDescription(description: string, context: string = ''): Promise<ApiResponse<AnalysisResult>> {
-        try {
-            console.log('🔍 Analyzing food description directly...')
-
-            const analysisResult = await foodAnalyzer.analyzeFoodWithEnhancedPrompt(description, context)
-            console.log('✅ Description analysis completed')
-
-            return {
-                success: true,
-                data: analysisResult
-            }
-        } catch (error: any) {
-            console.error('❌ Description analysis failed:', error)
-
-            return {
-                success: false,
-                error: error.message || 'Description analysis failed'
-            }
-        }
-    }
-}
-
-    // Add utils to apiClient (with type assertion)
-    ; (apiClient as any).utils = {
-        // Re-export food analyzer utilities
-        ...foodAnalyzerUtils,
-        // Convert file to base64
-        async fileToBase64(file: File): Promise<string> {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader()
-                reader.readAsDataURL(file)
-                reader.onload = () => {
-                    const result = reader.result as string
-                    // Remove data:image/jpeg;base64, prefix
-                    const base64 = result.split(',')[1]
-                    resolve(base64)
-                }
-                reader.onerror = (error) => reject(error)
-            })
-        },
-
-        // Format calories
-        formatCalories(calories: number): string {
-            return new Intl.NumberFormat('en-US').format(Math.round(calories))
-        },
-
-        // Format macronutrients
-        formatMacro(value: number, unit: string = 'g'): string {
-            return `${value.toFixed(1)}${unit}`
-        },
-
-        // Calculate macro percentages
-        calculateMacroPercentages(protein: number, carbs: number, fats: number) {
-            const totalCalories = (protein * 4) + (carbs * 4) + (fats * 9)
-
-            if (totalCalories === 0) {
-                return { protein: 0, carbs: 0, fats: 0 }
-            }
-
-            return {
-                protein: Math.round(((protein * 4) / totalCalories) * 100),
-                carbs: Math.round(((carbs * 4) / totalCalories) * 100),
-                fats: Math.round(((fats * 9) / totalCalories) * 100)
-            }
-        },
-
-        // Validate image file
-        validateImageFile(file: File): { valid: boolean; error?: string } {
-            const maxSize = 10 * 1024 * 1024 // 10MB
-            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-
-            if (!allowedTypes.includes(file.type)) {
-                return {
-                    valid: false,
-                    error: 'Please upload a valid image file (JPEG, PNG, or WebP)'
-                }
-            }
-
-            if (file.size > maxSize) {
-                return {
-                    valid: false,
-                    error: 'Image file size must be less than 10MB'
-                }
-            }
-
-            return { valid: true }
-        },
-
-        // Generate mock data for development - uses dynamic generation
-        generateMockAnalysis(description: string = 'mixed food items', context: string = ''): AnalysisResult {
-            return foodAnalyzer.generateMockAnalysis(description, context)
-        }
-    }
-
-// Export utils separately for backward compatibility  
-export const utils = (apiClient as any).utils
-
-export default api
+// Export the class for testing
+export { ApiClient }

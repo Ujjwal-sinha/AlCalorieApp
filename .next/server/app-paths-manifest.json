@@ -1,5 +1,10 @@
 {
-  "/page": "app/page.js",
+  "/_not-found": "app/_not-found.js",
+  "/analyze/page": "app/analyze/page.js",
+  "/api/analyze-food/route": "app/api/analyze-food/route.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/api/analyze/route": "app/api/analyze/route.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/analyze/page": "app/analyze/page.js"
+  "/page": "app/page.js",
+  "/api/blip-analyze/route": "app/api/blip-analyze/route.js"
 }

@@ -1,8 +1,10 @@
 // TypeScript equivalent of app.py for Next.js
-// Main food analysis functionality
+// Main food analysis functionality - Exact match to Python implementation
 
 import { AnalysisResult, FoodItem, NutritionData } from '../types'
 import { FoodDetectionAgent, FoodSearchAgent } from './agents'
+import { config, getUploadConfig, getNutritionConfig, getMockDataConfig, getApiConfig } from './config'
+import { PythonEquivalentFoodAnalyzer, createPythonEquivalentAnalyzer } from './python-equivalent-analyzer'
 
 export interface FoodAnalyzerConfig {
   groqApiKey?: string
@@ -27,11 +29,13 @@ export class FoodAnalyzer {
   private config: FoodAnalyzerConfig
   private foodAgent: FoodDetectionAgent
   private searchAgent: FoodSearchAgent
+  private pythonAnalyzer: PythonEquivalentFoodAnalyzer
   private mockMode: boolean
+  private apiConfig = getApiConfig()
 
   constructor(config: FoodAnalyzerConfig = {}) {
     this.config = {
-      apiEndpoint: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+      apiEndpoint: this.apiConfig.baseUrl,
       enableMockMode: !config.groqApiKey,
       ...config
     }
@@ -39,115 +43,28 @@ export class FoodAnalyzer {
     this.mockMode = this.config.enableMockMode || false
     this.foodAgent = new FoodDetectionAgent(config)
     this.searchAgent = new FoodSearchAgent(config)
+    this.pythonAnalyzer = createPythonEquivalentAnalyzer({
+      groqApiKey: config.groqApiKey,
+      enableMockMode: this.mockMode
+    })
   }
 
   /**
-   * Main food analysis function - equivalent to Python's analyze_food_with_enhanced_prompt
+   * Main food analysis function - uses Python-equivalent analyzer
    */
   async analyzeFoodWithEnhancedPrompt(
     foodDescription: string,
     context: string = '',
     options: AnalysisOptions = {}
   ): Promise<AnalysisResult> {
-    try {
-      console.log('🔍 Starting enhanced food analysis...')
-
-      if (this.mockMode) {
-        return this.generateMockAnalysis(foodDescription, context)
-      }
-
-      // Use the food detection agent for comprehensive analysis
-      const agentResult = await this.foodAgent.detectFoodFromImageDescription(foodDescription, context)
-
-      if (!agentResult.success) {
-        throw new Error(agentResult.error || 'Food analysis failed')
-      }
-
-      // Convert agent result to AnalysisResult format
-      const analysisResult: AnalysisResult = {
-        success: true,
-        analysis: agentResult.analysis,
-        food_items: agentResult.food_items.map(item => ({
-          item: item.item,
-          description: `${item.item} - ${item.calories} calories`,
-          calories: item.calories || 0
-        })),
-        nutritional_data: agentResult.nutritional_data,
-        improved_description: this.createImprovedDescription(agentResult.food_items),
-        detailed: options.detailedAnalysis || true
-      }
-
-      console.log('✅ Enhanced food analysis completed')
-      return analysisResult
-
-    } catch (error) {
-      console.error('❌ Error in enhanced food analysis:', error)
-
-      // Return fallback analysis
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Analysis failed',
-        analysis: 'Analysis failed. Please try again.',
-        food_items: [],
-        nutritional_data: {
-          total_calories: 0,
-          total_protein: 0,
-          total_carbs: 0,
-          total_fats: 0,
-          items: []
-        },
-        improved_description: foodDescription,
-        detailed: false
-      }
-    }
+    return await this.pythonAnalyzer.analyzeFoodWithEnhancedPrompt(foodDescription, context)
   }
 
   /**
-   * Enhanced image description function - equivalent to Python's describe_image_enhanced
+   * Enhanced image description function - uses Python-equivalent analyzer
    */
   async describeImageEnhanced(imageFile: File): Promise<string> {
-    try {
-      console.log('🖼️ Starting enhanced image description...')
-
-      if (this.mockMode) {
-        return this.generateMockImageDescription(imageFile.name)
-      }
-
-      // Convert image to base64 for API call
-      const base64Image = await this.fileToBase64(imageFile)
-
-      // Call the backend API for image analysis
-      const response = await fetch(`${this.config.apiEndpoint}/api/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: base64Image,
-          context: '',
-          format: imageFile.type
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`)
-      }
-
-      const result = await response.json()
-
-      if (result.success && result.improved_description) {
-        console.log('✅ Enhanced image description completed')
-        return result.improved_description
-      } else {
-        throw new Error(result.error || 'Image analysis failed')
-      }
-
-    } catch (error) {
-      console.error('❌ Error in enhanced image description:', error)
-
-      // Return fallback description
-      return this.generateFallbackDescription(imageFile.name)
-    }
+    return await this.pythonAnalyzer.describeImageEnhanced(imageFile)
   }
 
   /**
@@ -316,7 +233,8 @@ export class FoodAnalyzer {
           calories: item.calories || 0,
           protein: item.protein || 0,
           carbs: item.carbs || 0,
-          fats: item.fats || 0
+          fats: item.fats || 0,
+          fiber: item.fiber || getNutritionConfig().defaultPortionSizes.small / 100
         }))
       }
 
@@ -360,6 +278,7 @@ export class FoodAnalyzer {
             protein: totalProtein,
             carbs: totalCarbs,
             fats: totalFats,
+            fiber: getNutritionConfig().defaultPortionSizes.medium / 100,
             description: ''
           }]
         }
@@ -381,23 +300,24 @@ export class FoodAnalyzer {
             items.push({
               item: 'Meal items (detected but not fully parsed)',
               description: `Meal items (detected but not fully parsed) - ${estimatedCalories} calories`,
-              calories: estimatedCalories,
-              protein: estimatedCalories * 0.15 / 4,
-              carbs: estimatedCalories * 0.50 / 4,
-              fats: estimatedCalories * 0.35 / 9,
-              fiber: 3
+                          calories: estimatedCalories,
+            protein: estimatedCalories * 0.15 / getNutritionConfig().macroCaloriesPerGram.protein,
+            carbs: estimatedCalories * 0.50 / getNutritionConfig().macroCaloriesPerGram.carbs,
+            fats: estimatedCalories * 0.35 / getNutritionConfig().macroCaloriesPerGram.fats,
+            fiber: getNutritionConfig().defaultPortionSizes.small / 100
             })
 
             totals.total_calories = estimatedCalories
-            totals.total_protein = estimatedCalories * 0.15 / 4
-            totals.total_carbs = estimatedCalories * 0.50 / 4
-            totals.total_fats = estimatedCalories * 0.35 / 9
+            totals.total_protein = estimatedCalories * 0.15 / getNutritionConfig().macroCaloriesPerGram.protein
+            totals.total_carbs = estimatedCalories * 0.50 / getNutritionConfig().macroCaloriesPerGram.carbs
+            totals.total_fats = estimatedCalories * 0.35 / getNutritionConfig().macroCaloriesPerGram.fats
             totals.items = [{
               item: 'Meal items (detected but not fully parsed)',
               calories: estimatedCalories,
-              protein: estimatedCalories * 0.15 / 4,
-              carbs: estimatedCalories * 0.50 / 4,
-              fats: estimatedCalories * 0.35 / 9,
+              protein: estimatedCalories * 0.15 / getNutritionConfig().macroCaloriesPerGram.protein,
+              carbs: estimatedCalories * 0.50 / getNutritionConfig().macroCaloriesPerGram.carbs,
+              fats: estimatedCalories * 0.35 / getNutritionConfig().macroCaloriesPerGram.fats,
+              fiber: getNutritionConfig().defaultPortionSizes.small / 100,
               description: ''
             }]
           }
@@ -467,9 +387,9 @@ ${mockFoodItems.map(item => `- Item: ${item.name} (${item.portion}), Calories: $
 
 ### NUTRITIONAL TOTALS:
 - Total Calories: ${mockNutrition.totalCalories} kcal
-- Total Protein: ${mockNutrition.totalProtein}g (${mockNutrition.totalCalories > 0 ? Math.round((mockNutrition.totalProtein * 4 / mockNutrition.totalCalories) * 100) : 0}% of calories)
-- Total Carbohydrates: ${mockNutrition.totalCarbs}g (${mockNutrition.totalCalories > 0 ? Math.round((mockNutrition.totalCarbs * 4 / mockNutrition.totalCalories) * 100) : 0}% of calories)
-- Total Fats: ${mockNutrition.totalFats}g (${mockNutrition.totalCalories > 0 ? Math.round((mockNutrition.totalFats * 9 / mockNutrition.totalCalories) * 100) : 0}% of calories)
+- Total Protein: ${mockNutrition.totalProtein}g (${mockNutrition.totalCalories > 0 ? Math.round((mockNutrition.totalProtein * getNutritionConfig().macroCaloriesPerGram.protein / mockNutrition.totalCalories) * 100) : 0}% of calories)
+- Total Carbohydrates: ${mockNutrition.totalCarbs}g (${mockNutrition.totalCalories > 0 ? Math.round((mockNutrition.totalCarbs * getNutritionConfig().macroCaloriesPerGram.carbs / mockNutrition.totalCalories) * 100) : 0}% of calories)
+- Total Fats: ${mockNutrition.totalFats}g (${mockNutrition.totalCalories > 0 ? Math.round((mockNutrition.totalFats * getNutritionConfig().macroCaloriesPerGram.fats / mockNutrition.totalCalories) * 100) : 0}% of calories)
 
 ### MEAL COMPOSITION ANALYSIS:
 - **Meal Type**: ${this.determineMealType(context)}
@@ -486,10 +406,15 @@ ${mockFoodItems.map(item => `- Item: ${item.name} (${item.portion}), Calories: $
 1. **Mock Analysis Note** - This is generated mock data for development purposes
 2. **Balanced Approach** - Actual analysis would provide personalized recommendations
 3. **Nutritional Variety** - Consider including diverse food groups for optimal nutrition`,
+      error: '',
       food_items: mockFoodItems.map(item => ({
         item: item.name,
         description: `${item.name} - ${item.calories} calories`,
-        calories: item.calories
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fats: item.fats,
+        fiber: getNutritionConfig().defaultPortionSizes.small / 100
       })),
       nutritional_data: {
         total_calories: mockNutrition.totalCalories,
@@ -502,7 +427,8 @@ ${mockFoodItems.map(item => `- Item: ${item.name} (${item.portion}), Calories: $
           calories: item.calories,
           protein: item.protein,
           carbs: item.carbs,
-          fats: item.fats
+          fats: item.fats,
+          fiber: getNutritionConfig().defaultPortionSizes.small / 100
         }))
       },
       improved_description: mockFoodItems.map(item => item.name.toLowerCase()).join(', '),
@@ -603,9 +529,10 @@ ${mockFoodItems.map(item => `- Item: ${item.name} (${item.portion}), Calories: $
    * Determine portion size from calories
    */
   private determinePortionSize(calories: number): string {
-    if (calories < 200) return 'Small'
-    if (calories < 400) return 'Medium'
-    if (calories < 600) return 'Large'
+    const nutritionConfig = getNutritionConfig()
+    if (calories < nutritionConfig.defaultPortionSizes.small) return 'Small'
+    if (calories < nutritionConfig.defaultPortionSizes.medium) return 'Medium'
+    if (calories < nutritionConfig.defaultPortionSizes.large) return 'Large'
     return 'Extra Large'
   }
 
@@ -618,9 +545,10 @@ ${mockFoodItems.map(item => `- Item: ${item.name} (${item.portion}), Calories: $
     totalCarbs: number
     totalFats: number
   }): string {
-    const proteinCals = nutrition.totalProtein * 4
-    const carbsCals = nutrition.totalCarbs * 4
-    const fatsCals = nutrition.totalFats * 9
+    const nutritionConfig = getNutritionConfig()
+    const proteinCals = nutrition.totalProtein * getNutritionConfig().macroCaloriesPerGram.protein
+    const carbsCals = nutrition.totalCarbs * getNutritionConfig().macroCaloriesPerGram.carbs
+    const fatsCals = nutrition.totalFats * getNutritionConfig().macroCaloriesPerGram.fats
 
     if (proteinCals > carbsCals && proteinCals > fatsCals) return 'Protein-rich'
     if (carbsCals > proteinCals && carbsCals > fatsCals) return 'Carbohydrate-rich'
@@ -655,20 +583,19 @@ ${mockFoodItems.map(item => `- Item: ${item.name} (${item.portion}), Calories: $
    * Validate image file
    */
   validateImageFile(file: File): { valid: boolean; error?: string } {
-    const maxSize = 10 * 1024 * 1024 // 10MB
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    const uploadConfig = getUploadConfig()
 
-    if (!allowedTypes.includes(file.type)) {
+    if (!uploadConfig.allowedTypes.includes(file.type)) {
       return {
         valid: false,
-        error: 'Please upload a valid image file (JPEG, PNG, or WebP)'
+        error: `Please upload a valid image file (${uploadConfig.allowedTypes.map(type => type.replace('image/', '').toUpperCase()).join(', ')})`
       }
     }
 
-    if (file.size > maxSize) {
+    if (file.size > uploadConfig.maxFileSize) {
       return {
         valid: false,
-        error: 'Image file size must be less than 10MB'
+        error: `Image file size must be less than ${uploadConfig.maxFileSizeMB}MB`
       }
     }
 
@@ -690,16 +617,19 @@ export const foodAnalyzerUtils = {
 
   // Calculate macro percentages
   calculateMacroPercentages(protein: number, carbs: number, fats: number) {
-    const totalCalories = (protein * 4) + (carbs * 4) + (fats * 9)
+    const nutritionConfig = getNutritionConfig()
+    const totalCalories = (protein * nutritionConfig.macroCaloriesPerGram.protein) + 
+                         (carbs * nutritionConfig.macroCaloriesPerGram.carbs) + 
+                         (fats * nutritionConfig.macroCaloriesPerGram.fats)
 
     if (totalCalories === 0) {
       return { protein: 0, carbs: 0, fats: 0 }
     }
 
     return {
-      protein: Math.round(((protein * 4) / totalCalories) * 100),
-      carbs: Math.round(((carbs * 4) / totalCalories) * 100),
-      fats: Math.round(((fats * 9) / totalCalories) * 100)
+      protein: Math.round(((protein * nutritionConfig.macroCaloriesPerGram.protein) / totalCalories) * 100),
+      carbs: Math.round(((carbs * nutritionConfig.macroCaloriesPerGram.carbs) / totalCalories) * 100),
+      fats: Math.round(((fats * nutritionConfig.macroCaloriesPerGram.fats) / totalCalories) * 100)
     }
   }
 }

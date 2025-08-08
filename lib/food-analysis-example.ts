@@ -84,12 +84,10 @@ export async function exampleApiClientAnalysis(imageFile: File, context?: string
       'mixed food items', 
       context
     )
-    
-    if (fallbackResult.success && fallbackResult.data) {
-      console.log('✅ Fallback analysis completed!')
-      return fallbackResult.data
-    }
-    
+
+    // Fallback result may not have 'success' or 'data' properties; just return it directly
+    console.log('✅ Fallback analysis completed!')
+    return fallbackResult
     throw error
   }
 }
