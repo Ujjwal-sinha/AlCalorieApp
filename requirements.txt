@@ -1,37 +1,51 @@
-langchain
-python-dotenv
-ipykernel
-langchain-community
-pypdf
-pymupdf
-faiss-cpu
-pandas
-langchain-groq
+# Core dependencies
+streamlit>=1.28.0
+python-dotenv>=1.0.0
+
+# AI and ML libraries
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.30.0
+# Note: TensorFlow removed to prevent import conflicts
+# tensorflow>=2.13.0,<2.15.0
+# tensorflow-hub>=0.13.0
+
+# LangChain and LLM
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-groq>=0.0.1
+
+# Computer Vision
+ultralytics>=8.0.0
+opencv-python-headless>=4.8.0
+Pillow>=10.0.0
+timm>=0.9.0
+efficientnet-pytorch>=0.7.0
+
+# Data processing and visualization
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+
+# Model interpretability
+captum>=0.6.0
+lime>=0.2.0
+
+# UI and utilities
+streamlit-option-menu>=0.3.0
+gradio>=3.40.0
+accelerate>=0.20.0
+peft>=0.4.0
+
+# Additional utilities
+ipykernel>=6.25.0
+pypdf>=3.15.0
+pymupdf>=1.23.0
+faiss-cpu>=1.7.4
 validators==0.28.1
-pytube
-ultralytics
-gradio
-Pillow
-streamlit
-transformers
-torchvision
-matplotlib
-fpdf
-accelerate
-peft
-captum
-lime
-opencv-python-headless
-numexpr
-duckduckgo-search
-timm
-efficientnet-pytorch
-tensorflow
-tensorflow-hub
-seaborn
-plotly
-numpy
-streamlit-option-menu
-transformers
-torch 
-torchvision
+pytube>=15.0.0
+fpdf>=2.7.0
+numexpr>=2.8.0
+duckduckgo-search>=4.1.0
