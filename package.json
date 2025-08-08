@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "api": "python start_api.py",
+    "dev:full": "concurrently \"npm run dev\" \"npm run api\"",
+    "setup": "npm install && python -m pip install -r requirements.txt"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
@@ -31,6 +34,7 @@
     "typescript": "^5"
   },
   "devDependencies": {
+    "concurrently": "^9.2.0",
     "eslint": "^8",
     "eslint-config-next": "14.0.4"
   }

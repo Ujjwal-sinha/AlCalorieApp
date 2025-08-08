@@ -23,7 +23,8 @@ try:
     from app import (
         load_models,
         describe_image_enhanced,
-        analyze_food_with_enhanced_prompt,
+        query_langchain,
+        extract_items_and_nutrients,
         models
     )
     MODELS_AVAILABLE = True
@@ -32,6 +33,128 @@ except ImportError as e:
     print(f"⚠️  Could not import existing models: {e}")
     print("Running in mock mode for development")
     MODELS_AVAILABLE = False
+
+def analyze_food_with_enhanced_prompt(food_description: str, context: str = "") -> Dict[str, Any]:
+    """
+    Enhanced food analysis function that combines food detection with nutritional analysis
+    """
+    try:
+        # Create comprehensive prompt for LLM
+        prompt = f"""
+        Analyze the following food items and provide detailed nutritional information:
+        
+        Food Description: {food_description}
+        Additional Context: {context}
+        
+        Please provide a comprehensive analysis in the following format:
+        
+        ## COMPREHENSIVE FOOD ANALYSIS
+        
+        ### IDENTIFIED FOOD ITEMS:
+        - Item: [food name] ([portion size]), Calories: [number], Protein: [number]g, Carbs: [number]g, Fats: [number]g
+        
+        ### NUTRITIONAL TOTALS:
+        - Total Calories: [number] kcal
+        - Total Protein: [number]g ([percentage]% of calories)
+        - Total Carbohydrates: [number]g ([percentage]% of calories)
+        - Total Fats: [number]g ([percentage]% of calories)
+        
+        ### MEAL COMPOSITION ANALYSIS:
+        - **Meal Type**: [breakfast/lunch/dinner/snack]
+        - **Cuisine Style**: [cuisine type]
+        - **Portion Size**: [small/medium/large]
+        - **Main Macronutrient**: [protein/carbs/fats]
+        
+        ### NUTRITIONAL QUALITY ASSESSMENT:
+        - **Strengths**: [nutritional benefits]
+        - **Areas for Improvement**: [suggestions]
+        - **Missing Nutrients**: [what could be added]
+        
+        ### HEALTH RECOMMENDATIONS:
+        1. [recommendation 1]
+        2. [recommendation 2]
+        3. [recommendation 3]
+        
+        Be specific with calorie and macronutrient estimates based on typical portion sizes.
+        """
+        
+        # Get analysis from LLM
+        if MODELS_AVAILABLE:
+            analysis_text = query_langchain(prompt)
+        else:
+            # Mock analysis for development
+            analysis_text = f"""## COMPREHENSIVE FOOD ANALYSIS
+
+### IDENTIFIED FOOD ITEMS:
+- Item: {food_description} (estimated portion), Calories: 400, Protein: 25g, Carbs: 35g, Fats: 15g
+
+### NUTRITIONAL TOTALS:
+- Total Calories: 400 kcal
+- Total Protein: 25g (25% of calories)
+- Total Carbohydrates: 35g (35% of calories)
+- Total Fats: 15g (34% of calories)
+
+### MEAL COMPOSITION ANALYSIS:
+- **Meal Type**: Mixed meal
+- **Cuisine Style**: Various
+- **Portion Size**: Medium
+- **Main Macronutrient**: Balanced
+
+### NUTRITIONAL QUALITY ASSESSMENT:
+- **Strengths**: Balanced macronutrients
+- **Areas for Improvement**: Add more vegetables
+- **Missing Nutrients**: Fiber, vitamins
+
+### HEALTH RECOMMENDATIONS:
+1. Well-balanced meal with good protein content
+2. Consider adding more vegetables for fiber
+3. Good portion size for most adults"""
+        
+        # Extract structured data
+        food_items, nutritional_totals = extract_items_and_nutrients(analysis_text)
+        
+        # If extraction failed, create fallback data
+        if not food_items:
+            estimated_calories = 400
+            food_items = [{
+                "item": food_description,
+                "calories": estimated_calories,
+                "protein": estimated_calories * 0.15 / 4,
+                "carbs": estimated_calories * 0.50 / 4,
+                "fats": estimated_calories * 0.35 / 9,
+                "fiber": 5
+            }]
+            nutritional_totals = {
+                "calories": estimated_calories,
+                "protein": estimated_calories * 0.15 / 4,
+                "carbs": estimated_calories * 0.50 / 4,
+                "fats": estimated_calories * 0.35 / 9
+            }
+        
+        return {
+            "success": True,
+            "analysis": analysis_text,
+            "food_items": [{"item": item["item"], "description": f"{item['item']} - {item['calories']} calories", "calories": item["calories"]} for item in food_items],
+            "nutritional_data": {
+                "total_calories": int(nutritional_totals["calories"]),
+                "total_protein": round(nutritional_totals["protein"], 1),
+                "total_carbs": round(nutritional_totals["carbs"], 1),
+                "total_fats": round(nutritional_totals["fats"], 1),
+                "items": food_items
+            },
+            "improved_description": food_description.lower()
+        }
+        
+    except Exception as e:
+        logger.error(f"Food analysis failed: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "analysis": "Analysis failed",
+            "food_items": [],
+            "nutritional_data": {"total_calories": 0, "total_protein": 0, "total_carbs": 0, "total_fats": 0, "items": []},
+            "improved_description": food_description
+        }
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

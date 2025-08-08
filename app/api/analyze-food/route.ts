@@ -18,9 +18,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     const base64Image = buffer.toString('base64')
 
-    // Call Python Streamlit backend
-    // Note: You'll need to modify your Python app to accept API calls
-    const pythonResponse = await fetch('http://localhost:8501/api/analyze', {
+    // Call Python FastAPI backend
+    const pythonResponse = await fetch('http://localhost:8000/api/analyze', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

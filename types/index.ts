@@ -8,6 +8,7 @@ export interface FoodItem {
   carbs?: number
   fats?: number
   fiber?: number
+  category?: string
 }
 
 export interface NutritionData {
