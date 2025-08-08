@@ -466,7 +466,7 @@ def create_modern_footer():
             <a href="https://www.linkedin.com/in/sinhaujjwal01/" target="_blank" style="color: white; margin: 0 1rem; text-decoration: none;">💼 LinkedIn</a>
         </div>
         <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
-            © 2024 Ujjwal Sinha • Built with ❤️ using Streamlit & Advanced AI
+            © 2025 Ujjwal Sinha • Built with ❤️ using Streamlit & Advanced AI
         </p>
     </div>
     """, unsafe_allow_html=True)
