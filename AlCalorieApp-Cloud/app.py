@@ -262,15 +262,12 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded Food Image", use_column_width=True)
         
-        # Create two columns for analysis options
-        col1, col2 = st.columns(2)
+        # Single comprehensive analysis button
+        st.markdown("### 🚀 Comprehensive Analysis")
+        st.markdown("Get both standard nutritional analysis and enhanced web-sourced insights in one click!")
         
-        with col1:
-            st.markdown("### 📷 Standard Analysis")
-            st.markdown("Quick nutritional analysis with AI models")
-            
-            # Standard analysis button
-            if st.button("🔍 Standard Analysis", disabled=not uploaded_file, key="standard_analyze"):
+        # Single analysis button that does both
+        if st.button("🔍 Analyze Food (Standard + Enhanced)", disabled=not uploaded_file, type="primary"):
                 if uploaded_file and UTILS_AVAILABLE and "error" not in models:
                     # Progress tracking
                     progress_bar = st.progress(0)
@@ -278,37 +275,75 @@ def main():
                     
                     try:
                         status_text.text("📷 Loading image...")
-                        progress_bar.progress(20)
+                        progress_bar.progress(10)
                         
                         image = Image.open(uploaded_file)
                         
-                        status_text.text("🔍 Detecting food items...")
-                        progress_bar.progress(50)
+                        status_text.text("🔍 Running standard analysis...")
+                        progress_bar.progress(30)
                         
-                        # Analyze the food
+                        # Standard analysis
                         analysis_result = analyze_food_image(image, context, models)
                         
-                        status_text.text("📊 Processing results...")
-                        progress_bar.progress(80)
+                        status_text.text("🤖 Running enhanced agent...")
+                        progress_bar.progress(60)
+                        
+                        # Enhanced agent analysis
+                        enhanced_result = None
+                        try:
+                            from utils.food_agent import FoodAgent
+                            agent = FoodAgent(models)
+                            enhanced_result = agent.process_food_image_complete(image)
+                        except Exception as e:
+                            st.warning(f"Enhanced agent not available: {str(e)}")
+                        
+                        status_text.text("📊 Processing combined results...")
+                        progress_bar.progress(90)
                         
                         progress_bar.progress(100)
-                        status_text.text("✅ Analysis complete!")
+                        status_text.text("✅ Comprehensive analysis complete!")
                         
                         # Clear progress
                         progress_bar.empty()
                         status_text.empty()
                         
                         if analysis_result["success"]:
-                            st.success("✅ Standard analysis completed!")
+                            st.success("✅ Comprehensive analysis completed!")
                             
-                            # Create a beautiful results container
-                            st.markdown("""
+                            # Create a beautiful results container with enhanced food items display
+                            description = analysis_result.get('description', 'Food items detected')
+                            
+                            # Format the description for better display
+                            if description.startswith("Main Food Items Identified:"):
+                                # Extract just the food items for cleaner display
+                                food_items = description.replace("Main Food Items Identified:", "").strip()
+                                display_title = "🍽️ Main Food Items Identified"
+                                display_content = food_items
+                            else:
+                                display_title = "🍽️ Comprehensive Analysis Results"
+                                display_content = description
+                            
+                            st.markdown(f"""
                             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                                         padding: 20px; border-radius: 15px; color: white; margin: 20px 0;">
-                                <h3 style="color: white; margin-bottom: 15px;">🍽️ Analysis Results</h3>
-                                <p style="font-size: 16px; margin-bottom: 0;"><strong>Detected Foods:</strong> {}</p>
+                                <h3 style="color: white; margin-bottom: 15px;">{display_title}</h3>
+                                <p style="font-size: 16px; margin-bottom: 0; line-height: 1.6;"><strong>Detected Items:</strong> {display_content}</p>
+                                <p style="font-size: 14px; margin: 5px 0 0 0; opacity: 0.9;">Standard Analysis + Enhanced Agent</p>
                             </div>
-                            """.format(analysis_result.get('description', 'Food items detected')), unsafe_allow_html=True)
+                            """, unsafe_allow_html=True)
+                            
+                            # Add item count summary
+                            if description.startswith("Main Food Items Identified:"):
+                                food_items_list = description.replace("Main Food Items Identified:", "").strip().split(", ")
+                                item_count = len(food_items_list)
+                                st.markdown(f"""
+                                <div style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 10px; 
+                                            box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 10px 0;">
+                                    <p style="margin: 0; color: #333; font-size: 16px;">
+                                        <strong>📊 Detection Summary:</strong> Successfully identified <strong>{item_count} food items</strong> in the image
+                                    </p>
+                                </div>
+                                """, unsafe_allow_html=True)
                             
                             # Enhanced nutrition summary with better styling
                             nutrition = analysis_result["nutritional_data"]
@@ -420,6 +455,116 @@ def main():
                                 </div>
                                 """, unsafe_allow_html=True)
                             
+                            # Enhanced Agent Results (if available)
+                            if enhanced_result and "error" not in enhanced_result:
+                                st.markdown("---")
+                                st.markdown("### 🤖 Enhanced Agent Insights")
+                                
+                                # Create beautiful enhanced results container
+                                st.markdown("""
+                                <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); 
+                                            padding: 20px; border-radius: 15px; color: white; margin: 20px 0;">
+                                    <h3 style="color: white; margin-bottom: 15px;">🌐 Web-Enhanced Insights</h3>
+                                    <p style="font-size: 16px; margin-bottom: 0;"><strong>Session ID:</strong> {}</p>
+                                </div>
+                                """.format(enhanced_result['image_analysis']['session_id']), unsafe_allow_html=True)
+                                
+                                # Enhanced results in organized sections
+                                col1, col2 = st.columns(2)
+                                
+                                with col1:
+                                    st.markdown("### 📸 Enhanced Analysis")
+                                    st.markdown(f"""
+                                    <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
+                                                box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #4ECDC4;">
+                                        <h5 style="color: #4ECDC4; margin-bottom: 15px;">🔍 AI + Web Detection</h5>
+                                        <p style="line-height: 1.6; color: #333; margin-bottom: 10px;">
+                                            <strong>Enhanced Description:</strong><br>
+                                            {enhanced_result['image_analysis']['enhanced_description']}
+                                        </p>
+                                        <p style="color: #666; font-size: 14px; margin: 0;">
+                                            <strong>Analysis Quality:</strong> ✅ Enhanced with Web Data
+                                        </p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                with col2:
+                                    st.markdown("### 🌐 Web Information")
+                                    web_info = enhanced_result['web_information']
+                                    st.markdown(f"""
+                                    <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
+                                                box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #FFD93D;">
+                                        <h5 style="color: #FFD93D; margin-bottom: 15px;">🌍 Web-Sourced Data</h5>
+                                        <p style="margin: 5px 0;"><strong>Food Name:</strong> {web_info.get('food_name', 'Unknown')}</p>
+                                        <p style="margin: 5px 0;"><strong>Nutrition:</strong> {web_info.get('nutrition', {}).get('calories', 'Variable')}</p>
+                                        <p style="margin: 5px 0;"><strong>Origin:</strong> {web_info.get('cultural', {}).get('origin', 'Various regions')}</p>
+                                        <p style="color: #666; font-size: 14px; margin: 10px 0 0 0;">
+                                            <strong>Data Source:</strong> 🌐 Web Search + AI Analysis
+                                        </p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                # Quick web insights
+                                st.markdown("### 💡 Web Insights")
+                                web_info = enhanced_result['web_information']
+                                
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    nutrition_info = web_info.get('nutrition', {})
+                                    st.markdown(f"""
+                                    <div style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 15px; 
+                                                box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                        <h6 style="color: #FF6B6B; margin-bottom: 10px;">🔥 Nutrition</h6>
+                                        <p style="margin: 2px 0; font-size: 14px;"><strong>Calories:</strong> {nutrition_info.get('calories', 'Variable')}</p>
+                                        <p style="margin: 2px 0; font-size: 14px;"><strong>Protein:</strong> {nutrition_info.get('protein', 'Variable')}</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                with col2:
+                                    cultural_info = web_info.get('cultural', {})
+                                    st.markdown(f"""
+                                    <div style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 15px; 
+                                                box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                        <h6 style="color: #45B7D1; margin-bottom: 10px;">🌍 Culture</h6>
+                                        <p style="margin: 2px 0; font-size: 14px;"><strong>Origin:</strong> {cultural_info.get('origin', 'Various')}</p>
+                                        <p style="margin: 2px 0; font-size: 14px;"><strong>History:</strong> Rich heritage</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                with col3:
+                                    health_info = web_info.get('health', {})
+                                    st.markdown(f"""
+                                    <div style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 15px; 
+                                                box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                        <h6 style="color: #4ECDC4; margin-bottom: 10px;">💊 Health</h6>
+                                        <p style="margin: 2px 0; font-size: 14px;"><strong>Benefits:</strong> Multiple</p>
+                                        <p style="margin: 2px 0; font-size: 14px;"><strong>Allergens:</strong> Check ingredients</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                # Ask follow-up questions for enhanced results
+                                st.markdown("### ❓ Ask Enhanced Questions")
+                                user_question = st.text_input(
+                                    "Ask about this food (nutrition, cooking, culture, health):",
+                                    placeholder="e.g., How should I cook this? What are the health benefits?",
+                                    key="comprehensive_question"
+                                )
+                                
+                                if user_question and st.button("🚀 Ask AI", key="comprehensive_ask"):
+                                    with st.spinner("🤖 AI is thinking..."):
+                                        answer = agent.answer_user_questions(user_question, enhanced_result)
+                                    
+                                    st.markdown("### 💬 AI Response")
+                                    st.markdown(f"""
+                                    <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); 
+                                                padding: 20px; border-radius: 15px; color: white; margin: 20px 0;">
+                                        <h5 style="color: white; margin-bottom: 15px;">🤖 AI Assistant</h5>
+                                        <div style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 10px; color: #333;">
+                                            <p style="margin: 0; line-height: 1.6;">{answer}</p>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            
                             # Save to history
                             entry = {
                                 "timestamp": datetime.now(),
@@ -446,244 +591,22 @@ def main():
                 else:
                     st.error("Please upload an image and ensure models are loaded properly.")
         
-        with col2:
-            st.markdown("### 🤖 Enhanced Agent")
-            st.markdown("Advanced analysis with web search and comprehensive insights")
-            
-            # Enhanced agent interface
-            try:
-                from utils.food_agent import FoodAgent
-                
-                # Initialize agent
-                agent = FoodAgent(models)
-                
-                # Use the shared uploaded file for enhanced analysis
-                if uploaded_file:
-                    # Enhanced analysis button
-                    if st.button("🚀 Enhanced Analysis", key="enhanced_analyze"):
-                        with st.spinner("Processing with enhanced agent..."):
-                            try:
-                                # Process with enhanced agent
-                                result = agent.process_food_image_complete(image)
-                                
-                                if "error" not in result:
-                                    st.success("✅ Enhanced analysis complete!")
-                                    
-                                    # Create beautiful enhanced results container
-                                    st.markdown("""
-                                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                                padding: 20px; border-radius: 15px; color: white; margin: 20px 0;">
-                                        <h3 style="color: white; margin-bottom: 15px;">🤖 Enhanced Analysis Results</h3>
-                                        <p style="font-size: 16px; margin-bottom: 0;"><strong>Session ID:</strong> {}</p>
-                                    </div>
-                                    """.format(result['image_analysis']['session_id']), unsafe_allow_html=True)
-                                    
-                                    # Enhanced results in organized sections
-                                    col1, col2 = st.columns(2)
-                                    
-                                    with col1:
-                                        st.markdown("### 📸 Image Analysis")
-                                        st.markdown(f"""
-                                        <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                                    box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #667eea;">
-                                            <h5 style="color: #667eea; margin-bottom: 15px;">🔍 AI Detection</h5>
-                                            <p style="line-height: 1.6; color: #333; margin-bottom: 10px;">
-                                                <strong>Description:</strong><br>
-                                                {result['image_analysis']['enhanced_description']}
-                                            </p>
-                                            <p style="color: #666; font-size: 14px; margin: 0;">
-                                                <strong>Analysis Quality:</strong> ✅ Enhanced with AI
-                                            </p>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    with col2:
-                                        st.markdown("### 🌐 Web Information")
-                                        web_info = result['web_information']
-                                        st.markdown(f"""
-                                        <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                                    box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #4ECDC4;">
-                                            <h5 style="color: #4ECDC4; margin-bottom: 15px;">🌍 Web-Sourced Data</h5>
-                                            <p style="margin: 5px 0;"><strong>Food Name:</strong> {web_info.get('food_name', 'Unknown')}</p>
-                                            <p style="margin: 5px 0;"><strong>Nutrition:</strong> {web_info.get('nutrition', {}).get('calories', 'Variable')}</p>
-                                            <p style="margin: 5px 0;"><strong>Origin:</strong> {web_info.get('cultural', {}).get('origin', 'Various regions')}</p>
-                                            <p style="color: #666; font-size: 14px; margin: 10px 0 0 0;">
-                                                <strong>Data Source:</strong> 🌐 Web Search + AI Analysis
-                                            </p>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    # Detailed web information in expandable sections
-                                    st.markdown("### 📋 Comprehensive Information")
-                                    
-                                    # Create tabs for different types of information
-                                    tab1, tab2, tab3, tab4 = st.tabs(["🍽️ Nutrition", "🌍 Cultural", "📖 Recipes", "💊 Health"])
-                                    
-                                    with tab1:
-                                        nutrition_info = web_info.get('nutrition', {})
-                                        st.markdown(f"""
-                                        <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                                            <h5 style="color: #FF6B6B; margin-bottom: 15px;">🔥 Nutritional Information</h5>
-                                            <p><strong>Calories:</strong> {nutrition_info.get('calories', 'Variable')}</p>
-                                            <p><strong>Protein:</strong> {nutrition_info.get('protein', 'Variable')}</p>
-                                            <p><strong>Carbohydrates:</strong> {nutrition_info.get('carbs', 'Variable')}</p>
-                                            <p><strong>Fats:</strong> {nutrition_info.get('fats', 'Variable')}</p>
-                                            <p style="color: #666; font-style: italic;">{nutrition_info.get('notes', 'Nutritional data from web sources')}</p>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    with tab2:
-                                        cultural_info = web_info.get('cultural', {})
-                                        st.markdown(f"""
-                                        <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                                            <h5 style="color: #45B7D1; margin-bottom: 15px;">🌍 Cultural Background</h5>
-                                            <p><strong>Origin:</strong> {cultural_info.get('origin', 'Various regions')}</p>
-                                            <p><strong>History:</strong> {cultural_info.get('history', 'Rich cultural heritage')}</p>
-                                            <p><strong>Cultural Significance:</strong> {cultural_info.get('cultural_significance', 'Important in many cuisines')}</p>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    with tab3:
-                                        recipes = web_info.get('recipes', [])
-                                        if recipes:
-                                            for i, recipe in enumerate(recipes[:3], 1):
-                                                st.markdown(f"""
-                                                <div style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 15px; 
-                                                            box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 15px;">
-                                                    <h6 style="color: #96CEB4; margin-bottom: 10px;">📖 Recipe {i}</h6>
-                                                    <p><strong>{recipe.get('title', 'Recipe')}</strong></p>
-                                                    <p style="color: #666; font-size: 14px;">{recipe.get('description', 'Cooking instructions')}</p>
-                                                </div>
-                                                """, unsafe_allow_html=True)
-                                        else:
-                                            st.markdown("""
-                                            <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                                                <p style="color: #666; text-align: center;">Recipe information available through web search</p>
-                                            </div>
-                                            """, unsafe_allow_html=True)
-                                    
-                                    with tab4:
-                                        health_info = web_info.get('health', {})
-                                        st.markdown(f"""
-                                        <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                                            <h5 style="color: #4ECDC4; margin-bottom: 15px;">💊 Health Information</h5>
-                                            <p><strong>Allergen Info:</strong> {health_info.get('allergen_info', 'Check ingredients')}</p>
-                                            <p><strong>Benefits:</strong> {', '.join(health_info.get('benefits', ['Various health benefits']))}</p>
-                                            <p><strong>Dietary Considerations:</strong> {', '.join(health_info.get('dietary_considerations', ['Generally suitable']))}</p>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    # Show detailed web info in expandable section
-                                    with st.expander("🔍 Raw Web Data", expanded=False):
-                                        st.json(web_info)
-                                    
-                                    # Enhanced follow-up questions section
-                                    st.markdown("### ❓ Ask Follow-up Questions")
-                                    
-                                    # Create a beautiful question input area
-                                    st.markdown("""
-                                    <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                                box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #FFD93D;">
-                                        <h5 style="color: #FFD93D; margin-bottom: 15px;">🤔 Have Questions?</h5>
-                                        <p style="color: #666; margin-bottom: 15px;">Ask anything about this food - nutrition, cooking, history, or health benefits!</p>
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                                    
-                                    # Question input with suggestions
-                                    col1, col2 = st.columns([3, 1])
-                                    with col1:
-                                        user_question = st.text_input(
-                                            "Ask your question:",
-                                            placeholder="e.g., How should I cook this? What are the health benefits?",
-                                            key="enhanced_question"
-                                        )
-                                    with col2:
-                                        if st.button("🚀 Ask AI", key="enhanced_ask", disabled=not user_question):
-                                            pass
-                                    
-                                    # Quick question suggestions
-                                    if not user_question:
-                                        st.markdown("**💡 Quick Questions:**")
-                                        suggestions = [
-                                            "What are the health benefits?",
-                                            "How should I cook this?",
-                                            "What's the cultural background?",
-                                            "Are there any allergens?",
-                                            "What are good substitutes?"
-                                        ]
-                                        
-                                        cols = st.columns(len(suggestions))
-                                        for i, suggestion in enumerate(suggestions):
-                                            with cols[i]:
-                                                if st.button(suggestion, key=f"suggestion_{i}"):
-                                                    st.session_state.quick_question = suggestion
-                                                    st.rerun()
-                                    
-                                    # Handle question and answer
-                                    if user_question and st.button("🚀 Ask AI", key="enhanced_ask_real"):
-                                        with st.spinner("🤖 AI is thinking..."):
-                                            answer = agent.answer_user_questions(user_question, result)
-                                        
-                                        # Display answer in a beautiful format
-                                        st.markdown("### 💬 AI Response")
-                                        st.markdown(f"""
-                                        <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); 
-                                                    padding: 20px; border-radius: 15px; color: white; margin: 20px 0;">
-                                            <h5 style="color: white; margin-bottom: 15px;">🤖 AI Assistant</h5>
-                                            <div style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 10px; color: #333;">
-                                                <p style="margin: 0; line-height: 1.6;">{answer}</p>
-                                            </div>
-                                        </div>
-                                        """, unsafe_allow_html=True)
-                                    
-                                    # Save to history
-                                    entry = {
-                                        "timestamp": datetime.now(),
-                                        "type": "enhanced_analysis",
-                                        "description": result['image_analysis'].get('enhanced_description', 'Enhanced analysis'),
-                                        "analysis": result['web_information'].get('summary', 'Enhanced analysis with web data'),
-                                        "nutritional_data": {
-                                            "total_calories": 0,  # Enhanced agent doesn't provide exact calories
-                                            "total_protein": 0,
-                                            "total_carbs": 0,
-                                            "total_fats": 0,
-                                            "items": []
-                                        },
-                                        "context": "Enhanced agent analysis",
-                                        "enhanced_data": result
-                                    }
-                                    st.session_state.history.append(entry)
-                                    
-                                else:
-                                    st.error(f"Enhanced analysis failed: {result['error']}")
-                                    
-                            except Exception as e:
-                                st.error(f"Enhanced analysis failed: {str(e)}")
-                                st.info("Try uploading a clearer image or check your internet connection.")
-                
-                # Show agent status
-                with st.expander("🤖 Agent Status"):
-                    status = agent.get_agent_status()
-                    st.json(status)
-                    
-            except ImportError:
-                st.info("Enhanced agent module not available. Using standard analysis only.")
-                st.markdown("""
-                <div class="analysis-card">
-                    <h4>🤖 Enhanced Agent Features</h4>
-                    <ul>
-                        <li>Web search for comprehensive information</li>
-                        <li>Cultural and historical background</li>
-                        <li>Recipe suggestions and cooking methods</li>
-                        <li>Follow-up question capabilities</li>
-                        <li>Context storage and management</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
+        # Enhanced agent features info
+        st.markdown("### 🤖 Enhanced Features Included")
+        st.markdown("""
+        <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #4ECDC4;">
+            <h5 style="color: #4ECDC4; margin-bottom: 15px;">🚀 What You'll Get:</h5>
+            <ul style="color: #333; line-height: 1.6;">
+                <li><strong>📊 Standard Analysis:</strong> Detailed nutritional breakdown with calories, protein, carbs, and fats</li>
+                <li><strong>🌐 Web Search:</strong> Comprehensive information from the web about your food</li>
+                <li><strong>🌍 Cultural Background:</strong> Historical and cultural significance</li>
+                <li><strong>📖 Recipe Suggestions:</strong> Cooking methods and preparation tips</li>
+                <li><strong>💊 Health Information:</strong> Benefits, allergens, and dietary considerations</li>
+                <li><strong>❓ AI Q&A:</strong> Ask follow-up questions about your food</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     with tab2:
         st.markdown("""

@@ -105,7 +105,7 @@ def extract_food_items_from_text(text: str) -> set:
     return items
 
 def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
-    """Enhanced food detection with global search, advanced parsing, and comprehensive model integration."""
+    """Enhanced food detection with focused, accurate analysis."""
     if not models.get('processor') or not models.get('blip_model'):
         return "Image analysis unavailable. Please check model loading."
     
@@ -119,64 +119,63 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
         
         all_food_items = set()
         
-        # Strategy 1: Global Search with Multi-Scale Analysis
-        global_search_prompts = [
-            "Perform a global search and identify EVERY food item, ingredient, dish, sauce, beverage, condiment, garnish, seasoning, and edible component visible in this image. Be exhaustive and thorough:",
-            "Conduct a comprehensive scan of this image and list ALL food-related items including main dishes, sides, appetizers, desserts, drinks, spices, herbs, oils, sauces, toppings, and any edible elements:",
-            "Search this entire image systematically and identify each food component, ingredient, preparation method, cooking style, and nutritional element present:",
-            "Analyze this image globally and extract every food item, cooking ingredient, dietary component, meal element, and consumable item visible:",
-            "Perform a thorough global examination and catalog all food items, beverages, condiments, seasonings, garnishes, and edible components in this image:",
-            "Conduct an exhaustive search of this image and identify every food-related element including dishes, ingredients, preparations, and nutritional components:",
-            "Search the entire image comprehensively and list all food items, drinks, sauces, spices, herbs, and edible elements with their preparation methods:",
-            "Analyze this image with global perspective and identify every food component, ingredient, cooking method, and dietary element present:",
-            "Perform a complete global scan and extract all food items, beverages, condiments, seasonings, and edible components from this image:",
-            "Conduct a thorough global analysis and identify every food-related item, preparation method, cooking style, and nutritional component visible:"
+        # Strategy 1: Comprehensive Detection Prompts for Maximum Coverage
+        focused_prompts = [
+            "List ALL food items, ingredients, dishes, sauces, beverages, condiments, and edible components visible in this image. Be exhaustive:",
+            "Identify every food-related item including main dishes, sides, appetizers, desserts, drinks, spices, herbs, oils, sauces, toppings, and any edible elements:",
+            "What food items, cooking ingredients, dietary components, meal elements, and consumable items can you see? List everything:",
+            "Search this image systematically and identify each food component, ingredient, preparation method, cooking style, and nutritional element present:",
+            "Analyze this image comprehensively and extract every food item, beverage, condiment, seasoning, garnish, and edible component visible:"
         ]
         
-        for i, prompt in enumerate(global_search_prompts):
+        # Use all prompts for maximum detection coverage
+        for i, prompt in enumerate(focused_prompts):
             try:
                 inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
                 with torch.no_grad():
                     outputs = models['blip_model'].generate(
                         **inputs, 
-                        max_new_tokens=500,  # Increased for global search
-                        num_beams=10,        # Increased for better quality
+                        max_new_tokens=300,  # Increased for comprehensive detection
+                        num_beams=8,         # Higher for better quality
                         do_sample=True,
-                        temperature=0.3,     # Lower for more focused detection
-                        top_p=0.98,         # Higher for comprehensive results
+                        temperature=0.5,     # Lower for more focused detection
+                        top_p=0.95,         # Higher for comprehensive results
                         repetition_penalty=1.1,
-                        length_penalty=1.2   # Encourage longer, more detailed responses
+                        length_penalty=1.1   # Encourage longer, more detailed responses
                     )
                 caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
                 
+                # Clean the caption
                 if caption.startswith(prompt):
                     caption = caption.replace(prompt, "").strip()
                 
+                # Extract food items more carefully
                 items = extract_food_items_from_text(caption)
                 all_food_items.update(items)
-                logger.info(f"Global search prompt {i+1} found: {len(items)} items")
+                logger.info(f"Focused prompt {i+1} found: {len(items)} items - {caption[:100]}...")
                 
             except Exception as e:
-                logger.warning(f"Global search prompt {i+1} failed: {e}")
+                logger.warning(f"Focused prompt {i+1} failed: {e}")
+                continue
         
-        # Strategy 2: Advanced YOLO Detection with Comprehensive Food Database
+        # Strategy 2: Simplified YOLO Detection for Better Accuracy
         if models.get('yolo_model') and models.get('NUMPY_AVAILABLE'):
             try:
                 import numpy as np
                 img_np = np.array(image)
-                # Ultra-low confidence threshold for maximum detection
-                results = models['yolo_model'](img_np, conf=0.01, iou=0.2)
+                # Use lower confidence threshold for maximum detection
+                results = models['yolo_model'](img_np, conf=0.15, iou=0.35)
                 
-                # Comprehensive global food database
-                global_food_database = {
-                    # Fruits (Global)
+                # Comprehensive food database for maximum detection
+                comprehensive_food_items = {
+                    # Fruits
                     'apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'lemon', 'lime',
                     'peach', 'pear', 'mango', 'pineapple', 'watermelon', 'cantaloupe', 'kiwi', 'avocado',
                     'cherry', 'plum', 'apricot', 'nectarine', 'fig', 'date', 'raisin', 'cranberry',
                     'raspberry', 'blackberry', 'gooseberry', 'currant', 'pomegranate', 'guava', 'papaya',
                     'dragon fruit', 'star fruit', 'lychee', 'longan', 'rambutan', 'durian', 'jackfruit',
                     'breadfruit', 'plantain', 'persimmon', 'quince', 'medlar', 'loquat', 'mulberry',
-                    # Vegetables (Global)
+                    # Vegetables
                     'tomato', 'potato', 'carrot', 'onion', 'broccoli', 'cauliflower', 'lettuce', 'spinach',
                     'cucumber', 'bell pepper', 'jalapeno', 'garlic', 'ginger', 'mushroom', 'corn', 'peas',
                     'beans', 'asparagus', 'zucchini', 'eggplant', 'celery', 'radish', 'beet', 'turnip',
@@ -185,8 +184,7 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                     'watercress', 'endive', 'escarole', 'bok choy', 'napa cabbage', 'savoy cabbage',
                     'red cabbage', 'green cabbage', 'white cabbage', 'chinese cabbage', 'pak choi',
                     'mustard greens', 'turnip greens', 'beet greens', 'dandelion greens', 'purslane',
-                    'amaranth', 'malabar spinach', 'new zealand spinach', 'orach', 'good king henry',
-                    # Proteins (Global)
+                    # Proteins
                     'chicken', 'fish', 'beef', 'pork', 'lamb', 'turkey', 'duck', 'egg', 'tofu', 'tempeh',
                     'shrimp', 'crab', 'lobster', 'salmon', 'tuna', 'cod', 'tilapia', 'bacon', 'sausage',
                     'ham', 'prosciutto', 'salami', 'pepperoni', 'chorizo', 'pastrami', 'corned beef',
@@ -197,7 +195,7 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                     'lamb chops', 'lamb shank', 'goat', 'venison', 'bison', 'elk', 'rabbit', 'quail',
                     'pheasant', 'partridge', 'guinea fowl', 'geese', 'pigeon', 'squab', 'ostrich',
                     'emu', 'kangaroo', 'crocodile', 'alligator', 'frog legs', 'snail', 'escargot',
-                    # Dairy (Global)
+                    # Dairy
                     'cheese', 'milk', 'yogurt', 'butter', 'cream', 'sour cream', 'cottage cheese',
                     'ricotta', 'mozzarella', 'cheddar', 'parmesan', 'gouda', 'brie', 'camembert',
                     'blue cheese', 'feta', 'halloumi', 'paneer', 'queso fresco', 'manchego', 'pecorino',
@@ -205,7 +203,7 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                     'pepper jack', 'string cheese', 'cream cheese', 'mascarpone', 'quark', 'kefir',
                     'buttermilk', 'evaporated milk', 'condensed milk', 'powdered milk', 'almond milk',
                     'soy milk', 'oat milk', 'coconut milk', 'rice milk', 'hemp milk', 'cashew milk',
-                    # Grains (Global)
+                    # Grains
                     'bread', 'rice', 'pasta', 'noodles', 'quinoa', 'oatmeal', 'cereal', 'flour', 'wheat',
                     'barley', 'rye', 'oats', 'corn', 'millet', 'sorghum', 'teff', 'amaranth', 'buckwheat',
                     'farro', 'spelt', 'kamut', 'freekeh', 'bulgur', 'couscous', 'polenta', 'grits',
@@ -213,7 +211,7 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                     'cake flour', 'pastry flour', 'all-purpose flour', 'self-rising flour', 'rye flour',
                     'buckwheat flour', 'almond flour', 'coconut flour', 'chickpea flour', 'rice flour',
                     'tapioca flour', 'potato flour', 'arrowroot flour', 'cassava flour', 'tigernut flour',
-                    # Processed Foods (Global)
+                    # Processed Foods
                     'pizza', 'burger', 'sandwich', 'hot dog', 'taco', 'burrito', 'sushi', 'salad', 'soup',
                     'stew', 'curry', 'stir fry', 'lasagna', 'spaghetti', 'macaroni', 'cake', 'cookie',
                     'brownie', 'muffin', 'donut', 'croissant', 'bagel', 'toast', 'pancake', 'waffle',
@@ -222,7 +220,7 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                     'ice cream', 'gelato', 'sorbet', 'pudding', 'custard', 'flan', 'creme brulee',
                     'chocolate', 'candy', 'chocolate bar', 'truffle', 'praline', 'fudge', 'caramel',
                     'toffee', 'nougat', 'marshmallow', 'gummy bear', 'jelly bean', 'licorice', 'lollipop',
-                    # Beverages (Global)
+                    # Beverages
                     'coffee', 'tea', 'juice', 'water', 'soda', 'beer', 'wine', 'milk', 'smoothie',
                     'milkshake', 'hot chocolate', 'cocoa', 'espresso', 'cappuccino', 'latte', 'americano',
                     'mocha', 'macchiato', 'flat white', 'cortado', 'piccolo', 'ristretto', 'lungo',
@@ -230,7 +228,7 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                     'rooibos', 'hibiscus', 'chamomile', 'peppermint', 'ginger tea', 'lemon tea',
                     'orange juice', 'apple juice', 'grape juice', 'cranberry juice', 'tomato juice',
                     'carrot juice', 'beet juice', 'celery juice', 'wheatgrass juice', 'aloe vera juice',
-                    # Condiments & Seasonings (Global)
+                    # Condiments & Seasonings
                     'sauce', 'ketchup', 'mustard', 'mayonnaise', 'hot sauce', 'soy sauce', 'vinegar',
                     'oil', 'olive oil', 'butter', 'salt', 'pepper', 'sugar', 'honey', 'syrup',
                     'maple syrup', 'agave nectar', 'stevia', 'splenda', 'aspartame', 'saccharin',
@@ -255,15 +253,15 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                             conf = float(box.conf[0])
                             class_name = models['yolo_model'].names[cls].lower()
                             
-                            # More permissive detection
-                            if conf > 0.05 and any(term in class_name for term in food_terms):
+                            # Check if it's a comprehensive food item
+                            if class_name in comprehensive_food_items:
                                 all_food_items.add(class_name)
                                 logger.info(f"YOLO detected: {class_name} (confidence: {conf:.2f})")
                                 
             except Exception as e:
                 logger.warning(f"YOLO detection failed: {e}")
         
-        # Strategy 3: Additional BLIP prompts for specific food categories
+        # Strategy 3: Additional category-specific prompts for maximum coverage
         category_prompts = [
             "What vegetables and fruits are in this image?",
             "What proteins and meats are visible?",
@@ -271,32 +269,35 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
             "What sauces, condiments, and seasonings are present?",
             "What beverages and drinks are in this image?",
             "What desserts and sweets are visible?",
-            "What herbs and spices can you identify?"
+            "What herbs and spices can you identify?",
+            "What cooking methods and preparation techniques are visible?"
         ]
         
+        # Use category prompts for additional detection
         for prompt in category_prompts:
-            try:
-                inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
-                with torch.no_grad():
-                    outputs = models['blip_model'].generate(
-                        **inputs, 
-                        max_new_tokens=200,
-                        num_beams=6,
-                        do_sample=True,
-                        temperature=0.5,
-                        top_p=0.9
-                    )
-                caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-                
-                if caption.startswith(prompt):
-                    caption = caption.replace(prompt, "").strip()
-                
-                items = extract_food_items_from_text(caption)
-                all_food_items.update(items)
-                logger.info(f"Category prompt found: {len(items)} items")
-                
-            except Exception as e:
-                logger.warning(f"Category prompt failed: {e}")
+                try:
+                    inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
+                    with torch.no_grad():
+                        outputs = models['blip_model'].generate(
+                            **inputs, 
+                            max_new_tokens=150,
+                            num_beams=3,
+                            do_sample=True,
+                            temperature=0.8,
+                            top_p=0.9
+                        )
+                    caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                    
+                    if caption.startswith(prompt):
+                        caption = caption.replace(prompt, "").strip()
+                    
+                    items = extract_food_items_from_text(caption)
+                    all_food_items.update(items)
+                    logger.info(f"Fallback prompt found: {len(items)} items - {caption[:50]}...")
+                    
+                except Exception as e:
+                    logger.warning(f"Fallback prompt failed: {e}")
+                    continue
         
         # Enhanced filtering with broader food keywords
         if all_food_items:
@@ -356,17 +357,77 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
             try:
                 inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
                 with torch.no_grad():
-                    outputs = models['blip_model'].generate(**inputs, max_new_tokens=150, num_beams=5)
+                    outputs = models['blip_model'].generate(
+                        **inputs, 
+                        max_new_tokens=200,
+                        num_beams=6,
+                        do_sample=True,
+                        temperature=0.6,
+                        top_p=0.9
+                    )
                 caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
                 
-                if prompt.lower() in caption.lower():
-                    caption = caption.lower().replace(prompt.lower(), "").strip()
+                if caption.startswith(prompt):
+                    caption = caption.replace(prompt, "").strip()
                 
-                if len(caption.split()) >= 3:  # More permissive
-                    return caption
-                    
+                items = extract_food_items_from_text(caption)
+                all_food_items.update(items)
+                logger.info(f"Fallback prompt found: {len(items)} items - {caption[:50]}...")
+                
             except Exception as e:
                 logger.warning(f"Fallback prompt failed: {e}")
+                continue
+        
+        # Enhanced filtering with broader food keywords
+        if all_food_items:
+            # Much broader essential food keywords
+            essential_food_keywords = {
+                # Fruits
+                'apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'lemon', 'lime',
+                'peach', 'pear', 'mango', 'pineapple', 'watermelon', 'cantaloupe', 'kiwi', 'fruit',
+                # Vegetables
+                'tomato', 'potato', 'carrot', 'onion', 'broccoli', 'cauliflower', 'lettuce', 'spinach',
+                'cucumber', 'bell pepper', 'jalapeno', 'garlic', 'ginger', 'mushroom', 'corn', 'peas',
+                'beans', 'asparagus', 'zucchini', 'eggplant', 'celery', 'radish', 'beet', 'turnip', 'vegetable',
+                # Proteins
+                'chicken', 'beef', 'pork', 'lamb', 'turkey', 'duck', 'egg', 'tofu', 'tempeh',
+                'shrimp', 'crab', 'lobster', 'salmon', 'tuna', 'cod', 'tilapia', 'bacon', 'sausage', 'meat', 'fish',
+                # Dairy
+                'cheese', 'milk', 'yogurt', 'butter', 'cream', 'sour cream', 'cottage cheese', 'dairy',
+                # Grains
+                'bread', 'rice', 'pasta', 'noodles', 'quinoa', 'oatmeal', 'cereal', 'flour', 'wheat', 'grain',
+                # Processed foods
+                'pizza', 'burger', 'sandwich', 'hot dog', 'taco', 'burrito', 'sushi', 'salad', 'soup',
+                'stew', 'curry', 'stir fry', 'lasagna', 'spaghetti', 'macaroni', 'cake', 'cookie',
+                'brownie', 'muffin', 'donut', 'croissant', 'bagel', 'toast', 'pancake', 'waffle',
+                # Beverages
+                'coffee', 'tea', 'juice', 'water', 'soda', 'beer', 'wine', 'milk', 'smoothie', 'drink',
+                # Condiments
+                'sauce', 'ketchup', 'mustard', 'mayonnaise', 'hot sauce', 'soy sauce', 'vinegar',
+                'oil', 'olive oil', 'butter', 'salt', 'pepper', 'sugar', 'honey', 'syrup', 'seasoning',
+                # General food terms
+                'food', 'meal', 'dish', 'ingredient', 'spice', 'herb', 'garnish', 'topping', 'filling'
+            }
+            
+            final_items = []
+            for item in all_food_items:
+                item_clean = item.strip().lower()
+                # More permissive filtering - include items that are longer than 2 chars and not obvious non-food
+                if (len(item_clean) > 2 and 
+                    (any(keyword in item_clean for keyword in essential_food_keywords) or 
+                     not any(non_food in item_clean for non_food in ['plate', 'bowl', 'cup', 'glass', 'table', 'chair', 'wall', 'floor', 'ceiling', 'window', 'door', 'light', 'shadow']))):
+                    final_items.append(item_clean)
+            
+            if final_items:
+                unique_items = sorted(set(final_items))
+                # Limit to top 15 most relevant items for comprehensive detection
+                if len(unique_items) > 15:
+                    unique_items = unique_items[:15]
+                
+                # Format as "Main Food Items Identified: item1, item2, item3..."
+                result_description = "Main Food Items Identified: " + ", ".join(unique_items)
+                logger.info(f"Final food items: {result_description}")
+                return result_description
         
         return "Food items detected. Add context for better identification."
             
