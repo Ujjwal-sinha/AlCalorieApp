@@ -639,7 +639,9 @@ def main():
                 status_class = "status-success" if status else "status-error"
                 status_icon = "✅" if status else "❌"
                 status_text = "Available" if status else "Not Available"
-                st.markdown(f'<span class="{status_class}">{status_icon} **{model}**: {status_text}</span>', unsafe_allow_html=True)
+                # Add "Fine-tuned" prefix to model names
+                model_display_name = f"Fine-tuned {model}"
+                st.markdown(f'<span class="{status_class}">{status_icon} **{model_display_name}**: {status_text}</span>', unsafe_allow_html=True)
         else:
             st.error("Models not available. Check deployment configuration.")
         
