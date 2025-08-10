@@ -92,6 +92,37 @@ AlCalorieApp-Cloud/
 - **LIME**: Local interpretability
 - **OpenCV**: Computer vision
 
+## 🤖 Enhanced Food Agent
+
+The app includes an advanced **Enhanced Food Agent** that provides comprehensive food analysis with web search capabilities:
+
+### Agent Features
+
+1. **Image Analysis**: Advanced food detection using multiple AI models
+2. **Web Search**: Real-time information from the web about food items
+3. **Context Management**: Store analysis context for follow-up questions
+4. **Comprehensive Information**: 
+   - Nutritional facts and health benefits
+   - Cultural and historical background
+   - Recipe suggestions and cooking methods
+   - Dietary considerations and allergen information
+
+### How to Use the Enhanced Agent
+
+1. **Navigate to the "🤖 Enhanced Agent" tab**
+2. **Upload a food image** for analysis
+3. **Click "Analyze with Enhanced Agent"** to start processing
+4. **View comprehensive results** including web-sourced information
+5. **Ask follow-up questions** about the food without re-uploading
+6. **Explore detailed insights** about nutrition, culture, and preparation
+
+### Agent Architecture
+
+- **Modular Design**: Each component can be upgraded independently
+- **Caching System**: Efficient storage of search results and context
+- **Error Handling**: Graceful fallbacks when web search is unavailable
+- **Session Management**: Unique session IDs for each analysis
+
 ## 📖 Usage Guide
 
 ### 1. Upload Food Image

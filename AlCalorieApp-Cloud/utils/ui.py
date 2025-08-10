@@ -113,11 +113,18 @@ def create_tips_section():
         """)
 
 def create_footer():
-    """Create the footer"""
-    st.markdown("---")
+    """Create the modern footer"""
     st.markdown("""
-    <div style="text-align: center; color: #666; padding: 20px;">
-        <p>🍱 AI Calorie Tracker | Built with Streamlit and AI</p>
-        <p>For accurate nutrition tracking, consider consulting with a registered dietitian.</p>
+    <div class="modern-footer">
+        <h3>🍱 AI Calorie Tracker</h3>
+        <p>🔬 AI Visualizations • 📊 Nutrition Analysis • 🚀 Modern Interface</p>
+        <p><strong>Developed by Ujjwal Sinha</strong></p>
+        <div style="margin-top: 1rem;">
+            <a href="https://github.com/Ujjwal-sinha" target="_blank" style="color: white; margin: 0 1rem; text-decoration: none;">📱 GitHub</a>
+            <a href="https://www.linkedin.com/in/sinhaujjwal01/" target="_blank" style="color: white; margin: 0 1rem; text-decoration: none;">💼 LinkedIn</a>
+        </div>
+        <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+            © 2025 Ujjwal Sinha • Built with ❤️ using Streamlit & Advanced AI
+        </p>
     </div>
     """, unsafe_allow_html=True)
