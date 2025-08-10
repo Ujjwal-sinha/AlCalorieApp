@@ -353,10 +353,10 @@ def create_complex_nutrition_charts(nutrition_data):
                                           startangle=90, pctdistance=0.85, radius=1.0)
         
         # Middle ring (shadow effect)
-        ax4.pie(sizes, colors=['black']*2, alpha=0.3, radius=0.8, startangle=90)
+        ax4.pie(sizes, colors=['black']*2, radius=0.8, startangle=90)
         
         # Inner ring (highlight)
-        ax4.pie(sizes, colors=colors_donut, alpha=0.6, radius=0.6, startangle=90)
+        ax4.pie(sizes, colors=colors_donut, radius=0.6, startangle=90)
         
         # Create donut effect with multiple circles
         centre_circle = plt.Circle((0,0), 0.5, fc='white', edgecolor='gray', linewidth=2)
