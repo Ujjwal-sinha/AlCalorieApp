@@ -317,75 +317,114 @@ def main():
                             if description.startswith("Main Food Items Identified:"):
                                 # Extract just the food items for cleaner display
                                 food_items = description.replace("Main Food Items Identified:", "").strip()
+                                food_items_list = food_items.split(", ")
                                 display_title = "🍽️ Main Food Items Identified"
                                 display_content = food_items
                             else:
                                 display_title = "🍽️ Comprehensive Analysis Results"
                                 display_content = description
+                                food_items_list = [description]
                             
+                            # Enhanced main results container
                             st.markdown(f"""
                             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                        padding: 20px; border-radius: 15px; color: white; margin: 20px 0;">
-                                <h3 style="color: white; margin-bottom: 15px;">{display_title}</h3>
-                                <p style="font-size: 16px; margin-bottom: 0; line-height: 1.6;"><strong>Detected Items:</strong> {display_content}</p>
-                                <p style="font-size: 14px; margin: 5px 0 0 0; opacity: 0.9;">Standard Analysis + Enhanced Agent</p>
+                                        padding: 25px; border-radius: 20px; color: white; margin: 20px 0; 
+                                        box-shadow: 0 8px 32px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.2);">
+                                <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                                    <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px;">
+                                        <span style="font-size: 24px;">🍽️</span>
+                                    </div>
+                                    <div>
+                                        <h3 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">{display_title}</h3>
+                                        <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0; font-size: 14px;">AI-Powered Food Detection</p>
+                                    </div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px; margin-top: 15px;">
+                                    <p style="font-size: 16px; margin: 0; line-height: 1.6; color: #333; font-weight: 500;">
+                                        <strong style="color: #667eea;">Detected Items:</strong> {display_content}
+                                    </p>
+                                </div>
+                                <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 12px; opacity: 0.8;">Standard Analysis + Enhanced Agent</span>
+                                    <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;">AI Verified</span>
+                                </div>
                             </div>
                             """, unsafe_allow_html=True)
                             
-                            # Add item count summary
+                            # Enhanced item count summary with better styling
                             if description.startswith("Main Food Items Identified:"):
-                                food_items_list = description.replace("Main Food Items Identified:", "").strip().split(", ")
                                 item_count = len(food_items_list)
                                 st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 10px; 
-                                            box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 10px 0;">
-                                    <p style="margin: 0; color: #333; font-size: 16px;">
-                                        <strong>📊 Detection Summary:</strong> Successfully identified <strong>{item_count} food items</strong> in the image
-                                    </p>
+                                <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); 
+                                            padding: 20px; border-radius: 15px; color: white; margin: 15px 0; 
+                                            box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center;">
+                                            <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 50%; margin-right: 12px;">
+                                                <span style="font-size: 18px;">📊</span>
+                                            </div>
+                                            <div>
+                                                <h4 style="color: white; margin: 0; font-size: 18px; font-weight: 600;">Detection Summary</h4>
+                                                <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">AI Analysis Results</p>
+                                            </div>
+                                        </div>
+                                        <div style="text-align: center; background: rgba(255,255,255,0.2); padding: 15px; border-radius: 12px; min-width: 80px;">
+                                            <div style="font-size: 24px; font-weight: bold; color: white;">{item_count}</div>
+                                            <div style="font-size: 12px; color: rgba(255,255,255,0.8);">Items Found</div>
+                                        </div>
+                                    </div>
                                 </div>
                                 """, unsafe_allow_html=True)
                             
                             # Enhanced nutrition summary with better styling
                             nutrition = analysis_result["nutritional_data"]
                             
-                            st.markdown("### 📊 Nutritional Breakdown")
+                            st.markdown("### 📈 Nutrition Analysis")
                             
-                            # Create nutrition cards with better styling
+                            # Create nutrition cards with enhanced styling
                             col1, col2, col3, col4 = st.columns(4)
                             with col1:
                                 st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                            text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #FF6B6B;">
-                                    <h4 style="color: #FF6B6B; margin: 0;">🔥 Calories</h4>
-                                    <h2 style="color: #333; margin: 10px 0;">{nutrition['total_calories']}</h2>
-                                    <p style="color: #666; margin: 0;">kcal</p>
+                                <div style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%); 
+                                            padding: 25px; border-radius: 18px; color: white; text-align: center; 
+                                            box-shadow: 0 8px 25px rgba(255,107,107,0.3); border: 1px solid rgba(255,255,255,0.2);">
+                                    <div style="font-size: 28px; margin-bottom: 12px;">🔥</div>
+                                    <div style="font-size: 24px; font-weight: bold; margin-bottom: 8px;">{nutrition['total_calories']}</div>
+                                    <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">Calories</div>
+                                    <div style="font-size: 12px; opacity: 0.7; margin-top: 5px;">kcal</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                             with col2:
                                 st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                            text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #4ECDC4;">
-                                    <h4 style="color: #4ECDC4; margin: 0;">💪 Protein</h4>
-                                    <h2 style="color: #333; margin: 10px 0;">{nutrition['total_protein']:.1f}</h2>
-                                    <p style="color: #666; margin: 0;">grams</p>
+                                <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); 
+                                            padding: 25px; border-radius: 18px; color: white; text-align: center; 
+                                            box-shadow: 0 8px 25px rgba(78,205,196,0.3); border: 1px solid rgba(255,255,255,0.2);">
+                                    <div style="font-size: 28px; margin-bottom: 12px;">💪</div>
+                                    <div style="font-size: 24px; font-weight: bold; margin-bottom: 8px;">{nutrition['total_protein']:.1f}g</div>
+                                    <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">Protein</div>
+                                    <div style="font-size: 12px; opacity: 0.7; margin-top: 5px;">Building Blocks</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                             with col3:
                                 st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                            text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #45B7D1;">
-                                    <h4 style="color: #45B7D1; margin: 0;">🌾 Carbs</h4>
-                                    <h2 style="color: #333; margin: 10px 0;">{nutrition['total_carbs']:.1f}</h2>
-                                    <p style="color: #666; margin: 0;">grams</p>
+                                <div style="background: linear-gradient(135deg, #45B7D1 0%, #96CEB4 100%); 
+                                            padding: 25px; border-radius: 18px; color: white; text-align: center; 
+                                            box-shadow: 0 8px 25px rgba(69,183,209,0.3); border: 1px solid rgba(255,255,255,0.2);">
+                                    <div style="font-size: 28px; margin-bottom: 12px;">🌾</div>
+                                    <div style="font-size: 24px; font-weight: bold; margin-bottom: 8px;">{nutrition['total_carbs']:.1f}g</div>
+                                    <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">Carbs</div>
+                                    <div style="font-size: 12px; opacity: 0.7; margin-top: 5px;">Energy Source</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                             with col4:
                                 st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                            text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #96CEB4;">
-                                    <h4 style="color: #96CEB4; margin: 0;">🥑 Fats</h4>
-                                    <h2 style="color: #333; margin: 10px 0;">{nutrition['total_fats']:.1f}</h2>
-                                    <p style="color: #666; margin: 0;">grams</p>
+                                <div style="background: linear-gradient(135deg, #FFD93D 0%, #FFB347 100%); 
+                                            padding: 25px; border-radius: 18px; color: white; text-align: center; 
+                                            box-shadow: 0 8px 25px rgba(255,217,61,0.3); border: 1px solid rgba(255,255,255,0.2);">
+                                    <div style="font-size: 28px; margin-bottom: 12px;">🥑</div>
+                                    <div style="font-size: 24px; font-weight: bold; margin-bottom: 8px;">{nutrition['total_fats']:.1f}g</div>
+                                    <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">Fats</div>
+                                    <div style="font-size: 12px; opacity: 0.7; margin-top: 5px;">Essential Fats</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                             
@@ -404,10 +443,19 @@ def main():
                             # Create expandable sections for better organization
                             with st.expander("🔍 Complete Analysis Report", expanded=True):
                                 st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; 
-                                            box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #667eea;">
-                                    <div style="line-height: 1.6; color: #333;">
-                                        {analysis_text.replace(chr(10), '<br>')}
+                                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                            padding: 25px; border-radius: 18px; color: white; margin: 15px 0; 
+                                            box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
+                                    <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 50%; margin-right: 12px;">
+                                            <span style="font-size: 18px;">📋</span>
+                                        </div>
+                                        <h4 style="color: white; margin: 0; font-size: 18px; font-weight: 600;">AI Analysis Report</h4>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; color: #333;">
+                                        <div style="line-height: 1.8; font-size: 15px;">
+                                            {analysis_text.replace(chr(10), '<br>')}
+                                        </div>
                                     </div>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -424,12 +472,20 @@ def main():
                             col1, col2 = st.columns(2)
                             with col1:
                                 st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                            box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                                    <h5 style="color: #667eea; margin-bottom: 10px;">📊 Macronutrient Balance</h5>
-                                    <p style="margin: 5px 0;"><strong>Protein:</strong> {protein_pct:.1f}%</p>
-                                    <p style="margin: 5px 0;"><strong>Carbs:</strong> {carbs_pct:.1f}%</p>
-                                    <p style="margin: 5px 0;"><strong>Fats:</strong> {fats_pct:.1f}%</p>
+                                <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); 
+                                            padding: 25px; border-radius: 18px; color: white; 
+                                            box-shadow: 0 8px 25px rgba(78,205,196,0.3);">
+                                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 50%; margin-right: 12px;">
+                                            <span style="font-size: 18px;">📊</span>
+                                        </div>
+                                        <h5 style="color: white; margin: 0; font-size: 18px; font-weight: 600;">Macronutrient Balance</h5>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; color: #333;">
+                                        <p style="margin: 8px 0; font-size: 15px;"><strong>Protein:</strong> {protein_pct:.1f}%</p>
+                                        <p style="margin: 8px 0; font-size: 15px;"><strong>Carbs:</strong> {carbs_pct:.1f}%</p>
+                                        <p style="margin: 8px 0; font-size: 15px;"><strong>Fats:</strong> {fats_pct:.1f}%</p>
+                                    </div>
                                 </div>
                                 """, unsafe_allow_html=True)
                             
@@ -438,20 +494,31 @@ def main():
                                 if total_cals < 300:
                                     meal_type = "Light Snack"
                                     meal_icon = "🍎"
+                                    meal_color = "#FF6B6B"
                                 elif total_cals < 600:
                                     meal_type = "Regular Meal"
                                     meal_icon = "🍽️"
+                                    meal_color = "#4ECDC4"
                                 else:
                                     meal_type = "Hearty Meal"
                                     meal_icon = "🍖"
+                                    meal_color = "#FFD93D"
                                 
                                 st.markdown(f"""
-                                <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 15px; 
-                                            box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                                    <h5 style="color: #667eea; margin-bottom: 10px;">🍽️ Meal Classification</h5>
-                                    <p style="margin: 5px 0;"><strong>Type:</strong> {meal_icon} {meal_type}</p>
-                                    <p style="margin: 5px 0;"><strong>Calorie Level:</strong> {total_cals} kcal</p>
-                                    <p style="margin: 5px 0;"><strong>Analysis Quality:</strong> ✅ High</p>
+                                <div style="background: linear-gradient(135deg, {meal_color} 0%, #FFB347 100%); 
+                                            padding: 25px; border-radius: 18px; color: white; 
+                                            box-shadow: 0 8px 25px rgba(255,107,107,0.3);">
+                                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                        <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 50%; margin-right: 12px;">
+                                            <span style="font-size: 18px;">🍽️</span>
+                                        </div>
+                                        <h5 style="color: white; margin: 0; font-size: 18px; font-weight: 600;">Meal Classification</h5>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; color: #333;">
+                                        <p style="margin: 8px 0; font-size: 15px;"><strong>Type:</strong> {meal_icon} {meal_type}</p>
+                                        <p style="margin: 8px 0; font-size: 15px;"><strong>Calorie Level:</strong> {total_cals} kcal</p>
+                                        <p style="margin: 8px 0; font-size: 15px;"><strong>Analysis Quality:</strong> ✅ High</p>
+                                    </div>
                                 </div>
                                 """, unsafe_allow_html=True)
                             
