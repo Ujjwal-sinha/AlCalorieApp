@@ -229,16 +229,194 @@ def load_css():
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     
-    /* Enhanced Sidebar */
+    /* Enhanced Sidebar with Black Font Color */
     .css-1d391kg {
-        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
         backdrop-filter: blur(20px);
     }
     
     .sidebar .sidebar-content {
-        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+        color: #333;
         backdrop-filter: blur(20px);
+    }
+    
+    /* Sidebar Text Visibility Fixes - Black Font */
+    .css-1d391kg h1, .css-1d391kg h2, .css-1d391kg h3, .css-1d391kg h4, .css-1d391kg h5, .css-1d391kg h6 {
+        color: #333 !important;
+        text-shadow: none;
+    }
+    
+    .css-1d391kg p, .css-1d391kg div, .css-1d391kg span, .css-1d391kg label {
+        color: #333 !important;
+    }
+    
+    .css-1d391kg .stMarkdown {
+        color: #333 !important;
+    }
+    
+    .css-1d391kg .stMarkdown h1, .css-1d391kg .stMarkdown h2, .css-1d391kg .stMarkdown h3, 
+    .css-1d391kg .stMarkdown h4, .css-1d391kg .stMarkdown h5, .css-1d391kg .stMarkdown h6 {
+        color: #333 !important;
+        text-shadow: none;
+    }
+    
+    .css-1d391kg .stMarkdown p {
+        color: #333 !important;
+    }
+    
+    /* Sidebar Input Elements */
+    .css-1d391kg .stNumberInput > div > div > input {
+        background: white !important;
+        color: #333 !important;
+        border: 2px solid #dee2e6 !important;
+        border-radius: 10px !important;
+    }
+    
+    .css-1d391kg .stNumberInput > div > div > input:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    .css-1d391kg .stNumberInput > div > div > label {
+        color: #333 !important;
+        font-weight: 600 !important;
+        text-shadow: none !important;
+    }
+    
+    /* Sidebar Selectbox */
+    .css-1d391kg .stSelectbox > div > div > div {
+        background: white !important;
+        color: #333 !important;
+        border: 2px solid #dee2e6 !important;
+        border-radius: 10px !important;
+    }
+    
+    .css-1d391kg .stSelectbox > div > div > label {
+        color: #333 !important;
+        font-weight: 600 !important;
+        text-shadow: none !important;
+    }
+    
+    /* Sidebar Button */
+    .css-1d391kg .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 15px !important;
+        font-weight: 600 !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3) !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .css-1d391kg .stButton > button:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+    }
+    
+    /* Sidebar Progress Bar */
+    .css-1d391kg .stProgress > div > div > div {
+        background: #e9ecef !important;
+        border-radius: 10px !important;
+    }
+    
+    .css-1d391kg .stProgress > div > div > div > div {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Sidebar Caption */
+    .css-1d391kg .stCaption {
+        color: #6c757d !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* Sidebar Metric */
+    .css-1d391kg .stMetric {
+        background: white !important;
+        border-radius: 15px !important;
+        padding: 1rem !important;
+        border: 1px solid #dee2e6 !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    }
+    
+    .css-1d391kg .stMetric > div > div > div {
+        color: #333 !important;
+        font-weight: 600 !important;
+    }
+    
+    .css-1d391kg .stMetric > div > div > div > div {
+        color: #6c757d !important;
+    }
+    
+    /* Additional Sidebar Text Visibility Fixes - Black Font */
+    .css-1d391kg .stText {
+        color: #333 !important;
+    }
+    
+    .css-1d391kg .stTextInput > div > div > input {
+        background: white !important;
+        color: #333 !important;
+        border: 2px solid #dee2e6 !important;
+        border-radius: 10px !important;
+    }
+    
+    .css-1d391kg .stTextInput > div > div > input:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    .css-1d391kg .stTextInput > div > div > label {
+        color: #333 !important;
+        font-weight: 600 !important;
+        text-shadow: none !important;
+    }
+    
+    /* Sidebar Divider */
+    .css-1d391kg hr {
+        border-color: #dee2e6 !important;
+        margin: 1rem 0 !important;
+    }
+    
+    /* Sidebar Links */
+    .css-1d391kg a {
+        color: #667eea !important;
+        text-decoration: none !important;
+        text-shadow: none !important;
+    }
+    
+    .css-1d391kg a:hover {
+        color: #5a6fd8 !important;
+        text-decoration: underline !important;
+    }
+    
+    /* Sidebar Code Blocks */
+    .css-1d391kg code {
+        background: #f8f9fa !important;
+        color: #333 !important;
+        border-radius: 5px !important;
+        padding: 2px 6px !important;
+        border: 1px solid #dee2e6 !important;
+    }
+    
+    /* Sidebar Lists */
+    .css-1d391kg ul, .css-1d391kg ol {
+        color: #333 !important;
+    }
+    
+    .css-1d391kg li {
+        color: #333 !important;
+        text-shadow: none !important;
+    }
+    
+    /* Sidebar Blockquotes */
+    .css-1d391kg blockquote {
+        border-left: 4px solid #667eea !important;
+        color: #333 !important;
+        background: #f8f9fa !important;
+        padding: 1rem !important;
+        border-radius: 0 10px 10px 0 !important;
     }
     
     /* Enhanced Tab Styling */
@@ -817,7 +995,7 @@ def create_modern_sidebar():
     with st.sidebar:
         st.markdown("""
         <div style="text-align: center; padding: 1rem;">
-            <h2>🍎 Nutrition Dashboard</h2>
+            <h2 style="color: #333; font-weight: 700;">🍎 Nutrition Dashboard</h2>
         </div>
         """, unsafe_allow_html=True)
         
@@ -831,27 +1009,29 @@ def create_modern_sidebar():
                 default_index=0,
                 styles={
                     "container": {"padding": "0!important", "background-color": "transparent"},
-                    "icon": {"color": "white", "font-size": "18px"},
+                    "icon": {"color": "#667eea", "font-size": "18px"},
                     "nav-link": {
-                        "color": "white",
+                        "color": "#333",
                         "font-size": "16px",
                         "text-align": "left",
                         "margin": "0px",
-                        "--hover-color": "#eee",
+                        "--hover-color": "#f8f9fa",
                         "border-radius": "10px",
                         "padding": "10px 15px",
+                        "font-weight": "500",
                     },
                     "nav-link-selected": {
-                        "background-color": "rgba(255,255,255,0.2)",
-                        "color": "white",
+                        "background-color": "rgba(102, 126, 234, 0.1)",
+                        "color": "#667eea",
                         "border-radius": "10px",
+                        "font-weight": "600",
                     },
                 }
             )
         else:
             # Fallback to simple selectbox
             st.markdown("""
-            <h4>📱 Navigation</h4>
+            <h4 style="color: #333; font-weight: 600;">📱 Navigation</h4>
             """, unsafe_allow_html=True)
             selected = st.selectbox(
                 "Choose a section:",
@@ -863,12 +1043,12 @@ def create_modern_sidebar():
         
         # Model status with fine-tuned labels
         st.markdown("""
-        <h4>🤖 AI Models Status</h4>
+        <h4 style="color: #333; font-weight: 600;">🤖 AI Models Status</h4>
         """, unsafe_allow_html=True)
         
         # Progress section
         st.markdown("""
-        <h4>📊 Today's Progress</h4>
+        <h4 style="color: #333; font-weight: 600;">📊 Today's Progress</h4>
         """, unsafe_allow_html=True)
         
         return selected
@@ -876,7 +1056,7 @@ def create_modern_sidebar():
 def create_model_status_display(model_status):
     """Create a modern model status display with fine-tuned labels"""
     st.markdown("""
-    <h4>🤖 AI Models Status</h4>
+    <h4 style="color: #333; font-weight: 600;">🤖 AI Models Status</h4>
     """, unsafe_allow_html=True)
     
     for model, status in model_status.items():
@@ -885,11 +1065,11 @@ def create_model_status_display(model_status):
         
         # Add fine-tuned label for all models
         st.markdown(f"""
-        <div style="margin: 0.5rem 0; padding: 0.5rem; border-radius: 8px; background: rgba(255,255,255,0.1);">
+        <div style="margin: 0.5rem 0; padding: 0.5rem; border-radius: 8px; background: white; border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                    <span style="color: #FFD700; font-weight: bold;">🔧 Fine-tuned</span> 
-                    <strong>{model}</strong>
+                <div style="color: #333;">
+                    <span style="color: #667eea; font-weight: bold;">🔧 Fine-tuned</span> 
+                    <strong style="color: #333;">{model}</strong>
                 </div>
                 <div style="color: {'#4CAF50' if status else '#f44336'}; font-weight: bold;">
                     {status_icon} {status_text}

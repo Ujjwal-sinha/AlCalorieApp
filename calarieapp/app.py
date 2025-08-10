@@ -1401,18 +1401,23 @@ def main():
         else:
             # Fallback to basic model status display
             st.markdown("""
-            <h4>🤖 AI Models Status</h4>
+            <h4 style="color: #333; font-weight: 600;">🤖 AI Models Status</h4>
             """, unsafe_allow_html=True)
             
             for model, status in model_status.items():
                 status_icon = "✅" if status else "❌"
-                st.write(f"🔧 **Fine-tuned {model}**: {'Available' if status else 'Not Available'}")
+                st.markdown(f"""
+                <div style="color: #333; margin: 0.5rem 0; padding: 0.5rem; border-radius: 8px; background: white; border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <span style="color: #667eea; font-weight: bold;">🔧 Fine-tuned {model}</span>: 
+                    <span style="color: {'#4CAF50' if status else '#f44336'}; font-weight: bold;">{'Available' if status else 'Not Available'}</span>
+                </div>
+                """, unsafe_allow_html=True)
         
         st.markdown("---")
         
         # User Profile
         st.markdown("""
-        <h4>👤 User Profile</h4>
+        <h4 style="color: #333; font-weight: 600;">👤 User Profile</h4>
         """, unsafe_allow_html=True)
         
         st.number_input("Daily Calorie Target (kcal)", min_value=1000, max_value=5000, 
@@ -1422,7 +1427,7 @@ def main():
         
         # Today's Progress
         st.markdown("""
-        <h4>📊 Today's Progress</h4>
+        <h4 style="color: #333; font-weight: 600;">📊 Today's Progress</h4>
         """, unsafe_allow_html=True)
         
         today = date.today().isoformat()
