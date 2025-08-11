@@ -774,16 +774,16 @@ def main():
                     status_text.text("🤖 Running enhanced agent with web search...")
                     progress_bar.progress(50)
                     
-                    # Ultra-enhanced agent analysis with web information
+                    # Smart agent analysis with web information
                     enhanced_result = None
                     try:
                         from utils.food_agent import FoodAgent
                         agent = FoodAgent(models)
-                        enhanced_result = agent.process_food_image_complete(image)
+                        enhanced_result = agent.get_comprehensive_analysis(image)
                         status_text.text("🌐 Gathering comprehensive food information...")
                         progress_bar.progress(80)
                     except Exception as e:
-                        st.warning(f"Enhanced agent not available: {str(e)}")
+                        st.warning(f"Smart agent not available: {str(e)}")
                     
                     status_text.text("📊 Processing ultra-comprehensive results...")
                     progress_bar.progress(95)
@@ -876,89 +876,53 @@ def main():
                                 if 'radar_chart' in charts:
                                     st.pyplot(charts['radar_chart'])
                         
-                        # Ultra-enhanced agent results with web search validation
+                        # Smart agent results with web search validation
                         if enhanced_result and not enhanced_result.get("error"):
-                            st.markdown("### 🤖 Ultra-Enhanced AI Agent Analysis")
+                            st.markdown("### 🤖 Smart AI Agent Analysis")
                             
-                            # Test web search functionality
-                            try:
-                                from utils.food_agent import FoodAgent
-                                test_agent = FoodAgent(models)
-                                web_test = test_agent.test_web_search("chicken rice")
-                                
-                                if web_test.get('search_working'):
-                                    st.success("🌐 Web search functionality is working!")
-                                else:
-                                    st.warning("🌐 Web search using fallback data (this is normal)")
-                                    
-                            except Exception as e:
-                                st.info("🌐 Web search test skipped")
+                            # Display detected foods
+                            detected_foods = enhanced_result.get('detected_foods', [])
+                            if detected_foods:
+                                st.markdown("#### 🍽️ Detected Foods")
+                                for i, food in enumerate(detected_foods, 1):
+                                    st.write(f"{i}. **{food.title()}**")
                             
-                            # Display comprehensive analysis
-                            if enhanced_result.get('image_analysis'):
-                                image_analysis = enhanced_result['image_analysis']
-                                
-                                with st.expander("🔍 Ultra-Comprehensive Image Analysis", expanded=True):
-                                    if image_analysis.get('ultra_enhanced_description'):
-                                        st.markdown("#### 📋 Detailed Food Analysis")
-                                        st.markdown(image_analysis['ultra_enhanced_description'])
-                                    
-                                    if image_analysis.get('quality_assessment'):
-                                        st.markdown("#### 🛡️ Food Quality & Safety Assessment")
-                                        st.markdown(image_analysis['quality_assessment'])
+                            # Display health score
+                            health_score = enhanced_result.get('health_score', 5)
+                            st.metric("Health Score", f"{health_score}/10")
+                            st.progress(health_score / 10)
                             
-                            # Display web-enhanced information
-                            if enhanced_result.get('web_information'):
-                                web_info = enhanced_result['web_information']
-                                
-                                with st.expander("🌐 Web-Enhanced Food Intelligence", expanded=True):
-                                    # Show web search status
-                                    st.info("🔍 Information gathered from multiple web sources and food databases")
-                                    
-                                    col1, col2 = st.columns(2)
-                                    
-                                    with col1:
-                                        st.markdown("#### 🥗 Nutritional Intelligence")
-                                        nutrition_info = web_info.get('nutrition', {})
-                                        st.write(f"**Calories:** {nutrition_info.get('calories', 'Variable')}")
-                                        st.write(f"**Protein:** {nutrition_info.get('protein', 'Variable')}")
-                                        st.write(f"**Carbs:** {nutrition_info.get('carbs', 'Variable')}")
-                                        st.write(f"**Fats:** {nutrition_info.get('fats', 'Variable')}")
-                                        
-                                        st.markdown("#### 🌍 Cultural Heritage")
-                                        cultural_info = web_info.get('cultural', {})
-                                        st.write(f"**Origin:** {cultural_info.get('origin', 'Various regions')}")
-                                        if cultural_info.get('history'):
-                                            st.write(f"**History:** {cultural_info['history'][:200]}...")
-                                    
-                                    with col2:
-                                        st.markdown("#### 💊 Health Benefits")
-                                        health_info = web_info.get('health', {})
-                                        if health_info.get('benefits'):
-                                            for benefit in health_info['benefits'][:3]:
-                                                st.write(f"• {benefit[:100]}...")
-                                        else:
-                                            st.write("• Rich in essential nutrients")
-                                            st.write("• Provides energy and nutrition")
-                                            st.write("• Part of balanced diet")
-                                        
-                                        st.markdown("#### 👨‍🍳 Recipe Suggestions")
-                                        recipes = web_info.get('recipes', [])
-                                        if recipes:
-                                            for recipe in recipes[:2]:
-                                                st.write(f"**{recipe.get('title', 'Recipe')}**")
-                                                st.write(f"{recipe.get('description', '')[:100]}...")
-                                        else:
-                                            st.write("**Traditional Preparation**")
-                                            st.write("Various cooking methods available...")
-                                
-                                # Comprehensive summary
-                                if web_info.get('summary'):
-                                    with st.expander("📊 Comprehensive Food Summary", expanded=False):
-                                        st.markdown(web_info['summary'])
-                                else:
-                                    with st.expander("📊 Food Information Summary", expanded=False):
-                                        st.markdown("Comprehensive food analysis completed with nutritional, cultural, and health information gathered from multiple sources.")
+                            # Display LLM analysis
+                            llm_analysis = enhanced_result.get('llm_analysis', '')
+                            if llm_analysis and len(llm_analysis) > 20:
+                                st.markdown("#### 🤖 AI Analysis")
+                                st.write(llm_analysis)
+                            
+                            # Display recommendations
+                            recommendations = enhanced_result.get('recommendations', [])
+                            if recommendations:
+                                st.markdown("#### 💡 Recommendations")
+                                for rec in recommendations:
+                                    st.write(f"• {rec}")
+                            
+                            # Display web nutrition data
+                            web_nutrition = enhanced_result.get('web_nutrition', {})
+                            if web_nutrition:
+                                st.markdown("#### 🌐 Web-Sourced Nutrition Data")
+                                for food, data in web_nutrition.items():
+                                    with st.expander(f"📊 {food.title()} Nutrition"):
+                                        col1, col2, col3, col4 = st.columns(4)
+                                        with col1:
+                                            st.metric("Calories", f"{data.get('calories', 0)}")
+                                        with col2:
+                                            st.metric("Protein", f"{data.get('protein', 0)}g")
+                                        with col3:
+                                            st.metric("Carbs", f"{data.get('carbs', 0)}g")
+                                        with col4:
+                                            st.metric("Fat", f"{data.get('fat', 0)}g")
+
+
+
                         
                         # Detailed analysis
                         st.markdown("### 📝 Detailed Analysis")

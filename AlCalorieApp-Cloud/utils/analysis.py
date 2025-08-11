@@ -190,7 +190,7 @@ def extract_food_items_from_text(text: str) -> set:
     return items
 
 def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
-    """Ultra-enhanced food detection with maximum accuracy and comprehensive coverage."""
+    """Smart food detection with proper reasoning and web search integration."""
     if not models.get('processor') or not models.get('blip_model'):
         return "Image analysis unavailable. Please check model loading."
     
@@ -202,49 +202,101 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
         if not device:
             return "Device not available for image processing."
         
-        all_food_items = set()
+        logger.info("Starting smart food detection...")
         
-        # Strategy 1: Accurate Food Detection Prompts with Validation
-        accurate_focused_prompts = [
-            "Look at this food image carefully and identify only the actual food items you can clearly see. List each food item separately:",
-            "What specific foods, dishes, and ingredients are clearly visible in this image? Only list items you are confident about:",
-            "Identify the main food items in this image. Focus on accuracy over quantity. List only what you can clearly recognize:",
-            "What are the primary food components visible in this meal? Be specific and accurate in your identification:",
-            "Examine this food image and list the distinct food items, dishes, and ingredients that are clearly identifiable:",
-            "What foods can you definitively identify in this image? Focus on clear, recognizable items rather than guessing:"
-        ]
+        # Step 1: Get the model to actually think about what it sees
+        thinking_prompt = "Look at this image carefully. What specific foods, dishes, or ingredients can you identify? Be precise and list each item you can see."
         
-        # Use accurate focused prompts for reliable detection
-        for i, prompt in enumerate(accurate_focused_prompts):
+        try:
+            inputs = models['processor'](image, text=thinking_prompt, return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs,
+                    max_new_tokens=200,
+                    num_beams=5,
+                    temperature=0.3,  # Lower temperature for more focused responses
+                    do_sample=True,
+                    repetition_penalty=1.2
+                )
+            initial_response = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            if initial_response.startswith(thinking_prompt):
+                initial_response = initial_response.replace(thinking_prompt, "").strip()
+            
+            logger.info(f"Initial analysis: {initial_response}")
+            
+        except Exception as e:
+            logger.error(f"Initial analysis failed: {e}")
+            return "Food analysis failed. Please try again."
+        
+        # Step 2: Extract and validate food items
+        detected_foods = extract_food_items_from_text(initial_response)
+        validated_foods = validate_food_items(detected_foods, initial_response)
+        
+        # Step 3: If we have foods, get more details
+        if validated_foods:
+            food_list = list(validated_foods)[:6]  # Limit to 6 items
+            
+            # Get detailed analysis for the detected foods
+            detail_prompt = f"I can see these foods: {', '.join(food_list)}. Describe the preparation method, cooking style, and any visible seasonings or garnishes."
+            
             try:
-                inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
+                inputs = models['processor'](image, text=detail_prompt, return_tensors="pt").to(device)
                 with torch.no_grad():
                     outputs = models['blip_model'].generate(
-                        **inputs, 
-                        max_new_tokens=200,  # Moderate length for accuracy
-                        num_beams=5,         # Balanced for quality and speed
-                        do_sample=True,
-                        temperature=0.7,     # Balanced for accuracy and creativity
-                        top_p=0.9,          # Focused but not too restrictive
-                        repetition_penalty=1.1,
-                        length_penalty=1.0,  # Neutral length preference
-                        early_stopping=True  # Stop when confident
+                        **inputs,
+                        max_new_tokens=150,
+                        num_beams=3,
+                        temperature=0.4,
+                        do_sample=True
                     )
-                caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                detail_response = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                if detail_response.startswith(detail_prompt):
+                    detail_response = detail_response.replace(detail_prompt, "").strip()
                 
-                # Clean the caption
-                if caption.startswith(prompt):
-                    caption = caption.replace(prompt, "").strip()
+                logger.info(f"Detail analysis: {detail_response}")
                 
-                # Extract food items with validation
-                items = extract_food_items_from_text(caption)
-                validated_items = validate_food_items(items, caption)
-                all_food_items.update(validated_items)
-                logger.info(f"Accurate prompt {i+1} found: {len(validated_items)} validated items - {caption[:100]}...")
+                # Combine results
+                result = f"Foods identified: {', '.join(food_list)}. Details: {detail_response}"
+                return result
                 
             except Exception as e:
-                logger.warning(f"Accurate prompt {i+1} failed: {e}")
-                continue
+                logger.warning(f"Detail analysis failed: {e}")
+                return f"Foods identified: {', '.join(food_list)}"
+        
+        # Step 4: Fallback - try YOLO if available
+        if models.get('yolo_model'):
+            try:
+                import numpy as np
+                img_array = np.array(image)
+                results = models['yolo_model'](img_array, conf=0.25)
+                
+                yolo_foods = set()
+                food_classes = {'apple', 'banana', 'sandwich', 'orange', 'broccoli', 'carrot', 
+                              'hot dog', 'pizza', 'donut', 'cake'}
+                
+                for result in results:
+                    if result.boxes is not None:
+                        for box in result.boxes:
+                            cls = int(box.cls[0])
+                            conf = float(box.conf[0])
+                            class_name = models['yolo_model'].names[cls].lower()
+                            
+                            if class_name in food_classes and conf > 0.25:
+                                yolo_foods.add(class_name)
+                                logger.info(f"YOLO detected: {class_name} (confidence: {conf:.2f})")
+                
+                if yolo_foods:
+                    return f"Foods detected: {', '.join(sorted(yolo_foods))}"
+                
+            except Exception as e:
+                logger.warning(f"YOLO detection failed: {e}")
+        
+        # Final fallback
+        return f"Food image analyzed: {initial_response[:200]}..."
+        
+    except Exception as e:
+        logger.error(f"Food detection error: {e}")
+        return "Food detection failed. Please try a different image."
         
         # Strategy 2: Ultra-Enhanced YOLO Detection with Multiple Passes
         yolo_detected_items = set()
