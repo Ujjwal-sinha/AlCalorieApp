@@ -752,8 +752,8 @@ def main():
         st.markdown("### 🚀 Comprehensive Analysis")
         st.markdown("Get both standard nutritional analysis and enhanced web-sourced insights in one click!")
         
-        # Single analysis button that does both
-        if st.button("🔍 Analyze Food (Standard + Enhanced)", disabled=not uploaded_file, type="primary"):
+        # Advanced analysis button
+        if st.button("🔍 Analyze Food (Advanced Multi-Model Detection)", disabled=not uploaded_file, type="primary"):
             if uploaded_file and UTILS_AVAILABLE and "error" not in models:
                 # Progress tracking
                 progress_bar = st.progress(0)
@@ -765,27 +765,27 @@ def main():
                     
                     image = Image.open(uploaded_file)
                     
-                    status_text.text("🔍 Running ultra-enhanced food detection...")
+                    status_text.text("🔍 Running advanced multi-model food detection...")
                     progress_bar.progress(20)
                     
-                    # Ultra-enhanced AI analysis with comprehensive food detection
+                    # Advanced AI analysis with multi-model ensemble detection
                     analysis_result = analyze_food_image(image, context, models)
                     
-                    status_text.text("🤖 Running enhanced agent with web search...")
+                    status_text.text("🤖 Running advanced multi-model agent...")
                     progress_bar.progress(50)
                     
-                    # Smart agent analysis with web information
+                    # Advanced multi-model agent analysis
                     enhanced_result = None
                     try:
                         from utils.food_agent import FoodAgent
                         agent = FoodAgent(models)
                         enhanced_result = agent.get_comprehensive_analysis(image)
-                        status_text.text("🌐 Gathering comprehensive food information...")
+                        status_text.text("🌐 Processing advanced detection results...")
                         progress_bar.progress(80)
                     except Exception as e:
-                        st.warning(f"Smart agent not available: {str(e)}")
+                        st.warning(f"Advanced agent not available: {str(e)}")
                     
-                    status_text.text("📊 Processing ultra-comprehensive results...")
+                    status_text.text("📊 Finalizing advanced multi-model analysis...")
                     progress_bar.progress(95)
                     
                     progress_bar.progress(100)
@@ -876,16 +876,43 @@ def main():
                                 if 'radar_chart' in charts:
                                     st.pyplot(charts['radar_chart'])
                         
-                        # Smart agent results with web search validation
+                        # Advanced multi-model agent results
                         if enhanced_result and not enhanced_result.get("error"):
-                            st.markdown("### 🤖 Smart AI Agent Analysis")
+                            st.markdown("### 🤖 Advanced Multi-Model AI Analysis")
                             
-                            # Display detected foods
+                            # Display advanced detection results
                             detected_foods = enhanced_result.get('detected_foods', [])
+                            confidence_scores = enhanced_result.get('confidence_scores', {})
+                            food_details = enhanced_result.get('food_details', {})
+                            total_detected = enhanced_result.get('total_foods_detected', 0)
+                            detection_quality = enhanced_result.get('detection_quality', 'standard')
+                            
+                            # Detection summary
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Foods Detected", total_detected)
+                            with col2:
+                                st.metric("Detection Quality", detection_quality.replace('_', ' ').title())
+                            with col3:
+                                avg_confidence = sum(confidence_scores.values()) / len(confidence_scores) if confidence_scores else 0
+                                st.metric("Avg Confidence", f"{avg_confidence:.1%}")
+                            
                             if detected_foods:
-                                st.markdown("#### 🍽️ Detected Foods")
+                                st.markdown("#### 🍽️ Detected Foods with Confidence")
                                 for i, food in enumerate(detected_foods, 1):
-                                    st.write(f"{i}. **{food.title()}**")
+                                    confidence = confidence_scores.get(food, 0.8)
+                                    details = food_details.get(food, {})
+                                    category = details.get('category', 'unknown')
+                                    
+                                    col1, col2, col3 = st.columns([3, 1, 1])
+                                    with col1:
+                                        st.write(f"{i}. **{food.title()}**")
+                                    with col2:
+                                        st.write(f"*{category}*")
+                                    with col3:
+                                        st.write(f"{confidence:.1%}")
+                            else:
+                                st.info("No specific foods detected in this image")
                             
                             # Display health score
                             health_score = enhanced_result.get('health_score', 5)

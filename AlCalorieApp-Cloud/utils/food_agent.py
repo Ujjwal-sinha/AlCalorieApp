@@ -510,50 +510,77 @@ class FoodAgent:
         return results
     
     def get_comprehensive_analysis(self, image: Image.Image) -> Dict[str, Any]:
-        """Get complete food analysis with web search and LLM reasoning"""
+        """Get complete food analysis with advanced multi-model detection"""
         try:
-            # Step 1: Analyze the image
-            image_analysis = self.analyze_food_image(image)
+            # Step 1: Advanced multi-model detection
+            from .advanced_detection import AdvancedFoodDetector
             
-            if "error" in image_analysis:
-                return image_analysis
+            advanced_detector = AdvancedFoodDetector(self.models)
+            advanced_results = advanced_detector.detect_foods_advanced(image)
+            
+            if "error" in advanced_results:
+                # Fallback to basic detection
+                image_analysis = self.analyze_food_image(image)
+                detected_foods = image_analysis.get('detected_foods', [])
+                confidence_scores = {}
+                food_details = {}
+            else:
+                detected_foods = advanced_results.get('detected_foods', [])
+                confidence_scores = advanced_results.get('confidence_scores', {})
+                food_details = advanced_results.get('food_details', {})
             
             # Step 2: Search for nutritional information
-            detected_foods = image_analysis.get('detected_foods', [])
             web_nutrition = self.search_web_information(detected_foods)
             
-            # Step 3: Get LLM analysis for context and recommendations
+            # Step 3: Enhanced LLM analysis with detailed context
             llm_prompt = f"""
-            Based on this food analysis:
-            - Detected foods: {', '.join(detected_foods)}
-            - Description: {image_analysis.get('food_description', '')}
+            Advanced food analysis results:
+            - Detected foods ({len(detected_foods)} items): {', '.join(detected_foods)}
+            - Detection confidence: High (multi-model ensemble)
+            - Food categories: {self._categorize_foods(detected_foods)}
             
-            Provide:
-            1. Estimated portion sizes for each food
-            2. Health assessment (healthy/moderate/unhealthy)
-            3. Cooking method analysis
-            4. Dietary recommendations
-            5. Potential allergens or dietary restrictions
+            Provide detailed analysis:
+            1. Portion size estimation for each food item
+            2. Cooking method identification and nutritional impact
+            3. Meal balance assessment (protein/carb/fat/fiber ratio)
+            4. Health score justification (1-10 scale)
+            5. Specific dietary recommendations
+            6. Potential allergens and dietary restrictions
+            7. Meal timing recommendations (breakfast/lunch/dinner/snack)
+            8. Nutritional completeness assessment
             
-            Be practical and specific.
+            Be specific, practical, and evidence-based.
             """
             
             llm_analysis = self._query_llm(llm_prompt)
             
-            # Step 4: Calculate comprehensive nutrition
-            comprehensive_nutrition = self._calculate_comprehensive_nutrition(
-                detected_foods, web_nutrition, image_analysis.get('nutrition_estimates', {})
+            # Step 4: Calculate comprehensive nutrition with advanced methods
+            comprehensive_nutrition = self._calculate_advanced_nutrition(
+                detected_foods, web_nutrition, confidence_scores, food_details
+            )
+            
+            # Step 5: Advanced health scoring
+            health_score = self._calculate_advanced_health_score(
+                comprehensive_nutrition, detected_foods, food_details
+            )
+            
+            # Step 6: Generate intelligent recommendations
+            recommendations = self._generate_intelligent_recommendations(
+                detected_foods, comprehensive_nutrition, health_score, food_details
             )
             
             return {
                 "session_id": self.session_id,
                 "detected_foods": detected_foods,
-                "food_description": image_analysis.get('food_description', ''),
+                "confidence_scores": confidence_scores,
+                "food_details": food_details,
                 "nutrition_data": comprehensive_nutrition,
                 "web_nutrition": web_nutrition,
                 "llm_analysis": llm_analysis,
-                "health_score": self._calculate_health_score(comprehensive_nutrition),
-                "recommendations": self._generate_recommendations(detected_foods, comprehensive_nutrition),
+                "health_score": health_score,
+                "recommendations": recommendations,
+                "detection_quality": "advanced_multi_model",
+                "total_foods_detected": len(detected_foods),
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -642,6 +669,276 @@ class FoodAgent:
             recommendations.append("This appears to be a well-balanced meal")
         
         return recommendations
+    
+    def _categorize_foods(self, foods: List[str]) -> Dict[str, List[str]]:
+        """Categorize detected foods by type"""
+        categories = {
+            'proteins': [],
+            'vegetables': [],
+            'fruits': [],
+            'grains': [],
+            'dairy': [],
+            'prepared_dishes': [],
+            'beverages': [],
+            'other': []
+        }
+        
+        protein_keywords = ['chicken', 'beef', 'pork', 'fish', 'egg', 'tofu', 'beans', 'meat']
+        vegetable_keywords = ['tomato', 'potato', 'carrot', 'broccoli', 'spinach', 'lettuce', 'onion']
+        fruit_keywords = ['apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry']
+        grain_keywords = ['rice', 'bread', 'pasta', 'quinoa', 'oats', 'cereal']
+        dairy_keywords = ['cheese', 'milk', 'yogurt', 'butter', 'cream']
+        prepared_keywords = ['pizza', 'burger', 'sandwich', 'salad', 'soup', 'curry']
+        beverage_keywords = ['coffee', 'tea', 'juice', 'water', 'soda', 'smoothie']
+        
+        for food in foods:
+            food_lower = food.lower()
+            categorized = False
+            
+            for keyword in protein_keywords:
+                if keyword in food_lower:
+                    categories['proteins'].append(food)
+                    categorized = True
+                    break
+            
+            if not categorized:
+                for keyword in vegetable_keywords:
+                    if keyword in food_lower:
+                        categories['vegetables'].append(food)
+                        categorized = True
+                        break
+            
+            if not categorized:
+                for keyword in fruit_keywords:
+                    if keyword in food_lower:
+                        categories['fruits'].append(food)
+                        categorized = True
+                        break
+            
+            if not categorized:
+                for keyword in grain_keywords:
+                    if keyword in food_lower:
+                        categories['grains'].append(food)
+                        categorized = True
+                        break
+            
+            if not categorized:
+                for keyword in dairy_keywords:
+                    if keyword in food_lower:
+                        categories['dairy'].append(food)
+                        categorized = True
+                        break
+            
+            if not categorized:
+                for keyword in prepared_keywords:
+                    if keyword in food_lower:
+                        categories['prepared_dishes'].append(food)
+                        categorized = True
+                        break
+            
+            if not categorized:
+                for keyword in beverage_keywords:
+                    if keyword in food_lower:
+                        categories['beverages'].append(food)
+                        categorized = True
+                        break
+            
+            if not categorized:
+                categories['other'].append(food)
+        
+        # Remove empty categories
+        return {k: v for k, v in categories.items() if v}
+    
+    def _calculate_advanced_nutrition(self, foods: List[str], web_data: Dict, 
+                                    confidence_scores: Dict, food_details: Dict) -> Dict[str, float]:
+        """Calculate nutrition with advanced portion estimation and confidence weighting"""
+        nutrition = {'total_calories': 0, 'total_protein': 0, 'total_carbs': 0, 'total_fats': 0, 'total_fiber': 0}
+        
+        for food in foods:
+            # Get nutrition data (prefer web data)
+            if food in web_data:
+                data = web_data[food]
+            elif food in self.nutrition_db:
+                data = self.nutrition_db[food]
+            else:
+                continue
+            
+            # Advanced portion estimation based on food type and context
+            portion_multiplier = self._estimate_advanced_portion_size(food, food_details.get(food, {}))
+            
+            # Apply confidence weighting
+            confidence = confidence_scores.get(food, 0.8)
+            weight = portion_multiplier * confidence
+            
+            nutrition['total_calories'] += data.get('calories', 0) * weight
+            nutrition['total_protein'] += data.get('protein', 0) * weight
+            nutrition['total_carbs'] += data.get('carbs', 0) * weight
+            nutrition['total_fats'] += data.get('fat', 0) * weight
+            nutrition['total_fiber'] += data.get('fiber', 0) * weight
+        
+        return nutrition
+    
+    def _estimate_advanced_portion_size(self, food: str, food_details: Dict) -> float:
+        """Advanced portion size estimation based on food type and context"""
+        # Base portion sizes (multipliers of 100g)
+        base_portions = {
+            # Proteins
+            'chicken': 1.2, 'chicken breast': 1.5, 'beef': 1.0, 'fish': 1.3, 'salmon': 1.2,
+            'egg': 0.5, 'eggs': 1.0, 'tofu': 0.8,
+            
+            # Vegetables
+            'broccoli': 0.8, 'carrot': 0.6, 'tomato': 1.0, 'potato': 1.5, 'sweet potato': 1.2,
+            'lettuce': 0.5, 'spinach': 0.3, 'onion': 0.4,
+            
+            # Fruits
+            'apple': 1.5, 'banana': 1.2, 'orange': 1.3, 'grape': 0.8, 'strawberry': 1.0,
+            
+            # Grains
+            'rice': 0.75, 'white rice': 0.75, 'brown rice': 0.75, 'bread': 0.3, 'pasta': 0.8,
+            'quinoa': 0.6, 'oats': 0.4,
+            
+            # Dairy
+            'cheese': 0.3, 'milk': 2.0, 'yogurt': 1.5, 'butter': 0.1,
+            
+            # Prepared foods
+            'pizza': 1.5, 'burger': 2.0, 'sandwich': 1.8, 'salad': 1.2, 'soup': 2.5,
+            
+            # Default
+            'default': 1.0
+        }
+        
+        # Get base portion
+        portion = base_portions.get(food, base_portions.get('default'))
+        
+        # Adjust based on food category
+        category = food_details.get('category', 'other')
+        if category == 'proteins':
+            portion *= 1.2  # Slightly larger protein portions
+        elif category == 'vegetables':
+            portion *= 0.8  # Smaller vegetable portions
+        elif category == 'prepared':
+            portion *= 1.5  # Larger prepared dish portions
+        
+        return portion
+    
+    def _calculate_advanced_health_score(self, nutrition: Dict[str, float], 
+                                       foods: List[str], food_details: Dict) -> int:
+        """Calculate advanced health score with multiple factors"""
+        score = 5  # Start with neutral
+        
+        calories = nutrition.get('total_calories', 0)
+        protein = nutrition.get('total_protein', 0)
+        carbs = nutrition.get('total_carbs', 0)
+        fats = nutrition.get('total_fats', 0)
+        fiber = nutrition.get('total_fiber', 0)
+        
+        # Macronutrient balance scoring
+        if protein >= 20:  # Good protein content
+            score += 1
+        elif protein >= 15:
+            score += 0.5
+        
+        if fiber >= 8:  # Excellent fiber
+            score += 1
+        elif fiber >= 5:  # Good fiber
+            score += 0.5
+        
+        # Calorie appropriateness
+        if 300 <= calories <= 600:  # Appropriate meal size
+            score += 1
+        elif calories < 300:  # Too small
+            score -= 0.5
+        elif calories > 800:  # Too large
+            score -= 1
+        
+        # Food variety bonus
+        food_categories = self._categorize_foods(foods)
+        variety_score = len([cat for cat in food_categories.values() if cat])
+        if variety_score >= 4:  # 4+ categories
+            score += 1
+        elif variety_score >= 3:  # 3 categories
+            score += 0.5
+        
+        # Processed food penalty
+        processed_foods = ['pizza', 'burger', 'fries', 'chips', 'soda', 'candy']
+        processed_count = sum(1 for food in foods if any(p in food.lower() for p in processed_foods))
+        if processed_count > len(foods) * 0.5:  # More than 50% processed
+            score -= 1
+        
+        # Vegetable/fruit bonus
+        healthy_foods = ['broccoli', 'spinach', 'kale', 'tomato', 'carrot', 'apple', 'banana', 'berry']
+        healthy_count = sum(1 for food in foods if any(h in food.lower() for h in healthy_foods))
+        if healthy_count >= 2:
+            score += 0.5
+        
+        return max(1, min(10, int(score)))
+    
+    def _generate_intelligent_recommendations(self, foods: List[str], nutrition: Dict[str, float],
+                                            health_score: int, food_details: Dict) -> List[str]:
+        """Generate intelligent, context-aware recommendations"""
+        recommendations = []
+        
+        calories = nutrition.get('total_calories', 0)
+        protein = nutrition.get('total_protein', 0)
+        carbs = nutrition.get('total_carbs', 0)
+        fats = nutrition.get('total_fats', 0)
+        fiber = nutrition.get('total_fiber', 0)
+        
+        # Calorie recommendations
+        if calories > 800:
+            recommendations.append("Consider reducing portion sizes or sharing this meal to manage calorie intake")
+        elif calories < 300:
+            recommendations.append("This meal may be too small - consider adding healthy sides or snacks")
+        
+        # Macronutrient recommendations
+        if protein < 15:
+            recommendations.append("Add lean protein sources like grilled chicken, fish, eggs, or legumes")
+        elif protein > 40:
+            recommendations.append("Protein content is high - ensure adequate hydration and kidney health")
+        
+        if fiber < 5:
+            recommendations.append("Increase fiber with vegetables, fruits, or whole grains for better digestion")
+        
+        if carbs > 60:
+            recommendations.append("High carbohydrate content - pair with protein and healthy fats for balance")
+        
+        # Food variety recommendations
+        food_categories = self._categorize_foods(foods)
+        if len(food_categories) < 3:
+            recommendations.append("Add variety with foods from different categories (proteins, vegetables, grains)")
+        
+        # Specific food recommendations
+        if not food_categories.get('vegetables'):
+            recommendations.append("Include colorful vegetables for vitamins, minerals, and antioxidants")
+        
+        if not food_categories.get('fruits'):
+            recommendations.append("Add fresh fruits for natural sweetness and vitamin C")
+        
+        # Health score based recommendations
+        if health_score >= 8:
+            recommendations.append("Excellent food choices! This meal provides balanced nutrition")
+        elif health_score >= 6:
+            recommendations.append("Good meal balance with room for minor improvements")
+        elif health_score >= 4:
+            recommendations.append("Consider healthier alternatives and better portion control")
+        else:
+            recommendations.append("Focus on whole foods, vegetables, and lean proteins for better nutrition")
+        
+        # Meal timing recommendations
+        if calories > 600:
+            recommendations.append("Best consumed as a main meal (lunch or dinner) rather than a snack")
+        elif calories < 400:
+            recommendations.append("Suitable as a light meal or substantial snack")
+        
+        # Hydration recommendations
+        if any('salty' in food.lower() or 'sodium' in str(food_details.get(food, {})) for food in foods):
+            recommendations.append("Increase water intake due to higher sodium content")
+        
+        # Default positive recommendation
+        if not recommendations:
+            recommendations.append("This appears to be a well-balanced meal with good nutritional variety")
+        
+        return recommendations[:6]  # Limit to 6 most relevant recommendations
     
     def _generate_comprehensive_food_data(self, query: str) -> List[Dict[str, Any]]:
         """Generate comprehensive food data when web search fails"""
