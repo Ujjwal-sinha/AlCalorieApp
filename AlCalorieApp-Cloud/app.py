@@ -51,6 +51,15 @@ def initialize_models():
     else:
         return {"error": "Utils not available"}
 
+# Function to get fresh model status
+def get_fresh_model_status():
+    """Get fresh model status without caching"""
+    if UTILS_AVAILABLE:
+        from utils.models import load_models, get_model_status
+        fresh_models = load_models()
+        return get_model_status(fresh_models)
+    return {}
+
 # Load models
 models = initialize_models()
 
@@ -631,17 +640,34 @@ def main():
     
     # Model status in sidebar
     with st.sidebar:
-        st.markdown("### 🤖 AI Models Status")
+        # Add refresh button
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown("### 🤖 AI Models Status")
+        with col2:
+            if st.button("🔄", help="Refresh model status and clear cache"):
+                with st.spinner("Refreshing models..."):
+                    st.cache_resource.clear()
+                    # Force reload
+                    import time
+                    time.sleep(1)
+                st.success("Models refreshed!")
+                st.rerun()
         
         if UTILS_AVAILABLE and "error" not in models:
-            model_status = get_model_status(models)
+            # Get fresh model status to avoid caching issues
+            try:
+                fresh_status = get_fresh_model_status()
+                model_status = fresh_status if fresh_status else get_model_status(models)
+            except:
+                model_status = get_model_status(models)
+            
             for model, status in model_status.items():
                 status_class = "status-success" if status else "status-error"
                 status_icon = "✅" if status else "❌"
                 status_text = "Available" if status else "Not Available"
-                # Add "Fine-tuned" prefix to model names
-                model_display_name = f"Fine-tuned {model}"
-                st.markdown(f'<span class="{status_class}">{status_icon} **{model_display_name}**: {status_text}</span>', unsafe_allow_html=True)
+                # Display model names as-is (they are pre-trained, not fine-tuned)
+                st.markdown(f'<span class="{status_class}">{status_icon} **{model}**: {status_text}</span>', unsafe_allow_html=True)
         else:
             st.error("Models not available. Check deployment configuration.")
         
@@ -880,37 +906,50 @@ def main():
                         if enhanced_result and not enhanced_result.get("error"):
                             st.markdown("### 🤖 Advanced Multi-Model AI Analysis")
                             
-                            # Display advanced detection results
+                            # Display Vision Transformer detection results
                             detected_foods = enhanced_result.get('detected_foods', [])
                             confidence_scores = enhanced_result.get('confidence_scores', {})
                             food_details = enhanced_result.get('food_details', {})
+                            detection_details = enhanced_result.get('detection_details', {})
                             total_detected = enhanced_result.get('total_foods_detected', 0)
-                            detection_quality = enhanced_result.get('detection_quality', 'standard')
+                            detection_method = enhanced_result.get('detection_method', 'standard')
+                            models_used = enhanced_result.get('models_used', [])
                             
                             # Detection summary
-                            col1, col2, col3 = st.columns(3)
+                            col1, col2, col3, col4 = st.columns(4)
                             with col1:
                                 st.metric("Foods Detected", total_detected)
                             with col2:
-                                st.metric("Detection Quality", detection_quality.replace('_', ' ').title())
+                                st.metric("Detection Method", detection_method.replace('_', ' ').title())
                             with col3:
                                 avg_confidence = sum(confidence_scores.values()) / len(confidence_scores) if confidence_scores else 0
                                 st.metric("Avg Confidence", f"{avg_confidence:.1%}")
+                            with col4:
+                                st.metric("Models Used", len(models_used))
+                            
+                            # Show models used
+                            if models_used:
+                                st.markdown("#### 🤖 AI Models Used")
+                                for model in models_used:
+                                    st.write(f"• **{model}**")
                             
                             if detected_foods:
-                                st.markdown("#### 🍽️ Detected Foods with Confidence")
+                                st.markdown("#### 🍽️ Detected Foods with AI Analysis")
                                 for i, food in enumerate(detected_foods, 1):
                                     confidence = confidence_scores.get(food, 0.8)
                                     details = food_details.get(food, {})
                                     category = details.get('category', 'unknown')
+                                    detection_methods = details.get('detection_methods', ['Unknown'])
                                     
-                                    col1, col2, col3 = st.columns([3, 1, 1])
-                                    with col1:
-                                        st.write(f"{i}. **{food.title()}**")
-                                    with col2:
-                                        st.write(f"*{category}*")
-                                    with col3:
-                                        st.write(f"{confidence:.1%}")
+                                    with st.expander(f"{i}. **{food.title()}** ({confidence:.1%} confidence)"):
+                                        col1, col2 = st.columns(2)
+                                        with col1:
+                                            st.write(f"**Category:** {category.title()}")
+                                            st.write(f"**Nutritional Type:** {details.get('nutritional_category', 'mixed').title()}")
+                                        with col2:
+                                            st.write(f"**Detection Methods:**")
+                                            for method in detection_methods:
+                                                st.write(f"• {method}")
                             else:
                                 st.info("No specific foods detected in this image")
                             

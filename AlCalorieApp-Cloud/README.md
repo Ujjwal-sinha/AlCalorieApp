@@ -4,13 +4,15 @@ An AI-powered calorie tracking application built with Streamlit that analyzes fo
 
 ## ✨ Features
 
-- 📷 **AI Food Detection**: Upload food images for automatic identification using BLIP and YOLO models
+- 🧠 **Advanced Vision Transformer Detection**: State-of-the-art food identification using ViT-B/16 and Swin Transformer models
+- 📷 **Multi-Model AI Food Detection**: Upload food images for automatic identification using Vision Transformers, BLIP, and YOLO models
 - 📊 **Comprehensive Nutrition Analysis**: Get detailed calorie and macronutrient breakdown with LLM analysis
 - 📈 **Progress Tracking**: Monitor daily calorie intake and goals with visual progress indicators
 - 📋 **History Management**: View and manage your food analysis history with detailed insights
 - 🎯 **Goal Setting**: Set and track daily calorie targets with progress visualization
 - 🔬 **Advanced Analytics**: AI interpretability features (Grad-CAM, SHAP, LIME) for model transparency
 - 📊 **Data Visualization**: Interactive charts and analytics dashboard
+- 🎯 **Ensemble Detection**: Combines multiple AI models for maximum accuracy
 
 ## 🚀 Deployment on Streamlit Cloud
 
@@ -59,6 +61,8 @@ AlCalorieApp-Cloud/
 
 ### AI Models Used
 
+- **Vision Transformer (ViT-B/16)**: Advanced transformer-based food detection with high accuracy
+- **Swin Transformer (Swin-T)**: Hierarchical vision transformer for robust food identification
 - **BLIP (Salesforce)**: For image captioning and food detection
 - **YOLO (Ultralytics)**: For object detection and food identification
 - **Groq LLM**: For nutritional analysis and recommendations
@@ -91,6 +95,52 @@ AlCalorieApp-Cloud/
 - **Captum**: Model interpretability
 - **LIME**: Local interpretability
 - **OpenCV**: Computer vision
+
+## 🧠 Vision Transformer (ViT) & Swin Transformer Features
+
+The app now includes state-of-the-art **Vision Transformer** models for superior food detection:
+
+### Vision Transformer Models
+
+- **ViT-B/16 (Vision Transformer Base/16)**: 
+  - 86M parameters, 16x16 patch size
+  - Pre-trained on ImageNet-21k and fine-tuned on ImageNet-1k
+  - Excellent for general food classification
+  - High accuracy for common food items
+
+- **Swin Transformer (Swin-T)**:
+  - Hierarchical vision transformer with shifted windows
+  - Better handling of multi-scale food objects
+  - Improved performance on complex food scenes
+  - Memory-efficient design for cloud deployment
+
+### Detection Capabilities
+
+The Vision Transformer models can detect:
+- **Fruits**: Apple, banana, orange, strawberry, pineapple, etc.
+- **Vegetables**: Broccoli, cauliflower, carrot, bell pepper, etc.
+- **Proteins**: Chicken, beef, fish, eggs, etc.
+- **Grains**: Rice, pasta, bread, etc.
+- **Dairy**: Milk, cheese, yogurt, etc.
+- **Prepared Foods**: Pizza, hamburger, sandwich, etc.
+- **Beverages**: Coffee, tea, juice, etc.
+- **Desserts**: Ice cream, cake, cookies, etc.
+
+### Ensemble Detection Strategy
+
+The app uses a sophisticated ensemble approach:
+1. **Primary**: Vision Transformer (ViT-B/16) detection
+2. **Secondary**: Swin Transformer detection
+3. **Ensemble**: Weighted combination of both models
+4. **Fallback**: BLIP and YOLO models for additional coverage
+5. **Color-based**: Final fallback for edge cases
+
+### Performance Benefits
+
+- **Higher Accuracy**: Vision Transformers achieve better food classification than traditional CNNs
+- **Better Generalization**: Improved performance on diverse food types and presentations
+- **Robust Detection**: Handles variations in lighting, angle, and food preparation
+- **Fast Inference**: Optimized for real-time analysis in the web interface
 
 ## 🤖 Enhanced Food Agent
 

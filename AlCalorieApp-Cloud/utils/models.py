@@ -145,6 +145,99 @@ def load_models() -> Dict[str, Any]:
         models['blip_model'] = None
         models['device'] = None
     
+    # Load Vision Transformer models with robust error handling
+    models['vit_processor'] = None
+    models['vit_model'] = None
+    models['swin_processor'] = None
+    models['swin_model'] = None
+    
+    if TRANSFORMERS_AVAILABLE and TORCH_AVAILABLE:
+        device = models.get('device', torch.device("cpu"))
+        
+        # Load ViT-B/16 with multiple strategies
+        logger.info("Attempting to load Vision Transformer (ViT-B/16)...")
+        
+        # Strategy 1: Try loading ViT-B/16
+        try:
+            from transformers import ViTImageProcessor, ViTForImageClassification
+            
+            # Load processor first
+            models['vit_processor'] = ViTImageProcessor.from_pretrained(
+                'google/vit-base-patch16-224',
+                cache_dir=None,
+                force_download=False
+            )
+            logger.info("ViT processor loaded successfully")
+            
+            # Load model
+            models['vit_model'] = ViTForImageClassification.from_pretrained(
+                'google/vit-base-patch16-224',
+                cache_dir=None,
+                force_download=False,
+                torch_dtype=torch.float32  # Ensure compatibility
+            )
+            
+            # Move to device and set to eval mode
+            models['vit_model'] = models['vit_model'].to(device)
+            models['vit_model'].eval()
+            
+            logger.info("✅ Vision Transformer (ViT-B/16) loaded successfully")
+            
+        except Exception as e:
+            logger.warning(f"Failed to load ViT-B/16 model: {e}")
+            models['vit_processor'] = None
+            models['vit_model'] = None
+            
+            # Strategy 2: Try smaller ViT model
+            try:
+                logger.info("Trying smaller ViT model...")
+                from transformers import ViTImageProcessor, ViTForImageClassification
+                
+                models['vit_processor'] = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224-in21k')
+                models['vit_model'] = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224-in21k')
+                models['vit_model'] = models['vit_model'].to(device).eval()
+                
+                logger.info("✅ Alternative ViT model loaded successfully")
+                
+            except Exception as e2:
+                logger.warning(f"Failed to load alternative ViT model: {e2}")
+                models['vit_processor'] = None
+                models['vit_model'] = None
+        
+        # Load Swin Transformer with memory optimization
+        logger.info("Attempting to load Swin Transformer...")
+        try:
+            from transformers import AutoImageProcessor, SwinForImageClassification
+            
+            # Load Swin-T (smaller version for memory efficiency)
+            models['swin_processor'] = AutoImageProcessor.from_pretrained(
+                'microsoft/swin-tiny-patch4-window7-224',
+                cache_dir=None,
+                force_download=False
+            )
+            logger.info("Swin processor loaded successfully")
+            
+            # Load model with memory optimization
+            models['swin_model'] = SwinForImageClassification.from_pretrained(
+                'microsoft/swin-tiny-patch4-window7-224',
+                cache_dir=None,
+                force_download=False,
+                torch_dtype=torch.float32
+            )
+            
+            # Move to device and set to eval mode
+            models['swin_model'] = models['swin_model'].to(device)
+            models['swin_model'].eval()
+            
+            logger.info("✅ Swin Transformer (Swin-T) loaded successfully")
+            
+        except Exception as e:
+            logger.warning(f"Failed to load Swin Transformer: {e}")
+            models['swin_processor'] = None
+            models['swin_model'] = None
+    else:
+        logger.warning("Transformers or PyTorch not available - Vision Transformer features disabled")
+    
     # Load YOLO (optional) - Enhanced for Streamlit Cloud
     models['yolo_model'] = load_yolo_model_with_retry()
     
@@ -178,6 +271,8 @@ def get_model_status(models: Dict[str, Any]) -> Dict[str, bool]:
     """Get status of all models"""
     return {
         'BLIP (Image Analysis)': models.get('blip_model') is not None,
+        'ViT-B/16 (Vision Transformer)': models.get('vit_model') is not None,
+        'Swin Transformer': models.get('swin_model') is not None,
         'LLM (Nutrition Analysis)': models.get('llm') is not None,
         'YOLO (Object Detection)': models.get('yolo_model') is not None,
         'CNN (Visualizations)': models.get('cnn_model') is not None

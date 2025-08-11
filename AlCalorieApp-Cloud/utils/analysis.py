@@ -190,7 +190,7 @@ def extract_food_items_from_text(text: str) -> set:
     return items
 
 def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
-    """Smart food detection with proper reasoning and web search integration."""
+    """Enhanced food detection with multiple strategies for better accuracy."""
     if not models.get('processor') or not models.get('blip_model'):
         return "Image analysis unavailable. Please check model loading."
     
@@ -202,101 +202,192 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
         if not device:
             return "Device not available for image processing."
         
-        logger.info("Starting smart food detection...")
+        logger.info("Starting enhanced food detection...")
         
-        # Step 1: Get the model to actually think about what it sees
-        thinking_prompt = "Look at this image carefully. What specific foods, dishes, or ingredients can you identify? Be precise and list each item you can see."
+        # Strategy 1: Direct food identification with multiple prompts
+        food_prompts = [
+            "What food is in this image?",
+            "Describe the food items you can see.",
+            "What are the main ingredients or dishes shown?",
+            "List the foods visible in this picture.",
+            "What meal or food items are displayed?"
+        ]
         
-        try:
-            inputs = models['processor'](image, text=thinking_prompt, return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = models['blip_model'].generate(
-                    **inputs,
-                    max_new_tokens=200,
-                    num_beams=5,
-                    temperature=0.3,  # Lower temperature for more focused responses
-                    do_sample=True,
-                    repetition_penalty=1.2
-                )
-            initial_response = models['processor'].decode(outputs[0], skip_special_tokens=True)
-            if initial_response.startswith(thinking_prompt):
-                initial_response = initial_response.replace(thinking_prompt, "").strip()
-            
-            logger.info(f"Initial analysis: {initial_response}")
-            
-        except Exception as e:
-            logger.error(f"Initial analysis failed: {e}")
-            return "Food analysis failed. Please try again."
+        all_detected_foods = set()
         
-        # Step 2: Extract and validate food items
-        detected_foods = extract_food_items_from_text(initial_response)
-        validated_foods = validate_food_items(detected_foods, initial_response)
-        
-        # Step 3: If we have foods, get more details
-        if validated_foods:
-            food_list = list(validated_foods)[:6]  # Limit to 6 items
-            
-            # Get detailed analysis for the detected foods
-            detail_prompt = f"I can see these foods: {', '.join(food_list)}. Describe the preparation method, cooking style, and any visible seasonings or garnishes."
-            
+        for prompt in food_prompts:
             try:
-                inputs = models['processor'](image, text=detail_prompt, return_tensors="pt").to(device)
+                inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
                 with torch.no_grad():
                     outputs = models['blip_model'].generate(
                         **inputs,
-                        max_new_tokens=150,
+                        max_new_tokens=100,
                         num_beams=3,
-                        temperature=0.4,
-                        do_sample=True
+                        do_sample=False  # Disable sampling for more deterministic results
                     )
-                detail_response = models['processor'].decode(outputs[0], skip_special_tokens=True)
-                if detail_response.startswith(detail_prompt):
-                    detail_response = detail_response.replace(detail_prompt, "").strip()
+                response = models['processor'].decode(outputs[0], skip_special_tokens=True)
                 
-                logger.info(f"Detail analysis: {detail_response}")
+                # Clean the response
+                if response.startswith(prompt):
+                    response = response.replace(prompt, "").strip()
                 
-                # Combine results
-                result = f"Foods identified: {', '.join(food_list)}. Details: {detail_response}"
-                return result
+                logger.info(f"Prompt '{prompt}' response: {response}")
+                
+                # Extract foods from response
+                foods = extract_food_items_from_text(response)
+                all_detected_foods.update(foods)
                 
             except Exception as e:
-                logger.warning(f"Detail analysis failed: {e}")
-                return f"Foods identified: {', '.join(food_list)}"
+                logger.warning(f"Prompt '{prompt}' failed: {e}")
+                continue
         
-        # Step 4: Fallback - try YOLO if available
+        # Strategy 2: Vision Transformer detection (ViT-B/16 and Swin Transformer)
+        vit_foods = set()
+        if models.get('vit_model') or models.get('swin_model'):
+            try:
+                from utils.vision_transformer_detection import VisionTransformerFoodDetector
+                
+                vit_detector = VisionTransformerFoodDetector(models)
+                vit_results = vit_detector.detect_food_with_transformers(image)
+                
+                if vit_results.get('success', False):
+                    vit_foods = set(vit_results.get('detected_foods', []))
+                    logger.info(f"Vision Transformer detected: {vit_foods}")
+                    logger.info(f"Models used: {vit_results.get('models_used', [])}")
+                    logger.info(f"Detection method: {vit_results.get('detection_method', 'unknown')}")
+                else:
+                    logger.warning(f"Vision Transformer detection failed: {vit_results.get('error', 'Unknown error')}")
+                    
+            except Exception as e:
+                logger.warning(f"Vision Transformer detection failed: {e}")
+        
+        # Strategy 3: YOLO detection as fallback
+        yolo_foods = set()
         if models.get('yolo_model'):
             try:
                 import numpy as np
                 img_array = np.array(image)
-                results = models['yolo_model'](img_array, conf=0.25)
                 
-                yolo_foods = set()
-                food_classes = {'apple', 'banana', 'sandwich', 'orange', 'broccoli', 'carrot', 
-                              'hot dog', 'pizza', 'donut', 'cake'}
-                
-                for result in results:
-                    if result.boxes is not None:
-                        for box in result.boxes:
-                            cls = int(box.cls[0])
-                            conf = float(box.conf[0])
-                            class_name = models['yolo_model'].names[cls].lower()
+                # Try multiple confidence levels
+                for conf_level in [0.1, 0.2, 0.3]:
+                    try:
+                        results = models['yolo_model'](img_array, conf=conf_level)
+                        
+                        # YOLO COCO classes that are food items
+                        food_classes = {
+                            'apple', 'banana', 'sandwich', 'orange', 'broccoli', 'carrot', 
+                            'hot dog', 'pizza', 'donut', 'cake', 'chair', 'dining table',
+                            'cup', 'fork', 'knife', 'spoon', 'bowl', 'wine glass', 'bottle'
+                        }
+                        
+                        # Only keep actual food items
+                        actual_food_classes = {
+                            'apple', 'banana', 'sandwich', 'orange', 'broccoli', 'carrot', 
+                            'hot dog', 'pizza', 'donut', 'cake'
+                        }
+                        
+                        for result in results:
+                            if result.boxes is not None:
+                                for box in result.boxes:
+                                    cls = int(box.cls[0])
+                                    confidence = float(box.conf[0])
+                                    class_name = models['yolo_model'].names[cls].lower()
+                                    
+                                    if class_name in actual_food_classes and confidence > conf_level:
+                                        yolo_foods.add(class_name)
+                                        logger.info(f"YOLO detected: {class_name} (confidence: {confidence:.3f})")
+                        
+                        if yolo_foods:  # If we found foods, use this confidence level
+                            break
                             
-                            if class_name in food_classes and conf > 0.25:
-                                yolo_foods.add(class_name)
-                                logger.info(f"YOLO detected: {class_name} (confidence: {conf:.2f})")
-                
-                if yolo_foods:
-                    return f"Foods detected: {', '.join(sorted(yolo_foods))}"
+                    except Exception as e:
+                        logger.warning(f"YOLO at confidence {conf_level} failed: {e}")
+                        continue
                 
             except Exception as e:
                 logger.warning(f"YOLO detection failed: {e}")
         
+        # Strategy 3: Image captioning without specific prompts
+        try:
+            inputs = models['processor'](image, return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = models['blip_model'].generate(
+                    **inputs,
+                    max_new_tokens=50,
+                    num_beams=3,
+                    do_sample=False
+                )
+            caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+            logger.info(f"Image caption: {caption}")
+            
+            # Extract foods from caption
+            caption_foods = extract_food_items_from_text(caption)
+            all_detected_foods.update(caption_foods)
+            
+        except Exception as e:
+            logger.warning(f"Image captioning failed: {e}")
+        
+        # Combine all detection methods
+        combined_foods = all_detected_foods.union(yolo_foods)
+        
+        # Validate detected foods
+        validated_foods = validate_food_items(combined_foods, "food image")
+        
+        if validated_foods:
+            food_list = sorted(list(validated_foods))[:8]  # Limit to 8 items
+            result = f"Detected foods: {', '.join(food_list)}"
+            logger.info(f"Final detection result: {result}")
+            return result
+        
+        # Strategy 4: Fallback with common food detection
+        fallback_foods = _detect_common_foods_by_color(image)
+        if fallback_foods:
+            return f"Possible foods detected: {', '.join(fallback_foods)}"
+        
         # Final fallback
-        return f"Food image analyzed: {initial_response[:200]}..."
+        return "Food image detected but specific items could not be identified clearly. Please try a clearer image with better lighting."
         
     except Exception as e:
-        logger.error(f"Food detection error: {e}")
+        logger.error(f"Enhanced food detection error: {e}")
         return "Food detection failed. Please try a different image."
+
+def _detect_common_foods_by_color(image: Image.Image) -> List[str]:
+    """Detect common foods based on dominant colors as fallback"""
+    try:
+        import numpy as np
+        from collections import Counter
+        
+        # Convert to numpy array
+        img_array = np.array(image.resize((100, 100)))  # Resize for faster processing
+        
+        # Get dominant colors
+        pixels = img_array.reshape(-1, 3)
+        
+        # Calculate average color
+        avg_color = np.mean(pixels, axis=0)
+        r, g, b = avg_color
+        
+        detected_foods = []
+        
+        # Color-based food detection
+        if r > 150 and g < 100 and b < 100:  # Red dominant
+            detected_foods.extend(['tomato', 'apple', 'strawberry'])
+        elif g > 150 and r < 120 and b < 120:  # Green dominant
+            detected_foods.extend(['broccoli', 'lettuce', 'spinach'])
+        elif r > 200 and g > 180 and b < 100:  # Yellow dominant
+            detected_foods.extend(['banana', 'corn', 'cheese'])
+        elif r > 150 and g > 100 and b < 80:  # Orange dominant
+            detected_foods.extend(['carrot', 'orange', 'sweet potato'])
+        elif r > 100 and g > 80 and b > 60:  # Brown dominant
+            detected_foods.extend(['bread', 'chicken', 'potato'])
+        else:
+            detected_foods.append('mixed food')
+        
+        return detected_foods[:3]  # Return top 3
+        
+    except Exception as e:
+        logger.warning(f"Color-based detection failed: {e}")
+        return ['food item']
         
         # Strategy 2: Ultra-Enhanced YOLO Detection with Multiple Passes
         yolo_detected_items = set()

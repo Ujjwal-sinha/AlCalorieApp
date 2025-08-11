@@ -510,24 +510,71 @@ class FoodAgent:
         return results
     
     def get_comprehensive_analysis(self, image: Image.Image) -> Dict[str, Any]:
-        """Get complete food analysis with advanced multi-model detection"""
+        """Get complete food analysis with Vision Transformer detection"""
         try:
-            # Step 1: Advanced multi-model detection
-            from .advanced_detection import AdvancedFoodDetector
+            # Step 1: Check if Vision Transformer is available
+            vit_available = self.models.get('vit_model') is not None
             
-            advanced_detector = AdvancedFoodDetector(self.models)
-            advanced_results = advanced_detector.detect_foods_advanced(image)
-            
-            if "error" in advanced_results:
-                # Fallback to basic detection
-                image_analysis = self.analyze_food_image(image)
-                detected_foods = image_analysis.get('detected_foods', [])
-                confidence_scores = {}
-                food_details = {}
+            if vit_available:
+                # Use Lightweight Vision Transformer detection
+                from .lightweight_vit_detection import LightweightViTFoodDetector
+                
+                vit_detector = LightweightViTFoodDetector(self.models)
+                vit_results = vit_detector.detect_food_lightweight(image)
+                
+                detected_foods = vit_results.get('detected_foods', [])
+                confidence_scores = vit_results.get('confidence_scores', {})
+                detection_method = vit_results.get('detection_method', 'lightweight_vit')
+                models_used = vit_results.get('models_used', [])
+                
+                # Create detection details
+                detection_details = {food: models_used for food in detected_foods}
+                
             else:
-                detected_foods = advanced_results.get('detected_foods', [])
-                confidence_scores = advanced_results.get('confidence_scores', {})
-                food_details = advanced_results.get('food_details', {})
+                # Fallback to simple detection when ViT is not available
+                from .simple_food_detection import SimpleFoodDetector
+                
+                simple_detector = SimpleFoodDetector(self.models)
+                simple_results = simple_detector.detect_food_simple(image)
+                
+                detected_foods = simple_results.get('detected_foods', [])
+                confidence_scores = simple_results.get('confidence_scores', {})
+                detection_method = simple_results.get('detection_method', 'simple_multi_method')
+                models_used = simple_results.get('models_used', [])
+                
+                # Create detection details
+                detection_details = {food: models_used for food in detected_foods}
+            
+            # Additional fallback to robust detection if needed
+            if not detected_foods or (len(detected_foods) == 1 and 'food item' in detected_foods):
+                from .robust_detection import RobustFoodDetector
+                
+                robust_detector = RobustFoodDetector(self.models)
+                robust_results = robust_detector.detect_food_robust(image)
+                
+                robust_foods = robust_results.get('detected_foods', [])
+                robust_confidence = robust_results.get('confidence_scores', {})
+                
+                # Combine results
+                for food in robust_foods:
+                    if food not in detected_foods:
+                        detected_foods.append(food)
+                        confidence_scores[food] = robust_confidence.get(food, 0.5)
+                        detection_details[food] = ['Robust Detection']
+                
+                detection_method = f'{detection_method}_with_robust_fallback'
+                if 'Robust Multi-Method' not in models_used:
+                    models_used.append('Robust Multi-Method')
+            
+            # Create food details
+            food_details = {}
+            for food in detected_foods:
+                food_details[food] = {
+                    'category': self._get_food_category(food),
+                    'common_name': food.title(),
+                    'nutritional_category': self._get_nutritional_category(food),
+                    'detection_methods': detection_details.get(food, ['Unknown'])
+                }
             
             # Step 2: Search for nutritional information
             web_nutrition = self.search_web_information(detected_foods)
@@ -574,12 +621,15 @@ class FoodAgent:
                 "detected_foods": detected_foods,
                 "confidence_scores": confidence_scores,
                 "food_details": food_details,
+                "detection_details": detection_details,
                 "nutrition_data": comprehensive_nutrition,
                 "web_nutrition": web_nutrition,
                 "llm_analysis": llm_analysis,
                 "health_score": health_score,
                 "recommendations": recommendations,
-                "detection_quality": "advanced_multi_model",
+                "detection_method": detection_method,
+                "models_used": models_used,
+                "detection_quality": "vision_transformer_ensemble",
                 "total_foods_detected": len(detected_foods),
                 "timestamp": datetime.now().isoformat()
             }
@@ -939,6 +989,38 @@ class FoodAgent:
             recommendations.append("This appears to be a well-balanced meal with good nutritional variety")
         
         return recommendations[:6]  # Limit to 6 most relevant recommendations
+    
+    def _get_food_category(self, food: str) -> str:
+        """Get category for a food item"""
+        food_lower = food.lower()
+        
+        if any(protein in food_lower for protein in ['chicken', 'beef', 'fish', 'egg', 'meat', 'protein']):
+            return 'proteins'
+        elif any(veg in food_lower for veg in ['tomato', 'broccoli', 'carrot', 'lettuce', 'vegetable']):
+            return 'vegetables'
+        elif any(fruit in food_lower for fruit in ['apple', 'banana', 'orange', 'fruit']):
+            return 'fruits'
+        elif any(grain in food_lower for grain in ['rice', 'bread', 'pasta', 'grain']):
+            return 'grains'
+        elif any(dairy in food_lower for dairy in ['cheese', 'milk', 'yogurt', 'dairy']):
+            return 'dairy'
+        elif any(prepared in food_lower for prepared in ['pizza', 'burger', 'sandwich', 'prepared']):
+            return 'prepared'
+        else:
+            return 'other'
+    
+    def _get_nutritional_category(self, food: str) -> str:
+        """Get nutritional category for a food item"""
+        food_lower = food.lower()
+        
+        if any(protein in food_lower for protein in ['chicken', 'beef', 'fish', 'egg', 'meat']):
+            return 'protein'
+        elif any(carb in food_lower for carb in ['rice', 'bread', 'pasta', 'potato']):
+            return 'carbohydrate'
+        elif any(fat in food_lower for fat in ['cheese', 'oil', 'butter', 'nuts']):
+            return 'fat'
+        else:
+            return 'mixed'
     
     def _generate_comprehensive_food_data(self, query: str) -> List[Dict[str, Any]]:
         """Generate comprehensive food data when web search fails"""

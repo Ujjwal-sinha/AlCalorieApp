@@ -288,39 +288,32 @@ class AdvancedFoodDetector:
             return {'error': str(e)}
     
     def _blip_ensemble_detection(self, image: Image.Image) -> Set[str]:
-        """Enhanced BLIP detection with multiple specialized prompts"""
+        """Enhanced BLIP detection with robust prompting strategy"""
         detected_foods = set()
         
         if not self.models.get('processor') or not self.models.get('blip_model'):
             return detected_foods
         
-        # Specialized prompts for different food types
-        specialized_prompts = [
-            "What specific foods, dishes, and ingredients can you identify in this image? List each item precisely.",
-            "Identify all proteins, meats, and protein sources visible in this food image.",
-            "What vegetables, fruits, and plant-based foods are shown in this image?",
-            "List all grains, starches, and carbohydrate sources you can see.",
-            "Identify any dairy products, cheese, or milk-based items in this image.",
-            "What prepared dishes, cooked meals, or processed foods are visible?",
-            "Describe the main course, side dishes, and any accompaniments shown.",
-            "What beverages, drinks, or liquid items can you identify?",
-            "List any snacks, appetizers, or finger foods visible in the image.",
-            "Identify any desserts, sweets, or baked goods shown."
+        # Simple, direct prompts that work better
+        effective_prompts = [
+            "What food is this?",
+            "Describe this food.",
+            "What am I looking at?",
+            "What is in this image?",
+            "Name the food items."
         ]
         
         device = self.models.get('device', 'cpu')
         
-        for prompt in specialized_prompts:
+        for prompt in effective_prompts:
             try:
                 inputs = self.models['processor'](image, text=prompt, return_tensors="pt").to(device)
                 with torch.no_grad():
                     outputs = self.models['blip_model'].generate(
                         **inputs,
-                        max_new_tokens=200,
-                        num_beams=5,
-                        temperature=0.2,  # Low temperature for consistency
-                        do_sample=True,
-                        repetition_penalty=1.3
+                        max_new_tokens=50,  # Shorter responses
+                        num_beams=3,
+                        do_sample=False  # Deterministic
                     )
                 response = self.models['processor'].decode(outputs[0], skip_special_tokens=True)
                 
@@ -337,6 +330,27 @@ class AdvancedFoodDetector:
             except Exception as e:
                 logger.warning(f"BLIP prompt failed: {e}")
                 continue
+        
+        # Also try image captioning without prompts
+        try:
+            inputs = self.models['processor'](image, return_tensors="pt").to(device)
+            with torch.no_grad():
+                outputs = self.models['blip_model'].generate(
+                    **inputs,
+                    max_new_tokens=30,
+                    num_beams=3,
+                    do_sample=False
+                )
+            caption = self.models['processor'].decode(outputs[0], skip_special_tokens=True)
+            
+            # Extract foods from caption
+            caption_foods = self._extract_foods_from_text(caption)
+            detected_foods.update(caption_foods)
+            
+            logger.info(f"BLIP caption: {caption}")
+            
+        except Exception as e:
+            logger.warning(f"BLIP captioning failed: {e}")
         
         return detected_foods
     
@@ -454,28 +468,61 @@ class AdvancedFoodDetector:
         return detected_foods
     
     def _extract_foods_from_text(self, text: str) -> Set[str]:
-        """Extract food items from text with advanced NLP"""
+        """Extract food items from text with improved matching"""
         foods = set()
-        text_lower = text.lower()
+        text_lower = text.lower().strip()
         
-        # Direct vocabulary matching
-        for food in self.food_vocabulary:
-            if food in text_lower:
-                foods.add(food)
-        
-        # Pattern-based extraction
-        food_patterns = [
-            r'\b(\w+(?:\s+\w+)*)\s+(?:dish|meal|food|cuisine)\b',
-            r'\b(?:grilled|fried|baked|roasted|steamed)\s+(\w+(?:\s+\w+)*)\b',
-            r'\b(\w+(?:\s+\w+)*)\s+(?:with|and|plus)\b',
-            r'\b(?:fresh|cooked|raw|organic)\s+(\w+(?:\s+\w+)*)\b'
+        # Remove common prefixes
+        prefixes_to_remove = [
+            "a photo of", "an image of", "this is", "i can see", "there is", "there are",
+            "the image shows", "this shows", "looking at", "this appears to be"
         ]
         
-        for pattern in food_patterns:
-            matches = re.findall(pattern, text_lower)
-            for match in matches:
-                if match in self.food_vocabulary:
-                    foods.add(match)
+        for prefix in prefixes_to_remove:
+            if text_lower.startswith(prefix):
+                text_lower = text_lower.replace(prefix, "").strip()
+        
+        # Direct vocabulary matching with word boundaries
+        for food in self.food_vocabulary:
+            # Check for exact matches and partial matches
+            if food in text_lower:
+                # Verify it's a word boundary match
+                import re
+                pattern = r'\b' + re.escape(food) + r'\b'
+                if re.search(pattern, text_lower):
+                    foods.add(food)
+        
+        # Common food words that might appear in different forms
+        common_foods = {
+            'pizza': ['pizza', 'pizzas'],
+            'burger': ['burger', 'hamburger', 'cheeseburger'],
+            'sandwich': ['sandwich', 'sandwiches', 'sub', 'hoagie'],
+            'chicken': ['chicken', 'poultry'],
+            'beef': ['beef', 'steak', 'meat'],
+            'fish': ['fish', 'seafood'],
+            'rice': ['rice', 'grain'],
+            'bread': ['bread', 'toast', 'loaf'],
+            'cheese': ['cheese', 'dairy'],
+            'tomato': ['tomato', 'tomatoes'],
+            'potato': ['potato', 'potatoes', 'fries'],
+            'apple': ['apple', 'apples'],
+            'banana': ['banana', 'bananas'],
+            'salad': ['salad', 'greens', 'lettuce']
+        }
+        
+        for base_food, variations in common_foods.items():
+            for variation in variations:
+                if variation in text_lower:
+                    foods.add(base_food)
+                    break
+        
+        # If no foods found, try to extract any noun that might be food
+        if not foods:
+            words = text_lower.split()
+            for word in words:
+                word = word.strip('.,!?;:"()[]{}')
+                if len(word) > 3 and word in self.food_vocabulary:
+                    foods.add(word)
         
         return foods
     
