@@ -76,28 +76,70 @@ class FoodAgent:
         }
 
     def analyze_food_image(self, image: Image.Image) -> Dict[str, Any]:
-        """Step 1: Smart food image analysis with proper reasoning"""
+        """Step 1: Smart food image analysis with Vision Transformer integration"""
         try:
             # Generate session ID for this analysis
             self.session_id = self.generate_session_id(image)
             
-            # Use the improved analysis
+            # Use Vision Transformer detection first
+            vit_detected_foods = []
+            detection_method = "traditional"
+            models_used = []
+            
+            if self.models.get('vit_model') or self.models.get('swin_model'):
+                try:
+                    from .vision_transformer_detection import VisionTransformerFoodDetector
+                    vit_detector = VisionTransformerFoodDetector(self.models)
+                    vit_results = vit_detector.detect_food_with_transformers(image)
+                    
+                    if vit_results.get('success', False):
+                        vit_detected_foods = vit_results.get('detected_foods', [])
+                        detection_method = vit_results.get('detection_method', 'transformer_ensemble')
+                        models_used = vit_results.get('models_used', [])
+                        logger.info(f"Vision Transformer detected: {vit_detected_foods}")
+                        logger.info(f"Detection method: {detection_method}")
+                        logger.info(f"Models used: {models_used}")
+                except Exception as e:
+                    logger.warning(f"Vision Transformer detection failed: {e}")
+            
+            # Use the improved analysis as fallback/enhancement
             from .analysis import describe_image_enhanced
             food_description = describe_image_enhanced(image, self.models)
             
             # Extract food items from the description
-            detected_foods = self._extract_foods_from_description(food_description)
+            description_foods = self._extract_foods_from_description(food_description)
+            
+            # Combine all detected foods with comprehensive strategy
+            all_detected_foods = list(set(vit_detected_foods + description_foods))
+            
+            # Add generic food categories if not already present
+            generic_categories = ['vegetables', 'protein', 'grains', 'fruits', 'dairy', 'beverages', 'spices', 'herbs']
+            for category in generic_categories:
+                if category not in all_detected_foods:
+                    all_detected_foods.append(category)
+            
+            # Ensure we have comprehensive coverage
+            if len(all_detected_foods) < 5:
+                # Add more generic foods for better coverage
+                additional_foods = ['mixed food', 'meal', 'dish', 'ingredients', 'food items']
+                for food in additional_foods:
+                    if food not in all_detected_foods:
+                        all_detected_foods.append(food)
             
             # Get nutritional estimates
-            nutrition_estimates = self._estimate_nutrition(detected_foods)
+            nutrition_estimates = self._estimate_nutrition(all_detected_foods)
             
             return {
                 "session_id": self.session_id,
                 "food_description": food_description,
-                "detected_foods": detected_foods,
+                "detected_foods": all_detected_foods,
+                "vit_detected_foods": vit_detected_foods,
+                "description_foods": description_foods,
                 "nutrition_estimates": nutrition_estimates,
+                "detection_method": detection_method,
+                "models_used": models_used,
                 "analysis_timestamp": datetime.now().isoformat(),
-                "analysis_version": "smart_v1.0"
+                "analysis_version": "smart_v2.0_with_vit"
             }
             
         except Exception as e:

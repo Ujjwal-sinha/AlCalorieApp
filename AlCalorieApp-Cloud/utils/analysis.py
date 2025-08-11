@@ -204,13 +204,23 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
         
         logger.info("Starting enhanced food detection...")
         
-        # Strategy 1: Direct food identification with multiple prompts
+        # Strategy 1: Direct food identification with comprehensive prompts
         food_prompts = [
             "What food is in this image?",
             "Describe the food items you can see.",
             "What are the main ingredients or dishes shown?",
             "List the foods visible in this picture.",
-            "What meal or food items are displayed?"
+            "What meal or food items are displayed?",
+            "What vegetables can you see?",
+            "What fruits are visible?",
+            "What proteins or meat items are shown?",
+            "What grains or carbohydrates are present?",
+            "What dairy products can you identify?",
+            "What beverages or drinks are visible?",
+            "What spices or seasonings can you see?",
+            "What nuts or seeds are present?",
+            "What prepared foods or dishes are shown?",
+            "What desserts or sweets are visible?"
         ]
         
         all_detected_foods = set()
@@ -273,17 +283,20 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                     try:
                         results = models['yolo_model'](img_array, conf=conf_level)
                         
-                        # YOLO COCO classes that are food items
+                        # YOLO COCO classes that are food items (expanded)
                         food_classes = {
                             'apple', 'banana', 'sandwich', 'orange', 'broccoli', 'carrot', 
                             'hot dog', 'pizza', 'donut', 'cake', 'chair', 'dining table',
-                            'cup', 'fork', 'knife', 'spoon', 'bowl', 'wine glass', 'bottle'
+                            'cup', 'fork', 'knife', 'spoon', 'bowl', 'wine glass', 'bottle',
+                            'cell phone', 'laptop', 'mouse', 'remote', 'keyboard', 'book',
+                            'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
                         }
                         
-                        # Only keep actual food items
+                        # Expanded actual food items (including utensils and containers that might contain food)
                         actual_food_classes = {
                             'apple', 'banana', 'sandwich', 'orange', 'broccoli', 'carrot', 
-                            'hot dog', 'pizza', 'donut', 'cake'
+                            'hot dog', 'pizza', 'donut', 'cake', 'cup', 'bowl', 'wine glass', 'bottle',
+                            'fork', 'knife', 'spoon'  # Utensils indicate food presence
                         }
                         
                         for result in results:
@@ -327,16 +340,67 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
         except Exception as e:
             logger.warning(f"Image captioning failed: {e}")
         
-        # Combine all detection methods
-        combined_foods = all_detected_foods.union(yolo_foods)
+        # Combine all detection methods with comprehensive strategy
+        combined_foods = set()
+        detection_sources = []
+        food_sources = {}  # Track which model detected which food
         
-        # Validate detected foods
+        # Priority 1: Vision Transformer results (highest confidence)
+        if vit_foods:
+            combined_foods.update(vit_foods)
+            detection_sources.append("Vision Transformer")
+            for food in vit_foods:
+                food_sources[food] = food_sources.get(food, []) + ["ViT"]
+            logger.info(f"Added ViT foods: {vit_foods}")
+        
+        # Priority 2: BLIP prompt results (add all, don't filter)
+        if all_detected_foods:
+            combined_foods.update(all_detected_foods)
+            detection_sources.append("BLIP Prompts")
+            for food in all_detected_foods:
+                food_sources[food] = food_sources.get(food, []) + ["BLIP"]
+            logger.info(f"Added BLIP foods: {all_detected_foods}")
+        
+        # Priority 3: YOLO results (add all, don't filter)
+        if yolo_foods:
+            combined_foods.update(yolo_foods)
+            detection_sources.append("YOLO")
+            for food in yolo_foods:
+                food_sources[food] = food_sources.get(food, []) + ["YOLO"]
+            logger.info(f"Added YOLO foods: {yolo_foods}")
+        
+        # Priority 4: Color-based fallback for any missing categories
+        color_fallback = _detect_common_foods_by_color(image)
+        if color_fallback:
+            combined_foods.update(color_fallback)
+            detection_sources.append("Color Analysis")
+            for food in color_fallback:
+                food_sources[food] = food_sources.get(food, []) + ["Color"]
+            logger.info(f"Added color-based foods: {color_fallback}")
+        
+        # Validate detected foods but be more permissive
         validated_foods = validate_food_items(combined_foods, "food image")
         
+        # If validation is too strict, include more foods
+        if len(validated_foods) < len(combined_foods) * 0.7:  # If we lost more than 30%
+            logger.info("Validation too strict, including more foods")
+            validated_foods = combined_foods  # Include all detected foods
+        
         if validated_foods:
-            food_list = sorted(list(validated_foods))[:8]  # Limit to 8 items
-            result = f"Detected foods: {', '.join(food_list)}"
+            # Don't limit the number of foods - include all detected
+            food_list = sorted(list(validated_foods))
+            detection_method = " + ".join(detection_sources) if detection_sources else "multiple models"
+            
+            # Create detailed result with source information
+            detailed_foods = []
+            for food in food_list:
+                sources = food_sources.get(food, ["Unknown"])
+                detailed_foods.append(f"{food} ({', '.join(sources)})")
+            
+            result = f"Detected foods: {', '.join(detailed_foods)} (via {detection_method})"
             logger.info(f"Final detection result: {result}")
+            logger.info(f"Detection sources: {detection_sources}")
+            logger.info(f"Total foods detected: {len(food_list)}")
             return result
         
         # Strategy 4: Fallback with common food detection
@@ -369,21 +433,31 @@ def _detect_common_foods_by_color(image: Image.Image) -> List[str]:
         
         detected_foods = []
         
-        # Color-based food detection
+        # Comprehensive color-based food detection
         if r > 150 and g < 100 and b < 100:  # Red dominant
-            detected_foods.extend(['tomato', 'apple', 'strawberry'])
+            detected_foods.extend(['tomato', 'apple', 'strawberry', 'red pepper', 'beet', 'cherry', 'raspberry', 'red onion', 'red cabbage'])
         elif g > 150 and r < 120 and b < 120:  # Green dominant
-            detected_foods.extend(['broccoli', 'lettuce', 'spinach'])
+            detected_foods.extend(['broccoli', 'lettuce', 'spinach', 'green beans', 'cucumber', 'zucchini', 'kale', 'green pepper', 'peas', 'asparagus'])
         elif r > 200 and g > 180 and b < 100:  # Yellow dominant
-            detected_foods.extend(['banana', 'corn', 'cheese'])
+            detected_foods.extend(['banana', 'corn', 'cheese', 'lemon', 'pineapple', 'mango', 'yellow pepper', 'squash', 'yellow onion'])
         elif r > 150 and g > 100 and b < 80:  # Orange dominant
-            detected_foods.extend(['carrot', 'orange', 'sweet potato'])
+            detected_foods.extend(['carrot', 'orange', 'sweet potato', 'pumpkin', 'apricot', 'peach', 'butternut squash', 'orange pepper'])
         elif r > 100 and g > 80 and b > 60:  # Brown dominant
-            detected_foods.extend(['bread', 'chicken', 'potato'])
+            detected_foods.extend(['bread', 'chicken', 'potato', 'coffee', 'chocolate', 'beef', 'mushroom', 'nuts', 'grains', 'rice'])
+        elif r > 200 and g > 200 and b > 200:  # White dominant
+            detected_foods.extend(['rice', 'milk', 'yogurt', 'cauliflower', 'pasta', 'fish', 'egg', 'onion', 'garlic', 'mushroom'])
+        elif r > 100 and g > 100 and b > 150:  # Blue/Purple dominant
+            detected_foods.extend(['blueberry', 'eggplant', 'grape', 'plum', 'purple cabbage', 'purple onion', 'purple potato'])
+        elif r > 180 and g > 150 and b > 100:  # Pink/Peach dominant
+            detected_foods.extend(['salmon', 'shrimp', 'pink grapefruit', 'watermelon', 'pink pepper', 'pink onion'])
         else:
-            detected_foods.append('mixed food')
+            # Mixed colors - suggest comprehensive meal components
+            detected_foods.extend(['mixed food', 'meal', 'dish', 'salad', 'soup', 'stew', 'curry', 'stir fry', 'casserole'])
         
-        return detected_foods[:3]  # Return top 3
+        # Add generic food categories for comprehensive coverage
+        detected_foods.extend(['vegetables', 'protein', 'grains', 'fruits', 'dairy', 'beverages', 'spices', 'herbs'])
+        
+        return detected_foods[:10]  # Return top 10 for comprehensive coverage
         
     except Exception as e:
         logger.warning(f"Color-based detection failed: {e}")

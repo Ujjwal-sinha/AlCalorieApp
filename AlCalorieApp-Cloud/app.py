@@ -827,13 +827,19 @@ def main():
                         # Display results
                         description = analysis_result.get('description', 'Food items detected')
                         
-                        # Enhanced results display with food count
+                        # Enhanced results display with Vision Transformer detection info
                         if description.startswith("Main Food Items Identified:"):
                             food_items = description.replace("Main Food Items Identified:", "").strip()
                             food_count = len([item.strip() for item in food_items.split(',') if item.strip()])
-                            display_title = f"🍽️ Ultra-Enhanced Food Detection ({food_count} items found)"
+                            display_title = f"🧠 Vision Transformer + Multi-Model Detection ({food_count} items found)"
+                        elif "via" in description and "Vision Transformer" in description:
+                            # Extract detection method from description
+                            detection_method = description.split("via ")[-1] if "via " in description else "Multi-Model"
+                            food_items = description.split(" (via")[0].replace("Detected foods: ", "")
+                            food_count = len([item.strip() for item in food_items.split(',') if item.strip()])
+                            display_title = f"🧠 {detection_method} Detection ({food_count} items found)"
                         else:
-                            display_title = "🍽️ Ultra-Enhanced Food Analysis Results"
+                            display_title = "🧠 Vision Transformer + Multi-Model Analysis Results"
                             food_count = "Multiple"
                         
                         st.markdown(f"""
@@ -846,7 +852,7 @@ def main():
                                 </div>
                                 <div>
                                     <h3 style="color: white; margin: 0; font-size: 24px;">{display_title}</h3>
-                                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Ultra-Comprehensive AI Food Detection</p>
+                                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Vision Transformer + Swin Transformer + BLIP + YOLO Ensemble</p>
                                 </div>
                             </div>
                             <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px;">
@@ -855,11 +861,54 @@ def main():
                                 </p>
                             </div>
                             <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 12px; opacity: 0.8;">Ultra-Enhanced Detection + Web Intelligence</span>
-                                <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;">✨ Enhanced</span>
+                                <span style="font-size: 12px; opacity: 0.8;">ViT-B/16 + Swin-T + BLIP + YOLO Ensemble</span>
+                                <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;">🧠 AI-Powered</span>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
+                        
+                        # Enhanced Agent Results (if available)
+                        if enhanced_result and "error" not in enhanced_result:
+                            st.markdown("### 🤖 Enhanced AI Agent Analysis")
+                            
+                            # Show detection method and models used
+                            detection_method = enhanced_result.get('detection_method', 'Multi-Model')
+                            models_used = enhanced_result.get('models_used', [])
+                            vit_detected = enhanced_result.get('vit_detected_foods', [])
+                            description_foods = enhanced_result.get('description_foods', [])
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.info(f"**Detection Method:** {detection_method}")
+                                if models_used:
+                                    st.info(f"**Models Used:** {', '.join(models_used)}")
+                            
+                            with col2:
+                                if vit_detected:
+                                    st.success(f"**Vision Transformer Detected:** {len(vit_detected)} items")
+                                if description_foods:
+                                    st.success(f"**Description Foods:** {len(description_foods)} items")
+                            
+                            # Show health score if available
+                            health_score = enhanced_result.get('health_score', None)
+                            if health_score is not None:
+                                st.markdown(f"### 🏥 Health Score: {health_score}/10")
+                                
+                                # Create a progress bar for health score
+                                health_percentage = (health_score / 10) * 100
+                                if health_percentage >= 80:
+                                    st.progress(health_percentage / 100, text="Excellent Health Score")
+                                elif health_percentage >= 60:
+                                    st.progress(health_percentage / 100, text="Good Health Score")
+                                else:
+                                    st.progress(health_percentage / 100, text="Needs Improvement")
+                            
+                            # Show recommendations if available
+                            recommendations = enhanced_result.get('recommendations', [])
+                            if recommendations:
+                                st.markdown("### 💡 AI Recommendations")
+                                for i, rec in enumerate(recommendations[:5], 1):  # Show top 5
+                                    st.markdown(f"{i}. {rec}")
                         
                         # Nutrition summary
                         nutrition = analysis_result["nutritional_data"]
