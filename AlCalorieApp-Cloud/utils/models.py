@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,52 @@ try:
 except ImportError:
     LIME_AVAILABLE = False
 
+def load_yolo_model_with_retry(max_retries=3, timeout=30):
+    """Load YOLO model with retry logic and timeout"""
+    if not YOLO_AVAILABLE:
+        return None
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Attempting to load YOLO model (attempt {attempt + 1}/{max_retries})")
+            
+            # Set a timeout for the operation
+            start_time = time.time()
+            
+            # Try loading with different strategies
+            yolo_model = None
+            
+            # Strategy 1: Local file
+            if os.path.exists("yolov8n.pt"):
+                try:
+                    yolo_model = YOLO("yolov8n.pt")
+                    logger.info("YOLO loaded successfully from local file")
+                    return yolo_model
+                except Exception as e:
+                    logger.warning(f"Local file loading failed: {e}")
+            
+            # Strategy 2: Download from Ultralytics
+            if yolo_model is None:
+                try:
+                    yolo_model = YOLO('yolov8n.pt')
+                    logger.info("YOLO downloaded and loaded successfully")
+                    return yolo_model
+                except Exception as e:
+                    logger.warning(f"Download loading failed: {e}")
+            
+            # Check timeout
+            if time.time() - start_time > timeout:
+                logger.warning(f"YOLO loading timed out after {timeout} seconds")
+                break
+                
+        except Exception as e:
+            logger.warning(f"YOLO loading attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2)  # Wait before retry
+    
+    logger.error("All YOLO loading attempts failed")
+    return None
+
 def load_models() -> Dict[str, Any]:
     """Load AI models with comprehensive error handling"""
     models = {}
@@ -98,23 +145,8 @@ def load_models() -> Dict[str, Any]:
         models['blip_model'] = None
         models['device'] = None
     
-    # Load YOLO (optional)
-    if YOLO_AVAILABLE:
-        try:
-            # Try to load from local file first
-            yolo_path = "yolov8n.pt"
-            if os.path.exists(yolo_path):
-                models['yolo_model'] = YOLO(yolo_path)
-                logger.info("YOLO loaded from local file")
-            else:
-                # Try to download
-                models['yolo_model'] = YOLO('yolov8n.pt')
-                logger.info("YOLO downloaded and loaded")
-        except Exception as e:
-            logger.warning(f"Failed to load YOLO: {e}")
-            models['yolo_model'] = None
-    else:
-        models['yolo_model'] = None
+    # Load YOLO (optional) - Enhanced for Streamlit Cloud
+    models['yolo_model'] = load_yolo_model_with_retry()
     
     # Load CNN model for visualizations (optional)
     if TORCH_AVAILABLE:

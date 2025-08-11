@@ -158,7 +158,8 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                 logger.warning(f"Focused prompt {i+1} failed: {e}")
                 continue
         
-        # Strategy 2: Simplified YOLO Detection for Better Accuracy
+        # Strategy 2: YOLO Detection with Fallback
+        yolo_detected_items = set()
         if models.get('yolo_model') and models.get('NUMPY_AVAILABLE'):
             try:
                 import numpy as np
@@ -260,6 +261,8 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                                 
             except Exception as e:
                 logger.warning(f"YOLO detection failed: {e}")
+        else:
+            logger.info("YOLO model not available - using BLIP-only detection")
         
         # Strategy 3: Additional category-specific prompts for maximum coverage
         category_prompts = [
@@ -426,6 +429,11 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                 
                 # Format as "Main Food Items Identified: item1, item2, item3..."
                 result_description = "Main Food Items Identified: " + ", ".join(unique_items)
+                
+                # Add note if YOLO is not available
+                if not models.get('yolo_model'):
+                    result_description += " (Enhanced detection with BLIP only - YOLO unavailable)"
+                
                 logger.info(f"Final food items: {result_description}")
                 return result_description
         
@@ -837,6 +845,138 @@ def analyze_food_image(image: Image.Image, context: str, models: Dict[str, Any])
                 "total_carbs": 0,
                 "total_fats": 0,
                 "items": []
+            }
+        }
+
+def analyze_manual_food_items(food_items: List[Dict], models: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze manually selected food items for nutrition data"""
+    try:
+        # Create a description from manual selections with location/bbox info
+        items_description = []
+        for item in food_items:
+            name = item['name']
+            quantity = item.get('quantity', '1 serving')
+            bbox = item.get('bbox', None)
+            location = item.get('location', '')
+            
+            if bbox:
+                # Use bounding box coordinates
+                left, top, width, height = bbox
+                items_description.append(f"{name} ({quantity}) at coordinates ({left}, {top}, {width}, {height})")
+            elif location:
+                # Use location description
+                items_description.append(f"{name} ({quantity}) at {location}")
+            else:
+                items_description.append(f"{name} ({quantity})")
+        
+        description = f"Main Food Items Identified: {', '.join(items_description)}"
+        
+        # Query LLM for nutrition analysis
+        if models.get('llm'):
+            # Create detailed food items list with location/bbox
+            food_items_detail = []
+            for item in food_items:
+                name = item['name']
+                quantity = item.get('quantity', '1 serving')
+                bbox = item.get('bbox', None)
+                location = item.get('location', '')
+                
+                if bbox:
+                    # Use bounding box coordinates
+                    left, top, width, height = bbox
+                    food_items_detail.append(f"{name} ({quantity}) at coordinates ({left}, {top}, {width}, {height})")
+                elif location:
+                    # Use location description
+                    food_items_detail.append(f"{name} ({quantity}) at {location}")
+                else:
+                    food_items_detail.append(f"{name} ({quantity})")
+            
+            prompt = f"""
+            Analyze the following food items and provide detailed nutritional information:
+            
+            Food Items: {', '.join(food_items_detail)}
+            
+            For each food item, provide:
+            1. Estimated calories
+            2. Protein content (grams)
+            3. Carbohydrate content (grams)
+            4. Fat content (grams)
+            5. Additional nutritional notes
+            
+            Consider the quantities specified for each item.
+            Format the response as a structured analysis with total nutritional values.
+            """
+            
+            try:
+                response = query_langchain(prompt, models)
+                analysis_text = response
+            except Exception as e:
+                analysis_text = f"Analysis based on manual selection: {', '.join([item['name'] for item in food_items])}"
+        else:
+            analysis_text = f"Analysis based on manual selection: {', '.join([item['name'] for item in food_items])}"
+        
+        # Extract nutrition data from the analysis
+        items, nutrition = extract_nutrition_data(analysis_text)
+        
+        # If no nutrition data extracted, provide estimates
+        if nutrition['total_calories'] == 0:
+            # Provide basic estimates based on food names
+            total_cals = 0
+            total_protein = 0
+            total_carbs = 0
+            total_fats = 0
+            
+            for item in food_items:
+                name = item['name'].lower()
+                quantity = item.get('quantity', '1 serving')
+                
+                # Basic nutrition estimates (simplified)
+                if any(word in name for word in ['apple', 'banana', 'orange', 'fruit']):
+                    total_cals += 80
+                    total_carbs += 20
+                elif any(word in name for word in ['chicken', 'beef', 'fish', 'meat']):
+                    total_cals += 200
+                    total_protein += 25
+                    total_fats += 10
+                elif any(word in name for word in ['rice', 'pasta', 'bread', 'potato']):
+                    total_cals += 150
+                    total_carbs += 30
+                elif any(word in name for word in ['salad', 'vegetable', 'lettuce']):
+                    total_cals += 50
+                    total_carbs += 10
+                else:
+                    total_cals += 100
+                    total_carbs += 15
+                    total_protein += 5
+                    total_fats += 5
+            
+            nutrition = {
+                'total_calories': total_cals,
+                'total_protein': total_protein,
+                'total_carbs': total_carbs,
+                'total_fats': total_fats
+            }
+        
+        return {
+            "success": True,
+            "description": description,
+            "analysis": analysis_text,
+            "nutritional_data": nutrition,
+            "items": items,
+            "manual_selection": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in manual food analysis: {e}")
+        return {
+            "success": False,
+            "error": f"Manual analysis failed: {str(e)}",
+            "description": f"Main Food Items Identified: {', '.join([item['name'] for item in food_items])}",
+            "nutritional_data": {
+                "total_calories": 0,
+                "total_protein": 0,
+                "total_carbs": 0,
+                "total_fats": 0
             }
         }
 
