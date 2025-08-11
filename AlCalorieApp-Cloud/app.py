@@ -679,15 +679,55 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
-        # Tips
-        with st.expander("💡 Tips for Better Results"):
+        # Enhanced tips for ultra-comprehensive detection
+        with st.expander("💡 Tips for Ultra-Enhanced Food Detection"):
             st.markdown("""
-            - 📸 Take clear photos in good lighting
-            - 🍽️ Include all food items in the frame
-            - 📝 Add context description if needed
-            - 🔄 Try different angles if detection is incomplete
-            - 🌐 Use Enhanced Agent for web-sourced information
+            ### 📸 **Image Quality Tips:**
+            - Take clear, well-lit photos with good contrast
+            - Ensure all food items are visible and not obscured
+            - Use natural lighting when possible for best color accuracy
+            - Avoid shadows that might hide food details
+            
+            ### 🍽️ **Food Arrangement Tips:**
+            - Spread food items out when possible for better individual detection
+            - Include all components of your meal in the frame
+            - Show different angles of complex dishes if needed
+            - Include garnishes, sauces, and condiments in the shot
+            
+            ### 📝 **Context Enhancement:**
+            - Add descriptions for unusual or regional foods
+            - Mention cooking methods if not visually obvious
+            - Include ingredient details for complex dishes
+            - Specify portion sizes if significantly different from standard
+            
+            ### 🎯 **Ultra-Enhanced Features:**
+            - **Multi-Pass Detection:** Uses 8+ different AI prompts for comprehensive coverage
+            - **YOLO Integration:** Multiple confidence levels for maximum food item detection
+            - **Web Intelligence:** Searches for nutritional and cultural information
+            - **Quality Assessment:** Evaluates food safety and freshness indicators
+            - **Category Analysis:** Specialized detection for fruits, vegetables, proteins, etc.
+            
+            ### 🌐 **Enhanced Agent Benefits:**
+            - Comprehensive web search for detailed food information
+            - Cultural and historical context for dishes
+            - Recipe suggestions and cooking tips
+            - Health benefits and dietary considerations
+            - Food safety and storage recommendations
             """)
+        
+        # Enhanced detection status
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); 
+                    padding: 15px; border-radius: 10px; color: white; margin: 10px 0;">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 20px; margin-right: 10px;">⚡</span>
+                <div>
+                    <strong>Ultra-Enhanced Detection Active</strong><br>
+                    <small>Using 8+ AI prompts + YOLO + Web Intelligence for maximum accuracy</small>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Single file upload for both analysis types
         uploaded_file = st.file_uploader(
@@ -725,23 +765,28 @@ def main():
                     
                     image = Image.open(uploaded_file)
                     
-                    status_text.text("🔍 Running standard analysis...")
-                    progress_bar.progress(30)
+                    status_text.text("🔍 Running ultra-enhanced food detection...")
+                    progress_bar.progress(20)
                     
-                    # Standard AI analysis
+                    # Ultra-enhanced AI analysis with comprehensive food detection
                     analysis_result = analyze_food_image(image, context, models)
                     
-                    # Enhanced agent analysis
+                    status_text.text("🤖 Running enhanced agent with web search...")
+                    progress_bar.progress(50)
+                    
+                    # Ultra-enhanced agent analysis with web information
                     enhanced_result = None
                     try:
                         from utils.food_agent import FoodAgent
                         agent = FoodAgent(models)
                         enhanced_result = agent.process_food_image_complete(image)
+                        status_text.text("🌐 Gathering comprehensive food information...")
+                        progress_bar.progress(80)
                     except Exception as e:
                         st.warning(f"Enhanced agent not available: {str(e)}")
                     
-                    status_text.text("📊 Processing combined results...")
-                    progress_bar.progress(90)
+                    status_text.text("📊 Processing ultra-comprehensive results...")
+                    progress_bar.progress(95)
                     
                     progress_bar.progress(100)
                     status_text.text("✅ Comprehensive analysis complete!")
@@ -756,23 +801,36 @@ def main():
                         # Display results
                         description = analysis_result.get('description', 'Food items detected')
                         
+                        # Enhanced results display with food count
+                        if description.startswith("Main Food Items Identified:"):
+                            food_items = description.replace("Main Food Items Identified:", "").strip()
+                            food_count = len([item.strip() for item in food_items.split(',') if item.strip()])
+                            display_title = f"🍽️ Ultra-Enhanced Food Detection ({food_count} items found)"
+                        else:
+                            display_title = "🍽️ Ultra-Enhanced Food Analysis Results"
+                            food_count = "Multiple"
+                        
                         st.markdown(f"""
                         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                                     padding: 25px; border-radius: 20px; color: white; margin: 20px 0; 
                                     box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
                             <div style="display: flex; align-items: center; margin-bottom: 20px;">
                                 <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px;">
-                                    <span style="font-size: 24px;">🍽️</span>
+                                    <span style="font-size: 24px;">🎯</span>
                                 </div>
                                 <div>
-                                    <h3 style="color: white; margin: 0; font-size: 24px;">Food Analysis Results</h3>
-                                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">AI-Powered Food Detection</p>
+                                    <h3 style="color: white; margin: 0; font-size: 24px;">{display_title}</h3>
+                                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Ultra-Comprehensive AI Food Detection</p>
                                 </div>
                             </div>
                             <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px;">
                                 <p style="font-size: 16px; margin: 0; line-height: 1.6; color: #333; font-weight: 500;">
                                     <strong style="color: #667eea;">Detected Items:</strong> {description}
                                 </p>
+                            </div>
+                            <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 12px; opacity: 0.8;">Ultra-Enhanced Detection + Web Intelligence</span>
+                                <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;">✨ Enhanced</span>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -818,11 +876,61 @@ def main():
                                 if 'radar_chart' in charts:
                                     st.pyplot(charts['radar_chart'])
                         
-                        # Enhanced agent results
-                        if enhanced_result and enhanced_result.get("success"):
-                            st.markdown("### 🤖 Enhanced AI Agent Analysis")
-                            with st.expander("🌐 Web-Enhanced Information", expanded=True):
-                                st.markdown(enhanced_result.get('enhanced_analysis', 'No enhanced analysis available'))
+                        # Ultra-enhanced agent results
+                        if enhanced_result and not enhanced_result.get("error"):
+                            st.markdown("### 🤖 Ultra-Enhanced AI Agent Analysis")
+                            
+                            # Display comprehensive analysis
+                            if enhanced_result.get('image_analysis'):
+                                image_analysis = enhanced_result['image_analysis']
+                                
+                                with st.expander("🔍 Ultra-Comprehensive Image Analysis", expanded=True):
+                                    if image_analysis.get('ultra_enhanced_description'):
+                                        st.markdown("#### 📋 Detailed Food Analysis")
+                                        st.markdown(image_analysis['ultra_enhanced_description'])
+                                    
+                                    if image_analysis.get('quality_assessment'):
+                                        st.markdown("#### 🛡️ Food Quality & Safety Assessment")
+                                        st.markdown(image_analysis['quality_assessment'])
+                            
+                            # Display web-enhanced information
+                            if enhanced_result.get('web_information'):
+                                web_info = enhanced_result['web_information']
+                                
+                                with st.expander("🌐 Web-Enhanced Food Intelligence", expanded=True):
+                                    col1, col2 = st.columns(2)
+                                    
+                                    with col1:
+                                        st.markdown("#### 🥗 Nutritional Intelligence")
+                                        nutrition_info = web_info.get('nutrition', {})
+                                        st.write(f"**Calories:** {nutrition_info.get('calories', 'Variable')}")
+                                        st.write(f"**Protein:** {nutrition_info.get('protein', 'Variable')}")
+                                        st.write(f"**Carbs:** {nutrition_info.get('carbs', 'Variable')}")
+                                        st.write(f"**Fats:** {nutrition_info.get('fats', 'Variable')}")
+                                        
+                                        st.markdown("#### 🌍 Cultural Heritage")
+                                        cultural_info = web_info.get('cultural', {})
+                                        st.write(f"**Origin:** {cultural_info.get('origin', 'Various regions')}")
+                                        if cultural_info.get('history'):
+                                            st.write(f"**History:** {cultural_info['history'][:200]}...")
+                                    
+                                    with col2:
+                                        st.markdown("#### 💊 Health Benefits")
+                                        health_info = web_info.get('health', {})
+                                        if health_info.get('benefits'):
+                                            for benefit in health_info['benefits'][:3]:
+                                                st.write(f"• {benefit[:100]}...")
+                                        
+                                        st.markdown("#### 👨‍🍳 Recipe Suggestions")
+                                        recipes = web_info.get('recipes', [])
+                                        for recipe in recipes[:2]:
+                                            st.write(f"**{recipe.get('title', 'Recipe')}**")
+                                            st.write(f"{recipe.get('description', '')[:100]}...")
+                                
+                                # Comprehensive summary
+                                if web_info.get('summary'):
+                                    with st.expander("📊 Comprehensive Food Summary", expanded=False):
+                                        st.markdown(web_info['summary'])
                         
                         # Detailed analysis
                         st.markdown("### 📝 Detailed Analysis")

@@ -105,7 +105,7 @@ def extract_food_items_from_text(text: str) -> set:
     return items
 
 def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
-    """Enhanced food detection with focused, accurate analysis."""
+    """Ultra-enhanced food detection with maximum accuracy and comprehensive coverage."""
     if not models.get('processor') or not models.get('blip_model'):
         return "Image analysis unavailable. Please check model loading."
     
@@ -119,29 +119,33 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
         
         all_food_items = set()
         
-        # Strategy 1: Comprehensive Detection Prompts for Maximum Coverage
-        focused_prompts = [
-            "List ALL food items, ingredients, dishes, sauces, beverages, condiments, and edible components visible in this image. Be exhaustive:",
-            "Identify every food-related item including main dishes, sides, appetizers, desserts, drinks, spices, herbs, oils, sauces, toppings, and any edible elements:",
-            "What food items, cooking ingredients, dietary components, meal elements, and consumable items can you see? List everything:",
-            "Search this image systematically and identify each food component, ingredient, preparation method, cooking style, and nutritional element present:",
-            "Analyze this image comprehensively and extract every food item, beverage, condiment, seasoning, garnish, and edible component visible:"
+        # Strategy 1: Ultra-Comprehensive Detection Prompts for Maximum Coverage
+        ultra_focused_prompts = [
+            "Examine this image pixel by pixel and list EVERY SINGLE food item, ingredient, dish, sauce, beverage, condiment, spice, herb, garnish, topping, and edible component visible. Include even the smallest details:",
+            "Perform a systematic scan of this image and identify ALL food-related items including: main dishes, side dishes, appetizers, desserts, snacks, drinks, cooking ingredients, seasonings, oils, vinegars, sauces, dressings, toppings, garnishes, and any edible elements:",
+            "What are ALL the food items, cooking ingredients, dietary components, meal elements, beverages, condiments, spices, herbs, oils, and consumable items you can see? Be extremely thorough and list everything:",
+            "Analyze this food image comprehensively using multiple detection passes and extract every single food item, beverage, condiment, seasoning, garnish, cooking ingredient, and edible component visible. Include preparation methods and cooking styles:",
+            "Search this image systematically in sections and identify each food component, ingredient, preparation method, cooking style, nutritional element, and edible item present. Leave nothing out:",
+            "Look at this image from multiple angles and perspectives. What are ALL the foods, ingredients, dishes, beverages, seasonings, and edible items present? Include textures, colors, and cooking methods:",
+            "Perform a detailed food inventory of this image. List every protein, vegetable, fruit, grain, dairy product, beverage, sauce, condiment, spice, herb, oil, and any other edible component:",
+            "Examine this image for ALL food categories: proteins (meat, fish, eggs, legumes), vegetables (fresh, cooked, pickled), fruits (fresh, dried, cooked), grains (bread, rice, pasta), dairy (cheese, milk products), beverages, seasonings, and condiments:"
         ]
         
-        # Use all prompts for maximum detection coverage
-        for i, prompt in enumerate(focused_prompts):
+        # Use all ultra-focused prompts for maximum detection coverage
+        for i, prompt in enumerate(ultra_focused_prompts):
             try:
                 inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
                 with torch.no_grad():
                     outputs = models['blip_model'].generate(
                         **inputs, 
-                        max_new_tokens=300,  # Increased for comprehensive detection
-                        num_beams=8,         # Higher for better quality
+                        max_new_tokens=400,  # Increased for ultra-comprehensive detection
+                        num_beams=10,        # Higher for better quality
                         do_sample=True,
-                        temperature=0.5,     # Lower for more focused detection
-                        top_p=0.95,         # Higher for comprehensive results
-                        repetition_penalty=1.1,
-                        length_penalty=1.1   # Encourage longer, more detailed responses
+                        temperature=0.3,     # Lower for more focused detection
+                        top_p=0.98,         # Higher for comprehensive results
+                        repetition_penalty=1.05,
+                        length_penalty=1.2,  # Encourage longer, more detailed responses
+                        early_stopping=False  # Don't stop early
                     )
                 caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
                 
@@ -152,20 +156,26 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                 # Extract food items more carefully
                 items = extract_food_items_from_text(caption)
                 all_food_items.update(items)
-                logger.info(f"Focused prompt {i+1} found: {len(items)} items - {caption[:100]}...")
+                logger.info(f"Ultra-focused prompt {i+1} found: {len(items)} items - {caption[:100]}...")
                 
             except Exception as e:
-                logger.warning(f"Focused prompt {i+1} failed: {e}")
+                logger.warning(f"Ultra-focused prompt {i+1} failed: {e}")
                 continue
         
-        # Strategy 2: YOLO Detection with Fallback
+        # Strategy 2: Ultra-Enhanced YOLO Detection with Multiple Passes
         yolo_detected_items = set()
         if models.get('yolo_model') and models.get('NUMPY_AVAILABLE'):
             try:
                 import numpy as np
                 img_np = np.array(image)
-                # Use lower confidence threshold for maximum detection
-                results = models['yolo_model'](img_np, conf=0.15, iou=0.35)
+                
+                # Multiple detection passes with different parameters for maximum coverage
+                detection_configs = [
+                    {'conf': 0.10, 'iou': 0.30},  # Very low confidence for maximum detection
+                    {'conf': 0.15, 'iou': 0.35},  # Low confidence
+                    {'conf': 0.20, 'iou': 0.40},  # Medium-low confidence
+                    {'conf': 0.25, 'iou': 0.45},  # Medium confidence
+                ]
                 
                 # Comprehensive food database for maximum detection
                 comprehensive_food_items = {
@@ -247,60 +257,73 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                     'flax seed', 'hemp seed', 'quinoa seed', 'amaranth seed', 'buckwheat seed'
                 }
                 
-                for result in results:
-                    if result.boxes is not None:
-                        for box in result.boxes:
-                            cls = int(box.cls[0])
-                            conf = float(box.conf[0])
-                            class_name = models['yolo_model'].names[cls].lower()
-                            
-                            # Check if it's a comprehensive food item
-                            if class_name in comprehensive_food_items:
-                                all_food_items.add(class_name)
-                                logger.info(f"YOLO detected: {class_name} (confidence: {conf:.2f})")
+                # Multiple detection passes with different parameters for maximum coverage
+                for config in detection_configs:
+                    try:
+                        results = models['yolo_model'](img_np, conf=config['conf'], iou=config['iou'])
+                        
+                        for result in results:
+                            if result.boxes is not None:
+                                for box in result.boxes:
+                                    cls = int(box.cls[0])
+                                    conf = float(box.conf[0])
+                                    class_name = models['yolo_model'].names[cls].lower()
+                                    
+                                    # Check if it's a comprehensive food item
+                                    if class_name in comprehensive_food_items:
+                                        all_food_items.add(class_name)
+                                        logger.info(f"YOLO detected: {class_name} (confidence: {conf:.2f}, config: {config})")
+                    except Exception as e:
+                        logger.warning(f"YOLO detection pass failed with config {config}: {e}")
+                        continue
                                 
             except Exception as e:
                 logger.warning(f"YOLO detection failed: {e}")
         else:
             logger.info("YOLO model not available - using BLIP-only detection")
         
-        # Strategy 3: Additional category-specific prompts for maximum coverage
-        category_prompts = [
-            "What vegetables and fruits are in this image?",
-            "What proteins and meats are visible?",
-            "What grains and carbohydrates can you see?",
-            "What sauces, condiments, and seasonings are present?",
-            "What beverages and drinks are in this image?",
-            "What desserts and sweets are visible?",
-            "What herbs and spices can you identify?",
-            "What cooking methods and preparation techniques are visible?"
+        # Strategy 3: Ultra-Detailed Category-Specific Prompts for Maximum Coverage
+        ultra_category_prompts = [
+            "What vegetables are in this image? Include fresh vegetables, cooked vegetables, pickled vegetables, fermented vegetables, and any vegetable-based ingredients:",
+            "What fruits are visible? Include fresh fruits, dried fruits, cooked fruits, fruit juices, fruit sauces, and any fruit-based components:",
+            "What proteins and meats are present? Include all types of meat, poultry, fish, seafood, eggs, legumes, nuts, seeds, and plant-based proteins:",
+            "What grains and carbohydrates can you see? Include bread, rice, pasta, noodles, cereals, flour-based items, and any grain-based ingredients:",
+            "What dairy products are visible? Include milk, cheese, yogurt, butter, cream, and any dairy-based ingredients or preparations:",
+            "What sauces, condiments, and seasonings are present? Include all liquid seasonings, dry spices, herbs, oils, vinegars, and flavor enhancers:",
+            "What beverages and drinks are in this image? Include hot drinks, cold drinks, alcoholic beverages, juices, and any liquid consumables:",
+            "What desserts, sweets, and baked goods are visible? Include cakes, cookies, pastries, candies, chocolates, and any sweet preparations:",
+            "What cooking oils, fats, and lipids can you identify? Include butter, olive oil, vegetable oils, animal fats, and any fat-based ingredients:",
+            "What fermented foods are present? Include pickles, sauerkraut, kimchi, fermented sauces, aged cheeses, and any fermented products:",
+            "What cooking methods and preparation techniques are visible? Identify grilled, fried, baked, steamed, boiled, raw, and other preparation styles:",
+            "What garnishes, toppings, and decorative elements are present? Include herbs, seeds, nuts, sauces, and any finishing touches:"
         ]
         
-        # Use category prompts for additional detection
-        for prompt in category_prompts:
-                try:
-                    inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
-                    with torch.no_grad():
-                        outputs = models['blip_model'].generate(
-                            **inputs, 
-                            max_new_tokens=150,
-                            num_beams=3,
-                            do_sample=True,
-                            temperature=0.8,
-                            top_p=0.9
-                        )
-                    caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
-                    
-                    if caption.startswith(prompt):
-                        caption = caption.replace(prompt, "").strip()
-                    
-                    items = extract_food_items_from_text(caption)
-                    all_food_items.update(items)
-                    logger.info(f"Fallback prompt found: {len(items)} items - {caption[:50]}...")
-                    
-                except Exception as e:
-                    logger.warning(f"Fallback prompt failed: {e}")
-                    continue
+        # Use ultra-detailed category prompts for additional detection
+        for i, prompt in enumerate(ultra_category_prompts):
+            try:
+                inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
+                with torch.no_grad():
+                    outputs = models['blip_model'].generate(
+                        **inputs, 
+                        max_new_tokens=250,  # Increased for detailed responses
+                        num_beams=6,         # Higher for better quality
+                        do_sample=True,
+                        temperature=0.4,     # Lower for more focused detection
+                        top_p=0.95,
+                        repetition_penalty=1.1
+                    )
+                caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
+                
+                if caption.startswith(prompt):
+                    caption = caption.replace(prompt, "").strip()
+                
+                items = extract_food_items_from_text(caption)
+                all_food_items.update(items)
+                logger.info(f"Category prompt {i+1} found: {len(items)} items - {caption[:50]}...")
+                
+            except Exception as e:
+                logger.warning(f"Category prompt {i+1} failed: {e}")
+                continue
         
         # Enhanced filtering with broader food keywords
         if all_food_items:

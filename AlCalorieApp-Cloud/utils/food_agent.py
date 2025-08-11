@@ -39,39 +39,77 @@ class FoodAgent:
         return hashlib.md5(combined.encode()).hexdigest()[:12]
     
     def analyze_food_image(self, image: Image.Image) -> Dict[str, Any]:
-        """Step 1: Analyze food image and generate description"""
+        """Step 1: Ultra-enhanced food image analysis with comprehensive detection"""
         try:
             # Generate session ID for this analysis
             self.session_id = self.generate_session_id(image)
             
-            # Use existing enhanced analysis
+            # Use existing ultra-enhanced analysis
             from .analysis import describe_image_enhanced
             food_description = describe_image_enhanced(image, self.models)
             
-            # Enhanced description with more context
-            enhanced_prompt = f"""
-            Analyze this food image comprehensively and provide:
-            1. Main food items identified
-            2. Cooking methods visible
-            3. Portion sizes estimated
-            4. Cuisine style if identifiable
-            5. Preparation techniques
-            6. Any special ingredients or garnishes
+            # Ultra-enhanced description with comprehensive context
+            ultra_enhanced_prompt = f"""
+            Perform an ultra-comprehensive analysis of this food image and provide:
             
-            Current description: {food_description}
+            1. COMPLETE FOOD INVENTORY:
+               - List every single food item, ingredient, and edible component visible
+               - Include main dishes, side dishes, garnishes, seasonings, and beverages
+               - Identify cooking methods, preparation techniques, and presentation styles
             
-            Provide a detailed, structured analysis.
+            2. DETAILED NUTRITIONAL ASSESSMENT:
+               - Estimate portion sizes for each identified food item
+               - Assess cooking methods and their nutritional impact
+               - Identify healthy vs. less healthy components
+            
+            3. CULINARY ANALYSIS:
+               - Determine cuisine style, cultural origin, and regional influences
+               - Identify cooking techniques and preparation methods
+               - Assess presentation style and plating techniques
+            
+            4. INGREDIENT BREAKDOWN:
+               - List all visible proteins, vegetables, fruits, grains, and dairy
+               - Identify spices, herbs, sauces, and condiments
+               - Note any special or unique ingredients
+            
+            5. MEAL CONTEXT:
+               - Determine meal type (breakfast, lunch, dinner, snack, dessert)
+               - Assess meal balance and nutritional completeness
+               - Identify any dietary considerations (vegetarian, vegan, gluten-free, etc.)
+            
+            Current ultra-enhanced description: {food_description}
+            
+            Provide an extremely detailed, structured analysis that covers every aspect of this food image.
+            Be thorough and comprehensive in your assessment.
             """
             
-            # Get enhanced description from LLM
-            enhanced_description = self._query_llm(enhanced_prompt)
+            # Get ultra-enhanced description from LLM
+            ultra_enhanced_description = self._query_llm(ultra_enhanced_prompt)
+            
+            # Additional analysis for food safety and quality
+            quality_assessment_prompt = f"""
+            Based on the food image analysis: {food_description}
+            
+            Provide a food quality and safety assessment:
+            1. Visual freshness indicators
+            2. Proper cooking indicators (if applicable)
+            3. Food safety considerations
+            4. Storage and handling recommendations
+            5. Optimal consumption timing
+            
+            Be specific and practical in your recommendations.
+            """
+            
+            quality_assessment = self._query_llm(quality_assessment_prompt)
             
             return {
                 "session_id": self.session_id,
                 "original_description": food_description,
-                "enhanced_description": enhanced_description,
-                "timestamp": datetime.now().isoformat(),
-                "image_hash": self.session_id
+                "ultra_enhanced_description": ultra_enhanced_description,
+                "quality_assessment": quality_assessment,
+                "analysis_timestamp": datetime.now().isoformat(),
+                "image_hash": self.session_id,
+                "analysis_version": "ultra_enhanced_v2.0"
             }
             
         except Exception as e:
@@ -113,16 +151,22 @@ class FoodAgent:
             return {"error": str(e)}
     
     def _generate_search_queries(self, food_description: str) -> Dict[str, str]:
-        """Generate targeted search queries for different information types"""
-        # Extract key food terms
+        """Generate ultra-comprehensive search queries for maximum information coverage"""
+        # Extract key food terms with enhanced processing
         food_terms = self._extract_food_terms(food_description)
         
+        # Ultra-comprehensive query set for maximum information gathering
         queries = {
-            "nutrition": f"{food_terms} nutrition facts calories protein carbs fats",
-            "recipes": f"{food_terms} recipe cooking instructions ingredients",
-            "cultural": f"{food_terms} cultural background history origin traditional",
-            "health": f"{food_terms} health benefits nutritional value dietary information",
-            "variations": f"{food_terms} variations types different ways to prepare"
+            "detailed_nutrition": f"{food_terms} complete nutrition facts calories protein carbohydrates fats fiber vitamins minerals micronutrients macronutrients",
+            "comprehensive_recipes": f"{food_terms} traditional recipes modern recipes cooking methods preparation techniques ingredients instructions",
+            "cultural_heritage": f"{food_terms} cultural background history origin traditional preparation regional variations ethnic significance",
+            "health_benefits": f"{food_terms} health benefits nutritional value dietary information wellness effects medical benefits",
+            "cooking_variations": f"{food_terms} cooking variations preparation methods different styles regional differences cooking techniques",
+            "ingredient_analysis": f"{food_terms} ingredients breakdown component analysis nutritional composition food science",
+            "dietary_considerations": f"{food_terms} dietary restrictions allergies vegan vegetarian gluten-free keto paleo dietary needs",
+            "food_safety": f"{food_terms} food safety storage handling preparation safety guidelines contamination prevention",
+            "seasonal_availability": f"{food_terms} seasonal availability fresh ingredients best time to eat optimal freshness",
+            "pairing_suggestions": f"{food_terms} food pairing wine pairing beverage pairing complementary foods flavor combinations"
         }
         
         return queries
