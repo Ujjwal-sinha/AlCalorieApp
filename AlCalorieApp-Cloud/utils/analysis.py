@@ -13,6 +13,91 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+def validate_food_items(items: set, context: str) -> set:
+    """Validate detected food items to ensure accuracy and remove false positives."""
+    validated_items = set()
+    
+    # Comprehensive list of actual food items
+    valid_food_items = {
+        # Proteins
+        'chicken', 'beef', 'pork', 'lamb', 'turkey', 'duck', 'fish', 'salmon', 'tuna', 'cod',
+        'shrimp', 'crab', 'lobster', 'egg', 'eggs', 'tofu', 'tempeh', 'bacon', 'sausage', 'ham',
+        'steak', 'ground beef', 'chicken breast', 'chicken thigh', 'pork chop', 'lamb chop',
+        
+        # Vegetables
+        'tomato', 'tomatoes', 'potato', 'potatoes', 'carrot', 'carrots', 'onion', 'onions',
+        'broccoli', 'cauliflower', 'lettuce', 'spinach', 'kale', 'cucumber', 'bell pepper',
+        'peppers', 'garlic', 'ginger', 'mushroom', 'mushrooms', 'corn', 'peas', 'beans',
+        'green beans', 'asparagus', 'zucchini', 'eggplant', 'celery', 'radish', 'beet',
+        'sweet potato', 'cabbage', 'brussels sprouts', 'artichoke',
+        
+        # Fruits
+        'apple', 'apples', 'banana', 'bananas', 'orange', 'oranges', 'grape', 'grapes',
+        'strawberry', 'strawberries', 'blueberry', 'blueberries', 'lemon', 'lime', 'peach',
+        'pear', 'mango', 'pineapple', 'watermelon', 'cantaloupe', 'kiwi', 'avocado',
+        'cherry', 'cherries', 'plum', 'apricot', 'coconut',
+        
+        # Grains & Starches
+        'rice', 'bread', 'pasta', 'noodles', 'quinoa', 'oats', 'oatmeal', 'cereal',
+        'wheat', 'barley', 'couscous', 'bulgur', 'tortilla', 'bagel', 'croissant',
+        
+        # Dairy
+        'cheese', 'milk', 'yogurt', 'butter', 'cream', 'sour cream', 'cottage cheese',
+        'mozzarella', 'cheddar', 'parmesan', 'feta', 'ricotta',
+        
+        # Prepared Foods
+        'pizza', 'burger', 'sandwich', 'salad', 'soup', 'stew', 'curry', 'pasta',
+        'spaghetti', 'lasagna', 'tacos', 'burrito', 'sushi', 'ramen', 'stir fry',
+        
+        # Beverages
+        'water', 'juice', 'coffee', 'tea', 'milk', 'soda', 'beer', 'wine', 'smoothie',
+        
+        # Condiments & Seasonings
+        'salt', 'pepper', 'oil', 'olive oil', 'butter', 'sauce', 'ketchup', 'mustard',
+        'mayonnaise', 'vinegar', 'soy sauce', 'hot sauce', 'herbs', 'spices',
+        
+        # Desserts
+        'cake', 'cookie', 'cookies', 'ice cream', 'chocolate', 'candy', 'pie', 'pastry'
+    }
+    
+    # Items that are definitely NOT food
+    non_food_items = {
+        'plate', 'bowl', 'cup', 'glass', 'fork', 'knife', 'spoon', 'napkin', 'table',
+        'chair', 'wall', 'background', 'surface', 'container', 'dish', 'utensil',
+        'cutlery', 'placemat', 'tablecloth', 'decoration', 'garnish', 'presentation',
+        'lighting', 'shadow', 'reflection', 'texture', 'color', 'pattern', 'style',
+        'arrangement', 'display', 'setting', 'environment', 'scene', 'photo', 'image'
+    }
+    
+    for item in items:
+        item_clean = item.strip().lower()
+        
+        # Skip if too short or empty
+        if len(item_clean) < 3:
+            continue
+            
+        # Skip if it's a non-food item
+        if any(non_food in item_clean for non_food in non_food_items):
+            continue
+            
+        # Include if it's a known food item
+        if any(food in item_clean for food in valid_food_items):
+            validated_items.add(item_clean)
+            continue
+            
+        # Include if it contains food-related keywords and context supports it
+        food_keywords = ['meat', 'vegetable', 'fruit', 'grain', 'dairy', 'protein', 'sauce', 'seasoning']
+        if any(keyword in item_clean for keyword in food_keywords):
+            validated_items.add(item_clean)
+            continue
+            
+        # Include if the context strongly suggests it's food
+        if any(food_context in context.lower() for food_context in ['cooked', 'fried', 'grilled', 'baked', 'fresh', 'seasoned']):
+            if len(item_clean) > 3 and not any(non_food in item_clean for non_food in non_food_items):
+                validated_items.add(item_clean)
+    
+    return validated_items
+
 def extract_food_items_from_text(text: str) -> set:
     """Extract individual food items from descriptive text with comprehensive parsing."""
     items = set()
@@ -119,33 +204,31 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
         
         all_food_items = set()
         
-        # Strategy 1: Ultra-Comprehensive Detection Prompts for Maximum Coverage
-        ultra_focused_prompts = [
-            "Examine this image pixel by pixel and list EVERY SINGLE food item, ingredient, dish, sauce, beverage, condiment, spice, herb, garnish, topping, and edible component visible. Include even the smallest details:",
-            "Perform a systematic scan of this image and identify ALL food-related items including: main dishes, side dishes, appetizers, desserts, snacks, drinks, cooking ingredients, seasonings, oils, vinegars, sauces, dressings, toppings, garnishes, and any edible elements:",
-            "What are ALL the food items, cooking ingredients, dietary components, meal elements, beverages, condiments, spices, herbs, oils, and consumable items you can see? Be extremely thorough and list everything:",
-            "Analyze this food image comprehensively using multiple detection passes and extract every single food item, beverage, condiment, seasoning, garnish, cooking ingredient, and edible component visible. Include preparation methods and cooking styles:",
-            "Search this image systematically in sections and identify each food component, ingredient, preparation method, cooking style, nutritional element, and edible item present. Leave nothing out:",
-            "Look at this image from multiple angles and perspectives. What are ALL the foods, ingredients, dishes, beverages, seasonings, and edible items present? Include textures, colors, and cooking methods:",
-            "Perform a detailed food inventory of this image. List every protein, vegetable, fruit, grain, dairy product, beverage, sauce, condiment, spice, herb, oil, and any other edible component:",
-            "Examine this image for ALL food categories: proteins (meat, fish, eggs, legumes), vegetables (fresh, cooked, pickled), fruits (fresh, dried, cooked), grains (bread, rice, pasta), dairy (cheese, milk products), beverages, seasonings, and condiments:"
+        # Strategy 1: Accurate Food Detection Prompts with Validation
+        accurate_focused_prompts = [
+            "Look at this food image carefully and identify only the actual food items you can clearly see. List each food item separately:",
+            "What specific foods, dishes, and ingredients are clearly visible in this image? Only list items you are confident about:",
+            "Identify the main food items in this image. Focus on accuracy over quantity. List only what you can clearly recognize:",
+            "What are the primary food components visible in this meal? Be specific and accurate in your identification:",
+            "Examine this food image and list the distinct food items, dishes, and ingredients that are clearly identifiable:",
+            "What foods can you definitively identify in this image? Focus on clear, recognizable items rather than guessing:"
         ]
         
-        # Use all ultra-focused prompts for maximum detection coverage
-        for i, prompt in enumerate(ultra_focused_prompts):
+        # Use accurate focused prompts for reliable detection
+        for i, prompt in enumerate(accurate_focused_prompts):
             try:
                 inputs = models['processor'](image, text=prompt, return_tensors="pt").to(device)
                 with torch.no_grad():
                     outputs = models['blip_model'].generate(
                         **inputs, 
-                        max_new_tokens=400,  # Increased for ultra-comprehensive detection
-                        num_beams=10,        # Higher for better quality
+                        max_new_tokens=200,  # Moderate length for accuracy
+                        num_beams=5,         # Balanced for quality and speed
                         do_sample=True,
-                        temperature=0.3,     # Lower for more focused detection
-                        top_p=0.98,         # Higher for comprehensive results
-                        repetition_penalty=1.05,
-                        length_penalty=1.2,  # Encourage longer, more detailed responses
-                        early_stopping=False  # Don't stop early
+                        temperature=0.7,     # Balanced for accuracy and creativity
+                        top_p=0.9,          # Focused but not too restrictive
+                        repetition_penalty=1.1,
+                        length_penalty=1.0,  # Neutral length preference
+                        early_stopping=True  # Stop when confident
                     )
                 caption = models['processor'].decode(outputs[0], skip_special_tokens=True)
                 
@@ -153,13 +236,14 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                 if caption.startswith(prompt):
                     caption = caption.replace(prompt, "").strip()
                 
-                # Extract food items more carefully
+                # Extract food items with validation
                 items = extract_food_items_from_text(caption)
-                all_food_items.update(items)
-                logger.info(f"Ultra-focused prompt {i+1} found: {len(items)} items - {caption[:100]}...")
+                validated_items = validate_food_items(items, caption)
+                all_food_items.update(validated_items)
+                logger.info(f"Accurate prompt {i+1} found: {len(validated_items)} validated items - {caption[:100]}...")
                 
             except Exception as e:
-                logger.warning(f"Ultra-focused prompt {i+1} failed: {e}")
+                logger.warning(f"Accurate prompt {i+1} failed: {e}")
                 continue
         
         # Strategy 2: Ultra-Enhanced YOLO Detection with Multiple Passes
@@ -169,12 +253,11 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                 import numpy as np
                 img_np = np.array(image)
                 
-                # Multiple detection passes with different parameters for maximum coverage
+                # Balanced detection passes for accuracy and coverage
                 detection_configs = [
-                    {'conf': 0.10, 'iou': 0.30},  # Very low confidence for maximum detection
-                    {'conf': 0.15, 'iou': 0.35},  # Low confidence
-                    {'conf': 0.20, 'iou': 0.40},  # Medium-low confidence
-                    {'conf': 0.25, 'iou': 0.45},  # Medium confidence
+                    {'conf': 0.25, 'iou': 0.45},  # High confidence for accuracy
+                    {'conf': 0.20, 'iou': 0.40},  # Medium confidence
+                    {'conf': 0.15, 'iou': 0.35},  # Lower confidence for coverage
                 ]
                 
                 # Comprehensive food database for maximum detection
@@ -404,60 +487,31 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                 logger.warning(f"Fallback prompt failed: {e}")
                 continue
         
-        # Enhanced filtering with broader food keywords
+        # Apply validation to all detected items
         if all_food_items:
-            # Much broader essential food keywords
-            essential_food_keywords = {
-                # Fruits
-                'apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'lemon', 'lime',
-                'peach', 'pear', 'mango', 'pineapple', 'watermelon', 'cantaloupe', 'kiwi', 'fruit',
-                # Vegetables
-                'tomato', 'potato', 'carrot', 'onion', 'broccoli', 'cauliflower', 'lettuce', 'spinach',
-                'cucumber', 'bell pepper', 'jalapeno', 'garlic', 'ginger', 'mushroom', 'corn', 'peas',
-                'beans', 'asparagus', 'zucchini', 'eggplant', 'celery', 'radish', 'beet', 'turnip', 'vegetable',
-                # Proteins
-                'chicken', 'beef', 'pork', 'lamb', 'turkey', 'duck', 'egg', 'tofu', 'tempeh',
-                'shrimp', 'crab', 'lobster', 'salmon', 'tuna', 'cod', 'tilapia', 'bacon', 'sausage', 'meat', 'fish',
-                # Dairy
-                'cheese', 'milk', 'yogurt', 'butter', 'cream', 'sour cream', 'cottage cheese', 'dairy',
-                # Grains
-                'bread', 'rice', 'pasta', 'noodles', 'quinoa', 'oatmeal', 'cereal', 'flour', 'wheat', 'grain',
-                # Processed foods
-                'pizza', 'burger', 'sandwich', 'hot dog', 'taco', 'burrito', 'sushi', 'salad', 'soup',
-                'stew', 'curry', 'stir fry', 'lasagna', 'spaghetti', 'macaroni', 'cake', 'cookie',
-                'brownie', 'muffin', 'donut', 'croissant', 'bagel', 'toast', 'pancake', 'waffle',
-                # Beverages
-                'coffee', 'tea', 'juice', 'water', 'soda', 'beer', 'wine', 'milk', 'smoothie', 'drink',
-                # Condiments
-                'sauce', 'ketchup', 'mustard', 'mayonnaise', 'hot sauce', 'soy sauce', 'vinegar',
-                'oil', 'olive oil', 'butter', 'salt', 'pepper', 'sugar', 'honey', 'syrup', 'seasoning',
-                # General food terms
-                'food', 'meal', 'dish', 'ingredient', 'spice', 'herb', 'garnish', 'topping', 'filling'
-            }
+            # Validate all detected items for accuracy
+            validated_items = validate_food_items(all_food_items, "")
             
-            final_items = []
-            for item in all_food_items:
-                item_clean = item.strip().lower()
-                # More permissive filtering - include items that are longer than 2 chars and not obvious non-food
-                if (len(item_clean) > 2 and 
-                    (any(keyword in item_clean for keyword in essential_food_keywords) or 
-                     not any(non_food in item_clean for non_food in ['plate', 'bowl', 'cup', 'glass', 'table', 'chair', 'wall', 'floor', 'ceiling', 'window', 'door', 'light', 'shadow']))):
-                    final_items.append(item_clean)
-            
-            if final_items:
-                unique_items = sorted(set(final_items))
-                # Limit to top 15 most relevant items for comprehensive detection
-                if len(unique_items) > 15:
-                    unique_items = unique_items[:15]
+            if validated_items:
+                # Sort and limit to most relevant items
+                unique_items = sorted(list(validated_items))
+                
+                # Limit to reasonable number for accuracy
+                if len(unique_items) > 10:
+                    unique_items = unique_items[:10]
                 
                 # Format as "Main Food Items Identified: item1, item2, item3..."
                 result_description = "Main Food Items Identified: " + ", ".join(unique_items)
                 
-                # Add note if YOLO is not available
-                if not models.get('yolo_model'):
-                    result_description += " (Enhanced detection with BLIP only - YOLO unavailable)"
+                # Add detection method info
+                detection_methods = []
+                if models.get('yolo_model'):
+                    detection_methods.append("YOLO")
+                detection_methods.append("BLIP")
                 
-                logger.info(f"Final food items: {result_description}")
+                result_description += f" (Detected using: {', '.join(detection_methods)})"
+                
+                logger.info(f"Validated food items ({len(unique_items)}): {result_description}")
                 return result_description
         
         return "Food items detected. Add context for better identification."
