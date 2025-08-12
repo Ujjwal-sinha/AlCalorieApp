@@ -1049,8 +1049,7 @@ def display_analysis_results(analysis_result):
                 st.markdown(analysis_result["analysis"])
 
 def display_expert_results(detections, summary):
-    """Display expert analysis results with detailed analysis only"""
-    st.markdown("### 🧠 Expert Multi-Model Analysis Results")
+    """Display expert analysis results with comprehensive report format"""
     
     # Handle new comprehensive format
     if isinstance(detections, dict):
@@ -1089,13 +1088,141 @@ def display_expert_results(detections, summary):
             continue
         valid_detections.append(detection)
     
+    # Create comprehensive report header
     if valid_detections:
-        st.success(f"✅ Expert analysis detected {len(valid_detections)} valid food items")
+        # Generate description for detected items
+        detected_items = [detection.final_label.replace('_', ' ').title() for detection in valid_detections]
+        description = ", ".join(detected_items[:5])  # Show first 5 items
+        if len(detected_items) > 5:
+            description += f" and {len(detected_items) - 5} more items"
         
-        # Show detailed detection information for valid foods only
-        st.markdown("#### 🔍 Detailed Food Analysis")
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); 
+                    padding: 25px; border-radius: 20px; color: white; margin: 20px 0; 
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px;">
+                    <span style="font-size: 24px;">🧠</span>
+                </div>
+                <div>
+                    <h3 style="color: white; margin: 0; font-size: 24px;">Expert Multi-Model Analysis Results</h3>
+                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Advanced AI-Powered Food Detection</p>
+                </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px;">
+                <p style="font-size: 16px; margin: 0; line-height: 1.6; color: #333; font-weight: 500;">
+                    <strong style="color: #ff6b6b;">Detected Items:</strong> {description}
+                </p>
+                <p style="font-size: 14px; margin: 10px 0 0 0; color: #666;">
+                    <strong>Total Items:</strong> {len(valid_detections)} | <strong>Detection Method:</strong> Expert Multi-Model System
+                </p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Create comprehensive nutrition data for charts
+        nutritional_data = []
+        total_calories = 0
+        total_protein = 0
+        total_carbs = 0
+        total_fats = 0
+        
         for detection in valid_detections:
-            with st.expander(f"📋 {detection.final_label.replace('_', ' ').title()} - Detailed Analysis", expanded=True):
+            nutrition = estimate_basic_nutrition(detection.final_label)
+            nutritional_data.append({
+                'food': detection.final_label.replace('_', ' ').title(),
+                'calories': nutrition['calories'],
+                'protein': nutrition['protein'],
+                'carbs': nutrition['carbs'],
+                'fat': nutrition['fat'],
+                'confidence': detection.confidence_score,
+                'detection_method': detection.detection_method
+            })
+            
+            # Sum up totals for chart
+            total_calories += nutrition['calories']
+            total_protein += nutrition['protein']
+            total_carbs += nutrition['carbs']
+            total_fats += nutrition['fat']
+        
+        # Create aggregated nutrition data for charts
+        chart_nutrition_data = {
+            'total_calories': total_calories,
+            'total_protein': total_protein,
+            'total_carbs': total_carbs,
+            'total_fats': total_fats,
+            'total_fiber': 0  # Default value
+        }
+        
+        # Nutrition Charts
+        if nutritional_data:
+            st.markdown("#### 📊 Expert Analysis Nutrition Visualization")
+            
+            # Create nutrition charts
+            nutrition_charts = create_complex_nutrition_charts(chart_nutrition_data)
+            
+            if nutrition_charts:
+                chart_tab1, chart_tab2, chart_tab3, chart_tab4 = st.tabs([
+                    "🔥 3D-Style Bar Chart", "🎯 Radar Chart", "📈 Stacked Area Chart", "🌊 Waterfall Chart"
+                ])
+                
+                with chart_tab1:
+                    if 'complex_bar_chart' in nutrition_charts:
+                        st.pyplot(nutrition_charts['complex_bar_chart'])
+                
+                with chart_tab2:
+                    if 'radar_chart' in nutrition_charts:
+                        st.pyplot(nutrition_charts['radar_chart'])
+                
+                with chart_tab3:
+                    if 'stacked_area_chart' in nutrition_charts:
+                        st.pyplot(nutrition_charts['stacked_area_chart'])
+                
+                with chart_tab4:
+                    if 'waterfall_chart' in nutrition_charts:
+                        st.pyplot(nutrition_charts['waterfall_chart'])
+        
+        # Show detailed analysis
+        st.markdown("#### 📝 Expert Analysis Report")
+        with st.expander("🔍 Complete Expert Analysis Report", expanded=True):
+            st.markdown("### 🧠 Expert Multi-Model Detection Results")
+            
+            # Show detected items summary
+            st.markdown("#### 🍽️ Detected Food Items")
+            detected_items_list = [detection.final_label.replace('_', ' ').title() for detection in valid_detections]
+            for i, item in enumerate(detected_items_list, 1):
+                st.write(f"**{i}.** {item}")
+            
+            # Model performance summary
+            if summary.get("detection_method"):
+                st.markdown("#### 🤖 Model Performance Summary")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Detection Method", summary['detection_method'])
+                with col2:
+                    st.metric("Total Detections", summary.get('total_detections', 0))
+                with col3:
+                    st.metric("Success Rate", "✅" if summary.get('success', False) else "❌")
+                
+                # Show individual model counts if available
+                if "blip_count" in summary:
+                    st.markdown("#### 📊 Model Breakdown")
+                    col1, col2, col3, col4, col5 = st.columns(5)
+                    with col1:
+                        st.metric("BLIP", summary.get("blip_count", 0))
+                    with col2:
+                        st.metric("ViT", summary.get("vit_count", 0))
+                    with col3:
+                        st.metric("Swin", summary.get("swin_count", 0))
+                    with col4:
+                        st.metric("CLIP", summary.get("clip_count", 0))
+                    with col5:
+                        st.metric("YOLO", summary.get("yolo_count", 0))
+            
+            # Detailed food analysis
+            st.markdown("#### 🔍 Detailed Food Analysis")
+            for i, detection in enumerate(valid_detections, 1):
+                st.markdown(f"**{i}. {detection.final_label.replace('_', ' ').title()}**")
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -1110,12 +1237,12 @@ def display_expert_results(detections, summary):
                 with col2:
                     st.markdown("**Top Alternatives:**")
                     if hasattr(detection, 'top_3_alternatives') and detection.top_3_alternatives:
-                        for i, alternative in enumerate(detection.top_3_alternatives, 1):
+                        for j, alternative in enumerate(detection.top_3_alternatives, 1):
                             if isinstance(alternative, tuple):
                                 label, score = alternative
-                                st.write(f"• **{i}.** {label.replace('_', ' ').title()}: {score:.3f}")
+                                st.write(f"• **{j}.** {label.replace('_', ' ').title()}: {score:.3f}")
                             else:
-                                st.write(f"• **{i}.** {str(alternative)}")
+                                st.write(f"• **{j}.** {str(alternative)}")
                     
                     if hasattr(detection, 'blip_description') and detection.blip_description:
                         st.markdown("**BLIP Description:**")
@@ -1133,34 +1260,15 @@ def display_expert_results(detections, summary):
                     st.metric("Carbs", f"{nutrition['carbs']}g")
                 with col_n4:
                     st.metric("Fat", f"{nutrition['fat']}g")
+                
+                st.markdown("---")
+        
+        # Show detection method
+        st.markdown("### 🔬 Detection Method")
+        st.info("Expert Multi-Model System: YOLO + ViT-B/16 + Swin + CLIP + BLIP")
+        
     else:
         st.info("No valid food items detected in expert analysis")
-    
-    # Show detection method
-    st.markdown("### 🔬 Detection Method")
-    st.info("Expert Multi-Model System: YOLO + ViT-B/16 + Swin + CLIP + BLIP")
-    
-    # Model performance summary
-    if summary.get("detection_method"):
-        st.markdown("#### 🤖 Model Performance Summary")
-        st.write(f"**Detection Method:** {summary['detection_method']}")
-        st.write(f"**Total Detections:** {summary.get('total_detections', 0)}")
-        st.write(f"**Success Rate:** {summary.get('success', False)}")
-        
-        # Show individual model counts if available
-        if "blip_count" in summary:
-            st.markdown("#### 📊 Model Breakdown")
-            col1, col2, col3, col4, col5 = st.columns(5)
-            with col1:
-                st.metric("BLIP", summary.get("blip_count", 0))
-            with col2:
-                st.metric("ViT", summary.get("vit_count", 0))
-            with col3:
-                st.metric("Swin", summary.get("swin_count", 0))
-            with col4:
-                st.metric("CLIP", summary.get("clip_count", 0))
-            with col5:
-                st.metric("YOLO", summary.get("yolo_count", 0))
 
 def categorize_food(food_name):
     """Categorize food into main categories"""
