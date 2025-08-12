@@ -1591,33 +1591,71 @@ def create_expert_food_recognition_interface(models: Dict[str, Any]):
                 if summary["success"]:
                     st.success(f"✅ Expert analysis complete! Found {summary['total_detections']} food items")
                     
+                    # Handle new comprehensive format
+                    all_detections = []
+                    if isinstance(detections, dict):
+                        if "blip_detections" in detections:
+                            all_detections.extend(detections["blip_detections"])
+                        if "vit_detections" in detections:
+                            all_detections.extend(detections["vit_detections"])
+                        if "swin_detections" in detections:
+                            all_detections.extend(detections["swin_detections"])
+                        if "clip_detections" in detections:
+                            all_detections.extend(detections["clip_detections"])
+                        if "yolo_detections" in detections:
+                            all_detections.extend(detections["yolo_detections"])
+                    else:
+                        all_detections = detections
+                    
                     # Display results
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         st.markdown("### 🎯 Detected Foods")
-                        for i, detection in enumerate(detections):
-                            st.markdown(f"""
-                            **{i+1}. {detection.final_label.replace('_', ' ').title()}**
-                            - Confidence: {detection.confidence_score:.3f}
-                            - Classifier: {detection.classifier_probability:.3f}
-                            - CLIP Similarity: {detection.clip_similarity:.3f}
-                            """)
+                        for i, detection in enumerate(all_detections):
+                            if hasattr(detection, 'final_label'):
+                                st.markdown(f"""
+                                **{i+1}. {detection.final_label.replace('_', ' ').title()}**
+                                - Confidence: {detection.confidence_score:.3f}
+                                - Classifier: {detection.classifier_probability:.3f}
+                                - CLIP Similarity: {detection.clip_similarity:.3f}
+                                """)
                     
                     with col2:
                         st.markdown("### 📊 Detection Details")
-                        for detection in detections:
-                            with st.expander(f"Details for {detection.final_label}"):
-                                st.write(f"**Bounding Box:** {detection.bounding_box}")
-                                st.write(f"**Top Alternatives:**")
-                                for label, score in detection.top_3_alternatives:
-                                    st.write(f"  - {label.replace('_', ' ').title()}: {score:.3f}")
-                                if detection.blip_description:
-                                    st.write(f"**BLIP Description:** {detection.blip_description}")
+                        for detection in all_detections:
+                            if hasattr(detection, 'final_label'):
+                                with st.expander(f"Details for {detection.final_label}"):
+                                    st.write(f"**Bounding Box:** {detection.bounding_box}")
+                                    st.write(f"**Top Alternatives:**")
+                                    if hasattr(detection, 'top_3_alternatives') and detection.top_3_alternatives:
+                                        for alternative in detection.top_3_alternatives:
+                                            if isinstance(alternative, tuple):
+                                                label, score = alternative
+                                                st.write(f"  - {label.replace('_', ' ').title()}: {score:.3f}")
+                                            else:
+                                                st.write(f"  - {str(alternative)}")
+                                    if hasattr(detection, 'blip_description') and detection.blip_description:
+                                        st.write(f"**BLIP Description:** {detection.blip_description}")
                     
                     # Show detection method
                     st.markdown("### 🔬 Detection Method")
                     st.info("Expert Multi-Model System: YOLO + ViT-B/16 + Swin + CLIP + BLIP")
+                    
+                    # Show model breakdown
+                    if "blip_count" in summary:
+                        st.markdown("#### 📊 Model Breakdown")
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        with col1:
+                            st.metric("BLIP", summary.get("blip_count", 0))
+                        with col2:
+                            st.metric("ViT", summary.get("vit_count", 0))
+                        with col3:
+                            st.metric("Swin", summary.get("swin_count", 0))
+                        with col4:
+                            st.metric("CLIP", summary.get("clip_count", 0))
+                        with col5:
+                            st.metric("YOLO", summary.get("yolo_count", 0))
                     
                 else:
                     st.warning("No food items detected with sufficient confidence")

@@ -1052,9 +1052,34 @@ def display_expert_results(detections, summary):
     """Display expert analysis results with detailed analysis only"""
     st.markdown("### 🧠 Expert Multi-Model Analysis Results")
     
+    # Handle new comprehensive format
+    if isinstance(detections, dict):
+        # New comprehensive format - extract all detections
+        all_detections = []
+        if "blip_detections" in detections:
+            all_detections.extend(detections["blip_detections"])
+        if "vit_detections" in detections:
+            all_detections.extend(detections["vit_detections"])
+        if "swin_detections" in detections:
+            all_detections.extend(detections["swin_detections"])
+        if "clip_detections" in detections:
+            all_detections.extend(detections["clip_detections"])
+        if "yolo_detections" in detections:
+            all_detections.extend(detections["yolo_detections"])
+        detections = all_detections
+    
+    # Ensure detections is a list
+    if not isinstance(detections, list):
+        st.error("Invalid detection format")
+        return
+    
     # Filter out non-food items and generic detections
     valid_detections = []
     for detection in detections:
+        # Ensure detection is a FoodDetection object
+        if not hasattr(detection, 'final_label'):
+            continue
+            
         # Skip generic/non-food items
         label_lower = detection.final_label.lower()
         if any(skip_word in label_lower for skip_word in ['what', 'how', 'when', 'where', 'why', 'food_item', 'unknown', 'other']):
@@ -1084,10 +1109,15 @@ def display_expert_results(detections, summary):
                 
                 with col2:
                     st.markdown("**Top Alternatives:**")
-                    for i, (label, score) in enumerate(detection.top_3_alternatives, 1):
-                        st.write(f"• **{i}.** {label.replace('_', ' ').title()}: {score:.3f}")
+                    if hasattr(detection, 'top_3_alternatives') and detection.top_3_alternatives:
+                        for i, alternative in enumerate(detection.top_3_alternatives, 1):
+                            if isinstance(alternative, tuple):
+                                label, score = alternative
+                                st.write(f"• **{i}.** {label.replace('_', ' ').title()}: {score:.3f}")
+                            else:
+                                st.write(f"• **{i}.** {str(alternative)}")
                     
-                    if detection.blip_description:
+                    if hasattr(detection, 'blip_description') and detection.blip_description:
                         st.markdown("**BLIP Description:**")
                         st.write(detection.blip_description)
                 
@@ -1116,6 +1146,21 @@ def display_expert_results(detections, summary):
         st.write(f"**Detection Method:** {summary['detection_method']}")
         st.write(f"**Total Detections:** {summary.get('total_detections', 0)}")
         st.write(f"**Success Rate:** {summary.get('success', False)}")
+        
+        # Show individual model counts if available
+        if "blip_count" in summary:
+            st.markdown("#### 📊 Model Breakdown")
+            col1, col2, col3, col4, col5 = st.columns(5)
+            with col1:
+                st.metric("BLIP", summary.get("blip_count", 0))
+            with col2:
+                st.metric("ViT", summary.get("vit_count", 0))
+            with col3:
+                st.metric("Swin", summary.get("swin_count", 0))
+            with col4:
+                st.metric("CLIP", summary.get("clip_count", 0))
+            with col5:
+                st.metric("YOLO", summary.get("yolo_count", 0))
 
 def categorize_food(food_name):
     """Categorize food into main categories"""
