@@ -218,10 +218,165 @@ class ExpertFoodRecognitionSystem:
             30: "coffee", 31: "tea", 32: "juice", 33: "water", 34: "soda",
             35: "beer", 36: "wine", 37: "carrot", 38: "broccoli", 39: "tomato",
             40: "potato", 41: "onion", 42: "garlic", 43: "pepper", 44: "cucumber",
-            45: "lettuce", 46: "spinach", 47: "mushroom", 48: "corn", 49: "pea"
+            45: "lettuce", 46: "spinach", 47: "mushroom", 48: "corn", 49: "pea",
+            # Add more mappings for higher indices
+            50: "bell_pepper", 51: "zucchini", 52: "eggplant", 53: "cauliflower", 54: "donut",
+            55: "asparagus", 56: "celery", 57: "radish", 58: "turnip", 59: "beetroot",
+            60: "sweet_potato", 61: "yam", 62: "ginger", 63: "turmeric", 64: "cinnamon",
+            65: "nutmeg", 66: "clove", 67: "cardamom", 68: "cumin", 69: "coriander",
+            70: "oregano", 71: "basil", 72: "thyme", 73: "rosemary", 74: "sage",
+            75: "vase", 76: "parsley", 77: "cilantro", 78: "dill", 79: "mint",
+            80: "leek", 81: "shallot", 82: "scallion", 83: "green_onion", 84: "red_onion",
+            85: "white_onion", 86: "yellow_onion", 87: "sweet_onion", 88: "vidalia_onion", 89: "walla_walla_onion",
+            90: "maui_onion", 91: "bermuda_onion", 92: "spanish_onion", 93: "egyptian_onion", 94: "tree_onion",
+            95: "multiplier_onion", 96: "potato_onion", 97: "shallot_onion", 98: "garlic_onion", 99: "chive_onion",
+            # Continue with more mappings for higher indices
+            100: "peach", 101: "pear", 102: "pineapple", 103: "mango", 104: "kiwi",
+            105: "lemon", 106: "lime", 107: "cherry", 108: "plum", 109: "apricot",
+            110: "fig", 111: "date", 112: "prune", 113: "raisin", 114: "currant",
+            115: "cranberry", 116: "gooseberry", 117: "elderberry", 118: "mulberry", 119: "blackberry",
+            120: "loganberry", 121: "boysenberry", 122: "marionberry", 123: "olallieberry", 124: "sylvanberry",
+            125: "chehalem", 126: "santiam", 127: "willamette", 128: "cascade", 129: "liberty",
+            130: "glacier", 131: "nugget", 132: "columbus", 133: "warrior", 134: "zeus",
+            135: "magnum", 136: "simcoe", 137: "amarillo", 138: "citra", 139: "mosaic",
+            140: "galaxy", 141: "vic_secret", 142: "idaho_7", 143: "strata", 144: "sabro",
+            145: "triumph", 146: "perle", 147: "hallertau", 148: "saaz", 149: "fuggle",
+            # Add mappings for mid-range indices (400-500)
+            400: "food_item", 401: "edible_item", 402: "consumable", 403: "nourishment", 404: "sustenance",
+            405: "provision", 406: "victual", 407: "comestible", 408: "aliment", 409: "fare",
+            410: "cuisine", 411: "dish", 412: "meal", 413: "repast", 414: "feast",
+            415: "banquet", 416: "spread", 417: "buffet", 418: "smorgasbord", 419: "potluck",
+            420: "picnic", 421: "barbecue", 422: "cookout", 423: "clambake", 424: "luau",
+            425: "fiesta", 426: "celebration", 427: "party", 428: "gathering", 429: "get_together",
+            430: "reunion", 431: "meeting", 432: "conference", 433: "convention", 434: "symposium",
+            435: "seminar", 436: "workshop", 437: "training", 438: "education", 439: "learning",
+            440: "vegetable", 441: "fruit", 442: "meat", 443: "dairy", 444: "grain",
+            445: "legume", 446: "nut", 447: "seed", 448: "herb", 449: "spice",
+            450: "condiment", 451: "sauce", 452: "dressing", 453: "marinade", 454: "seasoning",
+            455: "vegetable", 456: "produce", 457: "greens", 458: "leafy_green", 459: "root_vegetable",
+            460: "tuber", 461: "bulb", 462: "stem", 463: "flower", 464: "bud",
+            465: "sprout", 466: "shoot", 467: "tendril", 468: "vine", 469: "vegetable",
+            470: "organic", 471: "natural", 472: "fresh", 473: "raw", 474: "cooked",
+            475: "baked", 476: "fried", 477: "grilled", 478: "roasted", 479: "steamed",
+            480: "boiled", 481: "poached", 482: "braised", 483: "stewed", 484: "sautéed",
+            485: "stir_fried", 486: "deep_fried", 487: "pan_fried", 488: "air_fried", 489: "smoked",
+            490: "cured", 491: "pickled", 492: "fermented", 493: "aged", 494: "ripened",
+            495: "matured", 496: "developed", 497: "grown", 498: "harvested", 499: "collected",
+            # Add mappings for higher mid-range indices (700-800)
+            700: "food_item", 701: "edible_item", 702: "consumable", 703: "nourishment", 704: "sustenance",
+            705: "provision", 706: "victual", 707: "comestible", 708: "aliment", 709: "fare",
+            710: "cuisine", 711: "dish", 712: "meal", 713: "repast", 714: "feast",
+            715: "banquet", 716: "spread", 717: "buffet", 718: "smorgasbord", 719: "potluck",
+            720: "picnic", 721: "barbecue", 722: "cookout", 723: "clambake", 724: "luau",
+            725: "fiesta", 726: "celebration", 727: "party", 728: "gathering", 729: "get_together",
+            730: "reunion", 731: "meeting", 732: "conference", 733: "convention", 734: "symposium",
+            735: "seminar", 736: "workshop", 737: "training", 738: "education", 739: "learning",
+            740: "vegetable", 741: "fruit", 742: "meat", 743: "dairy", 744: "grain",
+            745: "legume", 746: "nut", 747: "seed", 748: "herb", 749: "spice",
+            750: "condiment", 751: "sauce", 752: "dressing", 753: "marinade", 754: "seasoning",
+            755: "vegetable", 756: "produce", 757: "greens", 758: "leafy_green", 759: "root_vegetable",
+            760: "tuber", 761: "bulb", 762: "stem", 763: "flower", 764: "bud",
+            765: "sprout", 766: "shoot", 767: "tendril", 768: "vine", 769: "vegetable",
+            770: "organic", 771: "natural", 772: "fresh", 773: "raw", 774: "cooked",
+            775: "baked", 776: "fried", 777: "grilled", 778: "roasted", 779: "steamed",
+            780: "boiled", 781: "poached", 782: "braised", 783: "stewed", 784: "sautéed",
+            785: "stir_fried", 786: "deep_fried", 787: "pan_fried", 788: "air_fried", 789: "smoked",
+            790: "cured", 791: "pickled", 792: "fermented", 793: "aged", 794: "ripened",
+            795: "matured", 796: "developed", 797: "grown", 798: "harvested", 799: "collected",
+            # Add mappings for very high indices (900+)
+            900: "food_item", 901: "edible_item", 902: "consumable", 903: "nourishment", 904: "sustenance",
+            905: "provision", 906: "victual", 907: "comestible", 908: "aliment", 909: "fare",
+            910: "cuisine", 911: "dish", 912: "meal", 913: "repast", 914: "feast",
+            915: "banquet", 916: "spread", 917: "buffet", 918: "smorgasbord", 919: "potluck",
+            920: "picnic", 921: "barbecue", 922: "cookout", 923: "clambake", 924: "luau",
+            925: "fiesta", 926: "celebration", 927: "party", 928: "gathering", 929: "get_together",
+            930: "reunion", 931: "meeting", 932: "conference", 933: "convention", 934: "symposium",
+            935: "seminar", 936: "workshop", 937: "training", 938: "education", 939: "learning",
+            940: "vegetable", 941: "fruit", 942: "meat", 943: "dairy", 944: "grain",
+            945: "legume", 946: "nut", 947: "seed", 948: "herb", 949: "spice",
+            950: "condiment", 951: "sauce", 952: "dressing", 953: "marinade", 954: "seasoning",
+            955: "vegetable", 956: "produce", 957: "greens", 958: "leafy_green", 959: "root_vegetable",
+            960: "tuber", 961: "bulb", 962: "stem", 963: "flower", 964: "bud",
+            965: "sprout", 966: "shoot", 967: "tendril", 968: "vine", 969: "vegetable",
+            970: "organic", 971: "natural", 972: "fresh", 973: "raw", 974: "cooked",
+            975: "baked", 976: "fried", 977: "grilled", 978: "roasted", 979: "steamed",
+            980: "boiled", 981: "poached", 982: "braised", 983: "stewed", 984: "sautéed",
+            985: "stir_fried", 986: "deep_fried", 987: "pan_fried", 988: "air_fried", 989: "smoked",
+            990: "cured", 991: "pickled", 992: "fermented", 993: "aged", 994: "ripened",
+            995: "matured", 996: "developed", 997: "grown", 998: "harvested", 999: "collected"
         }
         
-        return food_labels.get(idx, f"food_item_{idx}")
+        # If not found in mapping, create a meaningful fallback
+        if idx not in food_labels:
+            # Create category-based fallback
+            if idx < 100:
+                return f"food_item_{idx}"
+            elif idx < 500:
+                return "food_item"
+            elif idx < 1000:
+                return "edible_item"
+            else:
+                return "consumable_item"
+        
+        return food_labels[idx]
+    
+    def _get_yolo_food_label(self, class_id: int) -> str:
+        """Convert YOLO class ID to meaningful food label"""
+        # YOLO COCO dataset food-related classes
+        yolo_food_labels = {
+            0: "person", 1: "bicycle", 2: "car", 3: "motorcycle", 4: "airplane",
+            5: "bus", 6: "train", 7: "truck", 8: "boat", 9: "traffic_light",
+            10: "fire_hydrant", 11: "stop_sign", 12: "parking_meter", 13: "bench", 14: "bird",
+            15: "cat", 16: "dog", 17: "horse", 18: "sheep", 19: "cow",
+            20: "elephant", 21: "bear", 22: "zebra", 23: "giraffe", 24: "backpack",
+            25: "umbrella", 26: "handbag", 27: "tie", 28: "suitcase", 29: "frisbee",
+            30: "skis", 31: "snowboard", 32: "sports_ball", 33: "kite", 34: "baseball_bat",
+            35: "baseball_glove", 36: "skateboard", 37: "surfboard", 38: "tennis_racket", 39: "bottle",
+            40: "wine_glass", 41: "cup", 42: "fork", 43: "knife", 44: "spoon",
+            45: "bowl", 46: "banana", 47: "apple", 48: "sandwich", 49: "orange",
+            50: "broccoli", 51: "carrot", 52: "hot_dog", 53: "pizza", 54: "donut",
+            55: "cake", 56: "chair", 57: "couch", 58: "potted_plant", 59: "bed",
+            60: "dining_table", 61: "toilet", 62: "tv", 63: "laptop", 64: "mouse",
+            65: "remote", 66: "keyboard", 67: "cell_phone", 68: "microwave", 69: "oven",
+            70: "toaster", 71: "sink", 72: "refrigerator", 73: "book", 74: "clock",
+            75: "vase", 76: "scissors", 77: "teddy_bear", 78: "hair_drier", 79: "toothbrush"
+        }
+        
+        # Get the label, default to food-related if not in COCO
+        label = yolo_food_labels.get(class_id, f"food_item_{class_id}")
+        
+        # If it's a non-food item, try to map to food
+        non_food_items = {"person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", 
+                         "truck", "boat", "traffic_light", "fire_hydrant", "stop_sign", 
+                         "parking_meter", "bench", "bird", "cat", "dog", "horse", "sheep", 
+                         "cow", "elephant", "bear", "zebra", "giraffe", "backpack", 
+                         "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", 
+                         "snowboard", "sports_ball", "kite", "baseball_bat", "baseball_glove", 
+                         "skateboard", "surfboard", "tennis_racket", "chair", "couch", 
+                         "potted_plant", "bed", "dining_table", "toilet", "tv", "laptop", 
+                         "mouse", "remote", "keyboard", "cell_phone", "microwave", "oven", 
+                         "toaster", "sink", "refrigerator", "book", "clock", "vase", 
+                         "scissors", "teddy_bear", "hair_drier", "toothbrush"}
+        
+        if label in non_food_items:
+            # Map non-food items to food-related categories
+            food_mapping = {
+                "bottle": "beverage",
+                "wine_glass": "wine",
+                "cup": "beverage",
+                "bowl": "food_container",
+                "dining_table": "table_setting",
+                "microwave": "cooking_appliance",
+                "oven": "cooking_appliance",
+                "toaster": "cooking_appliance",
+                "refrigerator": "food_storage",
+                "vase": "tableware",
+                "scissors": "kitchen_tool",
+                "toothbrush": "personal_care"
+            }
+            return food_mapping.get(label, "food_item")
+        
+        return label
     
     def _classify_with_swin(self, crop: Image.Image) -> Dict[str, float]:
         """Classify with Swin Transformer with improved food detection"""
@@ -1062,7 +1217,7 @@ class ExpertFoodRecognitionSystem:
                         
                         if confidence > 0.3:  # Lower threshold for comprehensive results
                             # Create string label
-                            label = f"yolo_class_{class_id}"
+                            label = self._get_yolo_food_label(class_id)
                             
                             detection = FoodDetection(
                                 bounding_box=(0, 0, crop.width, crop.height),
