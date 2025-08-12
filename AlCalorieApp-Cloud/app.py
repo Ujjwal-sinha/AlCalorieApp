@@ -1054,16 +1054,16 @@ def display_expert_results(detections, summary):
                     if 'waterfall_chart' in nutrition_charts:
                         st.pyplot(nutrition_charts['waterfall_chart'])
         
+        # Show detected items summary FIRST (always visible)
+        st.markdown("#### 🍽️ Detected Food Items")
+        detected_items_list = [improve_food_name_display(detection.final_label) for detection in valid_detections]
+        for i, item in enumerate(detected_items_list, 1):
+            st.write(f"**{i}.** {item}")
+        
         # Show detailed analysis
         st.markdown("#### 📝 Expert Analysis Report")
         with st.expander("🔍 Complete Expert Analysis Report", expanded=True):
             st.markdown("### 🧠 Expert Multi-Model Detection Results")
-            
-            # Show detected items summary
-            st.markdown("#### 🍽️ Detected Food Items")
-            detected_items_list = [improve_food_name_display(detection.final_label) for detection in valid_detections]
-            for i, item in enumerate(detected_items_list, 1):
-                st.write(f"**{i}.** {item}")
             
             # Model performance summary
             if summary.get("detection_method"):
