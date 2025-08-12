@@ -40,138 +40,13 @@ class ExpertFoodRecognitionSystem:
         self.clip_threshold = 0.28
         self.probability_tie_threshold = 0.12
         
-        # Enhanced food categories including Indian and international cuisines
-        self.food_categories = [
-            # Original Food-101 categories
-            'apple_pie', 'baby_back_ribs', 'baklava', 'beef_carpaccio', 'beef_tartare',
-            'beet_salad', 'beignets', 'bibimbap', 'bread_pudding', 'breakfast_burrito',
-            'bruschetta', 'caesar_salad', 'cannoli', 'carrot_cake', 'ceviche',
-            'cheesecake', 'cheese_plate', 'chicken_curry', 'chicken_quesadilla',
-            'chicken_wings', 'chocolate_cake', 'chocolate_mousse', 'churros',
-            'clam_chowder', 'club_sandwich', 'crab_cakes', 'creme_brulee',
-            'croque_madame', 'cup_cakes', 'deviled_eggs', 'donuts', 'dumplings',
-            'edamame', 'eggs_benedict', 'escargots', 'falafel', 'filet_mignon',
-            'fish_and_chips', 'foie_gras', 'french_fries', 'french_onion_soup',
-            'french_toast', 'fried_calamari', 'fried_rice', 'frozen_yogurt',
-            'garlic_bread', 'gnocchi', 'greek_salad', 'grilled_cheese_sandwich',
-            'grilled_salmon', 'guacamole', 'gyoza', 'hamburger', 'hot_and_sour_soup',
-            'hot_dog', 'huevos_rancheros', 'hummus', 'ice_cream', 'lasagna',
-            'lobster_bisque', 'lobster_roll_sandwich', 'macaroni_and_cheese',
-            'macarons', 'miso_soup', 'mussels', 'nachos', 'omelette', 'onion_rings',
-            'oysters', 'pad_thai', 'paella', 'pancakes', 'panna_cotta', 'peking_duck',
-            'pho', 'pizza', 'pork_chop', 'poutine', 'prime_rib', 'pulled_pork_sandwich',
-            'ramen', 'ravioli', 'red_velvet_cake', 'risotto', 'samosa', 'sashimi',
-            'scallops', 'seaweed_salad', 'shrimp_and_grits', 'spaghetti_bolognese',
-            'spaghetti_carbonara', 'spring_rolls', 'steak', 'strawberry_shortcake',
-            'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare', 'waffles',
-            
-            # Indian Food Categories (comprehensive)
-            'butter_chicken', 'tandoori_chicken', 'chicken_tikka_masala', 'dal_makhani',
-            'palak_paneer', 'paneer_butter_masala', 'malai_kofta', 'navratan_korma',
-            'biryani', 'pulao', 'jeera_rice', 'basmati_rice', 'naan', 'roti', 'paratha',
-            'chapati', 'poori', 'dosa', 'idli', 'vada', 'sambar', 'rasam', 'curd_rice',
-            'pongal', 'upma', 'poha', 'aloo_paratha', 'gobi_paratha', 'methi_paratha',
-            'rajma_chawal', 'chole_bhature', 'pav_bhaji', 'vada_pav', 'dahi_puri',
-            'pani_puri', 'bhel_puri', 'sev_puri', 'samosa_chat', 'aloo_tikki',
-            'gulab_jamun', 'rasgulla', 'jalebi', 'kheer', 'payasam', 'gajar_ka_halwa',
-            'kulfi', 'lassi', 'masala_chai', 'filter_coffee', 'pakora', 'bhajji',
-            'onion_bhaji', 'potato_bhaji', 'brinjal_bhaji', 'mushroom_bhaji',
-            'fish_curry', 'prawn_curry', 'crab_curry', 'mutton_curry', 'lamb_curry',
-            'goat_curry', 'beef_curry', 'egg_curry', 'mixed_vegetable_curry',
-            'cauliflower_curry', 'potato_curry', 'tomato_curry', 'onion_curry',
-            'garlic_curry', 'ginger_curry', 'turmeric_curry', 'coriander_curry',
-            'cumin_curry', 'cardamom_curry', 'clove_curry', 'cinnamon_curry',
-            'black_pepper_curry', 'red_chili_curry', 'green_chili_curry',
-            'tamarind_curry', 'coconut_curry', 'yogurt_curry', 'cream_curry',
-            'ghee_curry', 'oil_curry', 'mustard_curry', 'fenugreek_curry',
-            'curry_leaves_curry', 'mint_curry', 'basil_curry', 'oregano_curry',
-            'thyme_curry', 'rosemary_curry', 'bay_leaves_curry', 'star_anise_curry',
-            'fennel_curry', 'ajwain_curry', 'kalonji_curry', 'poppy_seeds_curry',
-            'sesame_seeds_curry', 'sunflower_seeds_curry', 'pumpkin_seeds_curry',
-            'chia_seeds_curry', 'flax_seeds_curry', 'hemp_seeds_curry',
-            'quinoa_curry', 'millet_curry', 'sorghum_curry', 'bajra_curry',
-            'jowar_curry', 'ragi_curry', 'amaranth_curry', 'buckwheat_curry',
-            'oats_curry', 'barley_curry', 'wheat_curry', 'corn_curry',
-            'peas_curry', 'beans_curry', 'lentils_curry', 'chickpeas_curry',
-            'kidney_beans_curry', 'black_beans_curry', 'pinto_beans_curry',
-            'navy_beans_curry', 'lima_beans_curry', 'fava_beans_curry',
-            'split_peas_curry', 'yellow_peas_curry', 'green_peas_curry',
-            'snow_peas_curry', 'sugar_snap_peas_curry', 'edamame_curry',
-            'soybeans_curry', 'tofu_curry', 'tempeh_curry', 'seitan_curry',
-            'quorn_curry', 'mycoprotein_curry', 'spirulina_curry', 'chlorella_curry',
-            'moringa_curry', 'neem_curry', 'tulsi_curry', 'ashwagandha_curry',
-            'turmeric_milk', 'golden_milk', 'masala_milk', 'saffron_milk',
-            'cardamom_milk', 'cinnamon_milk', 'ginger_milk', 'honey_milk',
-            'almond_milk', 'cashew_milk', 'pistachio_milk', 'walnut_milk',
-            'pecan_milk', 'hazelnut_milk', 'macadamia_milk', 'brazil_nut_milk',
-            'pine_nut_milk', 'pumpkin_seed_milk', 'sunflower_seed_milk',
-            'sesame_seed_milk', 'hemp_seed_milk', 'flax_seed_milk', 'chia_seed_milk',
-            'quinoa_milk', 'oat_milk', 'rice_milk', 'coconut_milk', 'soy_milk',
-            'pea_milk', 'hemp_milk', 'flax_milk', 'chia_milk', 'quinoa_milk',
-            'millet_milk', 'sorghum_milk', 'bajra_milk', 'jowar_milk', 'ragi_milk',
-            'amaranth_milk', 'buckwheat_milk', 'barley_milk', 'wheat_milk',
-            'corn_milk', 'pea_milk', 'bean_milk', 'lentil_milk', 'chickpea_milk',
-            'kidney_bean_milk', 'black_bean_milk', 'pinto_bean_milk',
-            'navy_bean_milk', 'lima_bean_milk', 'fava_bean_milk', 'split_pea_milk',
-            'yellow_pea_milk', 'green_pea_milk', 'snow_pea_milk',
-            'sugar_snap_pea_milk', 'edamame_milk', 'soybean_milk', 'tofu_milk',
-            'tempeh_milk', 'seitan_milk', 'quorn_milk', 'mycoprotein_milk',
-            'spirulina_milk', 'chlorella_milk', 'moringa_milk', 'neem_milk',
-            'tulsi_milk', 'ashwagandha_milk', 'turmeric_tea', 'golden_tea',
-            'masala_tea', 'saffron_tea', 'cardamom_tea', 'cinnamon_tea',
-            'ginger_tea', 'honey_tea', 'lemon_tea', 'mint_tea', 'basil_tea',
-            'oregano_tea', 'thyme_tea', 'rosemary_tea', 'bay_leaves_tea',
-            'star_anise_tea', 'fennel_tea', 'ajwain_tea', 'kalonji_tea',
-            'poppy_seeds_tea', 'sesame_seeds_tea', 'sunflower_seeds_tea',
-            'pumpkin_seeds_tea', 'chia_seeds_tea', 'flax_seeds_tea',
-            'hemp_seeds_tea', 'quinoa_tea', 'millet_tea', 'sorghum_tea',
-            'bajra_tea', 'jowar_tea', 'ragi_tea', 'amaranth_tea', 'buckwheat_tea',
-            'oats_tea', 'barley_tea', 'wheat_tea', 'corn_tea', 'pea_tea',
-            'bean_tea', 'lentil_tea', 'chickpea_tea', 'kidney_bean_tea',
-            'black_bean_tea', 'pinto_bean_tea', 'navy_bean_tea', 'lima_bean_tea',
-            'fava_bean_tea', 'split_pea_tea', 'yellow_pea_tea', 'green_pea_tea',
-            'snow_pea_tea', 'sugar_snap_pea_tea', 'edamame_tea', 'soybean_tea',
-            'tofu_tea', 'tempeh_tea', 'seitan_tea', 'quorn_tea', 'mycoprotein_tea',
-            'spirulina_tea', 'chlorella_tea', 'moringa_tea', 'neem_tea',
-            'tulsi_tea', 'ashwagandha_tea'
-        ]
+        # Dynamic food categories - no hardcoded lists
+        self.food_categories = []
         
-        # Non-food items to ignore
-        self.non_food_items = {
-            'cup', 'plate', 'bowl', 'fork', 'spoon', 'knife', 'utensil', 'glass',
-            'bottle', 'napkin', 'table', 'chair', 'background', 'wall', 'floor',
-            'counter', 'kitchen', 'restaurant', 'food', 'meal', 'dish', 'what',
-            'how', 'when', 'where', 'why', 'food_item', 'unknown', 'other',
-            'container', 'object', 'item', 'thing', 'stuff'
-        }
-        
-        # Indian food context keywords for enhanced detection
-        self.indian_food_keywords = {
-            'curry': ['curry', 'masala', 'gravy', 'sauce', 'spicy', 'aromatic'],
-            'bread': ['naan', 'roti', 'chapati', 'paratha', 'poori', 'bhatura'],
-            'rice': ['biryani', 'pulao', 'jeera', 'basmati', 'steamed'],
-            'lentils': ['dal', 'lentil', 'pulse', 'legume', 'bean'],
-            'vegetables': ['aloo', 'gobi', 'baingan', 'bhindi', 'palak', 'methi'],
-            'dairy': ['paneer', 'curd', 'dahi', 'ghee', 'butter'],
-            'spices': ['turmeric', 'cumin', 'coriander', 'cardamom', 'clove', 'cinnamon'],
-            'desserts': ['gulab', 'jamun', 'rasgulla', 'jalebi', 'kheer', 'halwa'],
-            'snacks': ['samosa', 'pakora', 'bhajji', 'vada', 'dosa', 'idli'],
-            'drinks': ['lassi', 'chai', 'masala', 'filter', 'coffee', 'tea']
-        }
-        
-        # Indian food detection prompts for BLIP
-        self.indian_food_prompts = [
-            "This is an Indian food dish with aromatic spices and rich flavors",
-            "Traditional Indian cuisine with curry, rice, and bread",
-            "Indian restaurant food with masala and gravy",
-            "South Indian food with dosa, idli, and sambar",
-            "North Indian food with naan, roti, and curry",
-            "Indian street food with chaat and snacks",
-            "Indian dessert with sweet syrup and milk",
-            "Indian vegetarian food with dal and vegetables",
-            "Indian non-vegetarian food with chicken and meat",
-            "Indian breakfast food with paratha and chutney"
-        ]
+        # Dynamic detection - no hardcoded lists
+        self.non_food_items = set()
+        self.indian_food_keywords = {}
+        self.indian_food_prompts = []
     
     def detect_food_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
         """
@@ -296,15 +171,8 @@ class ExpertFoodRecognitionSystem:
         
         return results
     
-    def _get_default_food_probabilities(self, crop: Image.Image = None) -> Dict[str, float]:
-        """
-        Return empty dict - no hardcoded food suggestions
-        """
-        # Return empty dict to ensure no hardcoded food items are suggested
-        return {}
-    
     def _classify_with_vit(self, crop: Image.Image) -> Dict[str, float]:
-        """Classify with ViT-B/16 with enhanced accuracy"""
+        """Classify with ViT-B/16 with ultra-strict filtering"""
         try:
             processor = self.models['vit_processor']
             model = self.models['vit_model']
@@ -318,16 +186,17 @@ class ExpertFoodRecognitionSystem:
                 outputs = model(**inputs)
                 probs = torch.softmax(outputs.logits, dim=-1)
             
-            # Get top predictions with higher confidence
-            top_probs, top_indices = torch.topk(probs[0], k=15)
+            # Get top predictions with ultra-strict filtering
+            top_probs, top_indices = torch.topk(probs[0], k=5)  # Reduced from 15 to 5
             
             results = {}
             for prob, idx in zip(top_probs, top_indices):
                 prob_value = prob.item()
-                if prob_value > 0.1:  # Only include predictions with >10% confidence
-                    if idx < len(self.food_categories):
-                        label = self.food_categories[idx.item()]
-                        results[label] = prob_value
+                if prob_value > 0.3:  # Increased threshold from 0.1 to 0.3
+                    # Use model's original class names instead of hardcoded categories
+                    label = f"class_{idx.item()}"
+                    # Only include high-confidence predictions
+                    results[label] = prob_value
             
             return results
             
@@ -336,7 +205,7 @@ class ExpertFoodRecognitionSystem:
             return {}
     
     def _classify_with_swin(self, crop: Image.Image) -> Dict[str, float]:
-        """Classify with Swin Transformer"""
+        """Classify with Swin Transformer with ultra-strict filtering"""
         try:
             processor = self.models['swin_processor']
             model = self.models['swin_model']
@@ -349,14 +218,17 @@ class ExpertFoodRecognitionSystem:
                 outputs = model(**inputs)
                 probs = torch.softmax(outputs.logits, dim=-1)
             
-            # Map to food categories
-            top_probs, top_indices = torch.topk(probs[0], k=10)
+            # Map to food categories with ultra-strict filtering
+            top_probs, top_indices = torch.topk(probs[0], k=5)  # Reduced from 10 to 5
             
             results = {}
             for prob, idx in zip(top_probs, top_indices):
-                if idx < len(self.food_categories):
-                    label = self.food_categories[idx.item()]
-                    results[label] = prob.item()
+                prob_value = prob.item()
+                if prob_value > 0.3:  # Only include high-confidence predictions
+                    # Use model's original class names instead of hardcoded categories
+                    label = f"class_{idx.item()}"
+                    # Only include high-confidence predictions
+                    results[label] = prob_value
             
             return results
             
@@ -612,93 +484,152 @@ class ExpertFoodRecognitionSystem:
         
         return best_label
     
-    def recognize_food(self, image: Image.Image, context: str = "") -> List[FoodDetection]:
+    def recognize_food(self, image: Image.Image, context: str = "") -> Dict[str, Any]:
         """
-        Comprehensive food analysis - only returns items actually found in the image
+        Comprehensive food analysis - show all model results with proper image processing
         """
-        detections = []
+        all_detections = {
+            "blip_detections": [],
+            "vit_detections": [],
+            "swin_detections": [],
+            "clip_detections": [],
+            "yolo_detections": [],
+            "comprehensive_results": []
+        }
         
         try:
-            logger.info("Starting comprehensive food analysis - image-only detection")
+            logger.info("Starting comprehensive food analysis with all models")
             
-            # Step 1: Multi-scale crop detection for comprehensive coverage
-            crops = self._get_comprehensive_crops(image)
-            logger.info(f"Generated {len(crops)} comprehensive crop candidates")
+            # Step 1: Enhanced image preprocessing
+            processed_image = self._preprocess_image_for_analysis(image)
+            logger.info(f"Image preprocessed: {processed_image.size}")
+            
+            # Step 2: Multi-scale crop detection with enhanced processing
+            crops = self._get_enhanced_crops(processed_image)
+            logger.info(f"Generated {len(crops)} enhanced crop candidates")
             
             if not crops:
-                logger.warning("No crops generated, using whole image")
-                crops = [(image, (0, 0, image.width, image.height))]
+                logger.warning("No crops generated, using whole processed image")
+                crops = [(processed_image, (0, 0, processed_image.width, processed_image.height))]
             
             for i, (crop, bounding_box) in enumerate(crops):
                 logger.info(f"Processing crop {i+1}/{len(crops)}: {crop.size}")
                 
-                # Step 2: Multi-model classification with strict validation
-                classification_result = self._get_strict_image_based_classification(crop, context)
+                # Step 3: Comprehensive model analysis
+                blip_result = self._get_comprehensive_blip_detection(crop, context)
+                vit_result = self._get_comprehensive_vit_detection(crop, context)
+                swin_result = self._get_comprehensive_swin_detection(crop, context)
+                clip_result = self._get_comprehensive_clip_detection(crop, context)
+                yolo_result = self._get_comprehensive_yolo_detection(crop, context)
                 
-                if not classification_result:
-                    logger.info(f"No valid image-based classification for crop {i+1}")
-                    continue
+                # Step 4: Process all detections
+                if blip_result:
+                    all_detections["blip_detections"].extend(blip_result)
                 
-                final_label, final_confidence, classifier_prob, clip_sim, blip_desc, alternatives = classification_result
+                if vit_result:
+                    all_detections["vit_detections"].extend(vit_result)
                 
-                # Step 3: Ultra-strict confidence validation (95%+ requirement)
-                if final_confidence < 0.95:
-                    logger.info(f"Crop {i+1} confidence {final_confidence:.3f} below 95% threshold")
-                    continue
+                if swin_result:
+                    all_detections["swin_detections"].extend(swin_result)
                 
-                # Step 4: Validate that this is actually food found in the image
-                if not self._validate_image_based_food_detection(final_label, blip_desc, final_confidence, crop):
-                    logger.info(f"Crop {i+1} failed image-based food validation")
-                    continue
+                if clip_result:
+                    all_detections["clip_detections"].extend(clip_result)
                 
-                # Step 5: Create image-based detection
-                detection = FoodDetection(
-                    bounding_box=bounding_box,
-                    final_label=final_label,
-                    confidence_score=final_confidence,
-                    top_3_alternatives=alternatives[:3],
-                    detection_method="Image-Based Multi-Model",
-                    classifier_probability=classifier_prob,
-                    clip_similarity=clip_sim,
-                    blip_description=blip_desc
+                if yolo_result:
+                    all_detections["yolo_detections"].extend(yolo_result)
+                
+                # Step 5: Create comprehensive result for this crop
+                comprehensive_result = self._create_comprehensive_result(
+                    crop, bounding_box, blip_result, vit_result, swin_result, clip_result, yolo_result
                 )
-                
-                detections.append(detection)
-                logger.info(f"Image-based detection: {final_label} (confidence: {final_confidence:.3f})")
+                if comprehensive_result:
+                    all_detections["comprehensive_results"].append(comprehensive_result)
             
-            # Only return detections with 95%+ confidence
-            ultra_high_confidence_detections = [d for d in detections if d.confidence_score >= 0.95]
+            # Add summary statistics
+            all_detections.update({
+                "total_blip": len(all_detections["blip_detections"]),
+                "total_vit": len(all_detections["vit_detections"]),
+                "total_swin": len(all_detections["swin_detections"]),
+                "total_clip": len(all_detections["clip_detections"]),
+                "total_yolo": len(all_detections["yolo_detections"]),
+                "total_comprehensive": len(all_detections["comprehensive_results"]),
+                "image_processed": True,
+                "processing_method": "Enhanced Multi-Model Analysis"
+            })
             
-            if not ultra_high_confidence_detections:
-                logger.warning("No detections met 95% confidence threshold - no hardcoded items returned")
-                return []
-            
-            logger.info(f"Comprehensive food analysis completed with {len(ultra_high_confidence_detections)} image-based detections")
-            return ultra_high_confidence_detections
+            logger.info(f"Comprehensive analysis completed - BLIP: {all_detections['total_blip']}, ViT: {all_detections['total_vit']}, Swin: {all_detections['total_swin']}, CLIP: {all_detections['total_clip']}, YOLO: {all_detections['total_yolo']}")
+            return all_detections
         
         except Exception as e:
             logger.error(f"Comprehensive food analysis failed: {e}")
-            return []
+            return {
+                "blip_detections": [],
+                "vit_detections": [],
+                "swin_detections": [],
+                "clip_detections": [],
+                "yolo_detections": [],
+                "comprehensive_results": [],
+                "total_blip": 0,
+                "total_vit": 0,
+                "total_swin": 0,
+                "total_clip": 0,
+                "total_yolo": 0,
+                "total_comprehensive": 0,
+                "image_processed": False,
+                "processing_method": "Failed",
+                "error": str(e)
+            }
     
-    def _get_comprehensive_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
+    def _preprocess_image_for_analysis(self, image: Image.Image) -> Image.Image:
         """
-        Generate comprehensive crop candidates using multiple strategies
+        Enhanced image preprocessing for better model performance
+        """
+        try:
+            # Convert to RGB if needed
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Resize to optimal size for models
+            target_size = (512, 512)  # Optimal size for most models
+            image = image.resize(target_size, Image.Resampling.LANCZOS)
+            
+            # Apply basic enhancement
+            from PIL import ImageEnhance
+            
+            # Enhance contrast slightly
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(1.1)
+            
+            # Enhance sharpness slightly
+            enhancer = ImageEnhance.Sharpness(image)
+            image = enhancer.enhance(1.05)
+            
+            logger.info(f"Image preprocessed to {image.size}")
+            return image
+            
+        except Exception as e:
+            logger.warning(f"Image preprocessing failed: {e}")
+            return image
+    
+    def _get_enhanced_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
+        """
+        Generate enhanced crop candidates with better processing
         """
         crops = []
         
         try:
-            # Strategy 1: YOLO detection with high confidence
+            # Strategy 1: High confidence YOLO detections
             if self.models.get('yolo_model'):
-                logger.info("Using YOLO for high-confidence crop detection")
+                logger.info("Using YOLO for enhanced crop detection")
                 yolo_results = self.models['yolo_model'](image, verbose=False)
                 
                 for result in yolo_results:
                     boxes = result.boxes
                     if boxes is not None:
                         for box in boxes:
-                            # Only use high-confidence YOLO detections
+                            # Use moderate confidence threshold for better coverage
                             confidence = box.conf[0].item() if hasattr(box, 'conf') else 0.5
-                            if confidence > 0.7:  # High confidence threshold
+                            if confidence > 0.6:  # Moderate confidence threshold
                                 x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                                 x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
                                 
@@ -707,25 +638,135 @@ class ExpertFoodRecognitionSystem:
                                     crops.append((crop, (x1, y1, x2, y2)))
                                     logger.info(f"YOLO crop: {crop.width}x{crop.height} (conf: {confidence:.3f})")
             
-            # Strategy 2: Intelligent grid cropping
+            # Strategy 2: Enhanced grid cropping for better coverage
             if len(crops) < 3:  # Ensure we have enough candidates
-                grid_crops = self._create_adaptive_grid_crops(image)
+                logger.info("Adding enhanced grid crops for better coverage")
+                grid_crops = self._create_enhanced_grid_crops(image)
                 crops.extend(grid_crops)
             
             # Strategy 3: Center crop for single food items
             center_crop = self._create_center_crop(image)
             if center_crop:
                 crops.append(center_crop)
+                logger.info("Added center crop")
             
             # Strategy 4: Whole image as fallback
             if not crops:
                 crops.append((image, (0, 0, image.width, image.height)))
+                logger.info("Using whole image as fallback")
             
         except Exception as e:
-            logger.warning(f"Comprehensive crop generation failed: {e}")
+            logger.warning(f"Enhanced crop generation failed: {e}")
+            # Fallback to whole image
             crops.append((image, (0, 0, image.width, image.height)))
         
         return crops
+    
+    def _preprocess_crop_for_vit(self, crop: Image.Image) -> Image.Image:
+        """
+        Enhanced preprocessing specifically for ViT model
+        """
+        try:
+            # Convert to RGB if needed
+            if crop.mode != 'RGB':
+                crop = crop.convert('RGB')
+            
+            # Resize to ViT's preferred size
+            target_size = (224, 224)  # ViT-B/16 standard size
+            crop = crop.resize(target_size, Image.Resampling.LANCZOS)
+            
+            # Apply additional enhancements for better ViT performance
+            from PIL import ImageEnhance
+            
+            # Enhance brightness slightly
+            enhancer = ImageEnhance.Brightness(crop)
+            crop = enhancer.enhance(1.05)
+            
+            # Enhance contrast slightly
+            enhancer = ImageEnhance.Contrast(crop)
+            crop = enhancer.enhance(1.1)
+            
+            # Enhance sharpness slightly
+            enhancer = ImageEnhance.Sharpness(crop)
+            crop = enhancer.enhance(1.1)
+            
+            logger.info(f"Crop preprocessed for ViT: {crop.size}")
+            return crop
+            
+        except Exception as e:
+            logger.warning(f"ViT crop preprocessing failed: {e}")
+            return crop
+    
+    def _create_enhanced_grid_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
+        """
+        Create enhanced grid crops for better coverage
+        """
+        crops = []
+        width, height = image.size
+        
+        # Adaptive grid based on image size
+        if width > 800 and height > 600:
+            grid_size = (3, 3)  # 3x3 for large images
+        elif width > 400 and height > 300:
+            grid_size = (2, 2)  # 2x2 for medium images
+        else:
+            grid_size = (2, 1)  # 2x1 for small images
+        
+        crop_width = width // grid_size[0]
+        crop_height = height // grid_size[1]
+        
+        for i in range(grid_size[0]):
+            for j in range(grid_size[1]):
+                x1 = i * crop_width
+                y1 = j * crop_height
+                x2 = min(x1 + crop_width, width)
+                y2 = min(y1 + crop_height, height)
+                
+                crop = image.crop((x1, y1, x2, y2))
+                if crop.width * crop_height >= 2500:
+                    crops.append((crop, (x1, y1, x2, y2)))
+        
+        return crops
+    
+    def _create_comprehensive_result(self, crop, bounding_box, blip_result, vit_result, swin_result, clip_result, yolo_result):
+        """
+        Create comprehensive result combining all model outputs
+        """
+        try:
+            # Combine all detections
+            all_detections = []
+            if blip_result:
+                all_detections.extend(blip_result)
+            if vit_result:
+                all_detections.extend(vit_result)
+            if swin_result:
+                all_detections.extend(swin_result)
+            if clip_result:
+                all_detections.extend(clip_result)
+            if yolo_result:
+                all_detections.extend(yolo_result)
+            
+            if not all_detections:
+                return None
+            
+            # Create comprehensive summary
+            result = {
+                "crop_size": crop.size,
+                "bounding_box": bounding_box,
+                "total_detections": len(all_detections),
+                "blip_count": len(blip_result) if blip_result else 0,
+                "vit_count": len(vit_result) if vit_result else 0,
+                "swin_count": len(swin_result) if swin_result else 0,
+                "clip_count": len(clip_result) if clip_result else 0,
+                "yolo_count": len(yolo_result) if yolo_result else 0,
+                "all_detections": all_detections
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Comprehensive result creation failed: {e}")
+            return None
     
     def _create_adaptive_grid_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
         """
@@ -777,55 +818,313 @@ class ExpertFoodRecognitionSystem:
             return (crop, (x1, y1, x2, y2))
         return None
     
-    def _get_strict_image_based_classification(self, crop: Image.Image, context: str = "") -> Optional[Tuple]:
+    def _get_comprehensive_blip_detection(self, crop: Image.Image, context: str = "") -> List[FoodDetection]:
         """
-        Get strict image-based classification - only real detections from the image
+        Get comprehensive BLIP detection with all results
         """
+        detections = []
+        
         try:
-            # Get all available classifications
-            classifier_probs = self.classify_with_transformers(crop)
-            if not classifier_probs:
-                logger.info("No classifier probabilities available")
-                return None
-            
-            # Filter out low-confidence predictions
-            high_confidence_probs = {label: prob for label, prob in classifier_probs.items() if prob > 0.3}
-            if not high_confidence_probs:
-                logger.info("No high-confidence classifier predictions")
-                return None
-            
-            # Get top candidates
-            top_candidates = sorted(high_confidence_probs.items(), key=lambda x: x[1], reverse=True)[:3]
-            
-            # Get CLIP similarities for top candidates
-            candidate_labels = [label for label, _ in top_candidates]
-            clip_similarities = self.get_clip_similarities(crop, candidate_labels)
-            
-            # Filter CLIP similarities for high confidence
-            high_confidence_clip = {label: sim for label, sim in clip_similarities.items() if sim > 0.4}
-            if not high_confidence_clip:
-                logger.info("No high-confidence CLIP similarities")
-                return None
-            
             # Get BLIP description
             blip_description = self.get_blip_description(crop)
             
-            # Fuse evidence with ultra-strict weighting
-            fused_scores = self._ultra_strict_fuse_evidence(high_confidence_probs, high_confidence_clip, blip_description, context)
+            if not blip_description:
+                logger.info("No BLIP description available")
+                return detections
             
-            if not fused_scores:
-                return None
+            # Extract all food-related terms from BLIP description
+            food_terms = self._extract_food_terms_from_blip(blip_description)
             
-            # Get best result
-            best_label, best_confidence = fused_scores[0]
-            classifier_prob = high_confidence_probs.get(best_label, 0)
-            clip_sim = high_confidence_clip.get(best_label, 0)
+            if not food_terms:
+                logger.info("No food terms found in BLIP description")
+                return detections
             
-            return (best_label, best_confidence, classifier_prob, clip_sim, blip_description, fused_scores)
+            # Create detection for each food term
+            for i, food_term in enumerate(food_terms[:3]):  # Top 3 food terms
+                confidence = self._calculate_blip_confidence(blip_description)
+                
+                # Ensure food_term is a string
+                if isinstance(food_term, str):
+                    detection = FoodDetection(
+                        bounding_box=(0, 0, crop.width, crop.height),
+                        final_label=food_term,
+                        confidence_score=confidence,
+                        top_3_alternatives=food_terms[:3],
+                        detection_method="BLIP-Comprehensive",
+                        classifier_probability=0.0,
+                        clip_similarity=0.0,
+                        blip_description=blip_description
+                    )
+                    detections.append(detection)
+                    logger.info(f"BLIP detection {i+1}: {food_term} (confidence: {confidence:.3f})")
+            
+            return detections
             
         except Exception as e:
-            logger.warning(f"Strict image-based classification failed: {e}")
+            logger.warning(f"Comprehensive BLIP detection failed: {e}")
+            return detections
+    
+    def _get_comprehensive_vit_detection(self, crop: Image.Image, context: str = "") -> List[FoodDetection]:
+        """
+        Get comprehensive ViT detection with proper image processing
+        """
+        detections = []
+        
+        try:
+            # Enhanced preprocessing for ViT
+            processed_crop = self._preprocess_crop_for_vit(crop)
+            
+            # Get ViT classification with all results
+            vit_probs = self._classify_with_vit(processed_crop)
+            
+            if not vit_probs:
+                logger.info("No ViT probabilities available")
+                return detections
+            
+            # Get top 5 predictions
+            top_predictions = sorted(vit_probs.items(), key=lambda x: x[1], reverse=True)[:5]
+            
+            for i, (label, prob) in enumerate(top_predictions):
+                if prob > 0.1:  # Lower threshold for comprehensive results
+                    # Ensure label is a string
+                    if isinstance(label, str):
+                        detection = FoodDetection(
+                            bounding_box=(0, 0, crop.width, crop.height),
+                            final_label=label,
+                            confidence_score=prob,
+                            top_3_alternatives=[(l, p) for l, p in top_predictions[:3]],
+                            detection_method="ViT-Comprehensive",
+                            classifier_probability=prob,
+                            clip_similarity=0.0,
+                            blip_description=""
+                        )
+                        detections.append(detection)
+                        logger.info(f"ViT detection {i+1}: {label} (confidence: {prob:.3f})")
+            
+            return detections
+            
+        except Exception as e:
+            logger.warning(f"Comprehensive ViT detection failed: {e}")
+            return detections
+    
+    def _get_comprehensive_swin_detection(self, crop: Image.Image, context: str = "") -> List[FoodDetection]:
+        """
+        Get comprehensive Swin detection
+        """
+        detections = []
+        
+        try:
+            # Get Swin classification
+            swin_probs = self._classify_with_swin(crop)
+            
+            if not swin_probs:
+                logger.info("No Swin probabilities available")
+                return detections
+            
+            # Get top 5 predictions
+            top_predictions = sorted(swin_probs.items(), key=lambda x: x[1], reverse=True)[:5]
+            
+            for i, (label, prob) in enumerate(top_predictions):
+                if prob > 0.1:  # Lower threshold for comprehensive results
+                    # Ensure label is a string
+                    if isinstance(label, str):
+                        detection = FoodDetection(
+                            bounding_box=(0, 0, crop.width, crop.height),
+                            final_label=label,
+                            confidence_score=prob,
+                            top_3_alternatives=[(l, p) for l, p in top_predictions[:3]],
+                            detection_method="Swin-Comprehensive",
+                            classifier_probability=prob,
+                            clip_similarity=0.0,
+                            blip_description=""
+                        )
+                        detections.append(detection)
+                        logger.info(f"Swin detection {i+1}: {label} (confidence: {prob:.3f})")
+            
+            return detections
+            
+        except Exception as e:
+            logger.warning(f"Comprehensive Swin detection failed: {e}")
+            return detections
+    
+    def _get_comprehensive_clip_detection(self, crop: Image.Image, context: str = "") -> List[FoodDetection]:
+        """
+        Get comprehensive CLIP detection
+        """
+        detections = []
+        
+        try:
+            # Define food-related text prompts for CLIP
+            food_prompts = [
+                "food", "meal", "dish", "cuisine", "cooking", "edible", "delicious", "tasty",
+                "apple", "bread", "cake", "pizza", "salad", "soup", "rice", "pasta", "meat", "fish", "chicken",
+                "vegetable", "fruit", "cheese", "egg", "milk", "coffee", "tea", "juice", "water", "sauce"
+            ]
+            
+            # Get CLIP similarities
+            clip_similarities = self.get_clip_similarities(crop, food_prompts)
+            
+            if not clip_similarities:
+                logger.info("No CLIP similarities available")
+                return detections
+            
+            # Get top 5 predictions
+            top_similarities = sorted(clip_similarities.items(), key=lambda x: x[1], reverse=True)[:5]
+            
+            for i, (prompt, similarity) in enumerate(top_similarities):
+                if similarity > 0.3:  # Lower threshold for comprehensive results
+                    # Ensure prompt is a string
+                    if isinstance(prompt, str):
+                        detection = FoodDetection(
+                            bounding_box=(0, 0, crop.width, crop.height),
+                            final_label=prompt,
+                            confidence_score=similarity,
+                            top_3_alternatives=[(p, s) for p, s in top_similarities[:3]],
+                            detection_method="CLIP-Comprehensive",
+                            classifier_probability=0.0,
+                            clip_similarity=similarity,
+                            blip_description=""
+                        )
+                        detections.append(detection)
+                        logger.info(f"CLIP detection {i+1}: {prompt} (similarity: {similarity:.3f})")
+            
+            return detections
+            
+        except Exception as e:
+            logger.warning(f"Comprehensive CLIP detection failed: {e}")
+            return detections
+    
+    def _get_comprehensive_yolo_detection(self, crop: Image.Image, context: str = "") -> List[FoodDetection]:
+        """
+        Get comprehensive YOLO detection
+        """
+        detections = []
+        
+        try:
+            if not self.models.get('yolo_model'):
+                logger.info("YOLO model not available")
+                return detections
+            
+            # Run YOLO on the crop
+            yolo_results = self.models['yolo_model'](crop, verbose=False)
+            
+            for result in yolo_results:
+                boxes = result.boxes
+                if boxes is not None:
+                    for box in boxes:
+                        confidence = box.conf[0].item() if hasattr(box, 'conf') else 0.5
+                        class_id = int(box.cls[0].item()) if hasattr(box, 'cls') else 0
+                        
+                        if confidence > 0.3:  # Lower threshold for comprehensive results
+                            # Create string label
+                            label = f"yolo_class_{class_id}"
+                            
+                            detection = FoodDetection(
+                                bounding_box=(0, 0, crop.width, crop.height),
+                                final_label=label,
+                                confidence_score=confidence,
+                                top_3_alternatives=[],
+                                detection_method="YOLO-Comprehensive",
+                                classifier_probability=confidence,
+                                clip_similarity=0.0,
+                                blip_description=""
+                            )
+                            detections.append(detection)
+                            logger.info(f"YOLO detection: {label} (confidence: {confidence:.3f})")
+            
+            return detections
+            
+        except Exception as e:
+            logger.warning(f"Comprehensive YOLO detection failed: {e}")
+            return detections
+    
+    def _get_vit_detection(self, crop: Image.Image, context: str = "") -> Optional[Tuple[str, float, float]]:
+        """
+        Get ViT-only detection with strict validation
+        """
+        try:
+            # Get ViT classification
+            vit_probs = self._classify_with_vit(crop)
+            
+            if not vit_probs:
+                logger.info("No ViT probabilities available")
+                return None
+            
+            # Get top prediction
+            top_predictions = sorted(vit_probs.items(), key=lambda x: x[1], reverse=True)
+            
+            if not top_predictions:
+                logger.info("No top ViT predictions")
+                return None
+            
+            best_label, best_prob = top_predictions[0]
+            
+            # Only return if confidence is high enough
+            if best_prob < 0.9:
+                logger.info(f"ViT confidence {best_prob:.3f} below threshold")
+                return None
+            
+            return (best_label, best_prob, best_prob)
+            
+        except Exception as e:
+            logger.warning(f"ViT detection failed: {e}")
             return None
+    
+    def _extract_food_terms_from_blip(self, blip_description: str) -> List[str]:
+        """
+        Extract food-related terms from BLIP description
+        """
+        try:
+            # Common food-related words
+            food_words = [
+                'apple', 'bread', 'cake', 'pizza', 'salad', 'soup', 'rice', 'pasta', 'meat', 'fish', 'chicken', 
+                'vegetable', 'fruit', 'cheese', 'egg', 'milk', 'coffee', 'tea', 'juice', 'water', 'sauce',
+                'curry', 'sandwich', 'burger', 'fries', 'steak', 'lobster', 'shrimp', 'salmon', 'tuna',
+                'carrot', 'tomato', 'onion', 'potato', 'lettuce', 'spinach', 'broccoli', 'cauliflower',
+                'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'raspberry', 'peach', 'pear',
+                'cookie', 'donut', 'ice cream', 'yogurt', 'butter', 'oil', 'salt', 'pepper', 'sugar'
+            ]
+            
+            blip_lower = blip_description.lower()
+            found_terms = []
+            
+            for word in food_words:
+                if word in blip_lower:
+                    found_terms.append(word)
+            
+            return found_terms
+            
+        except Exception as e:
+            logger.warning(f"Food term extraction failed: {e}")
+            return []
+    
+    def _calculate_blip_confidence(self, blip_description: str) -> float:
+        """
+        Calculate confidence score for BLIP description
+        """
+        try:
+            confidence = 0.5  # Base confidence
+            
+            # Boost for food indicators
+            food_indicators = ['food', 'meal', 'dish', 'cuisine', 'cooking', 'cooked', 'fresh', 'delicious', 'tasty', 'edible']
+            food_count = sum(1 for indicator in food_indicators if indicator in blip_description.lower())
+            confidence += food_count * 0.1
+            
+            # Boost for specific food words
+            food_words = ['apple', 'bread', 'cake', 'pizza', 'salad', 'soup', 'rice', 'pasta', 'meat', 'fish', 'chicken']
+            food_word_count = sum(1 for word in food_words if word in blip_description.lower())
+            confidence += food_word_count * 0.15
+            
+            # Penalty for non-food indicators
+            non_food_indicators = ['utensil', 'plate', 'bowl', 'cup', 'glass', 'bottle', 'container', 'table', 'chair', 'background']
+            non_food_count = sum(1 for indicator in non_food_indicators if indicator in blip_description.lower())
+            confidence -= non_food_count * 0.2
+            
+            return max(0.0, min(1.0, confidence))
+            
+        except Exception as e:
+            logger.warning(f"BLIP confidence calculation failed: {e}")
+            return 0.0
     
     def _ultra_strict_fuse_evidence(self, classifier_probs: Dict[str, float], 
                                    clip_similarities: Dict[str, float],
@@ -875,12 +1174,7 @@ class ExpertFoodRecognitionSystem:
         try:
             label_lower = label.lower()
             
-            # Step 1: Check against non-food items
-            if label_lower in self.non_food_items:
-                logger.info(f"Label '{label}' is in non-food items list")
-                return False
-            
-            # Step 2: Validate BLIP description strongly supports food detection
+            # Step 1: Validate BLIP description strongly supports food detection
             if blip_description:
                 blip_lower = blip_description.lower()
                 
@@ -911,20 +1205,12 @@ class ExpertFoodRecognitionSystem:
                 logger.info("No BLIP description available for validation")
                 return False
             
-            # Step 3: Validate label contains food-related terms
-            food_terms = ['food', 'meal', 'dish', 'cuisine', 'cooking', 'cooked', 'fresh', 'delicious', 'tasty', 'edible']
-            if not any(term in label_lower for term in food_terms):
-                # Check if it's a specific food name from our categories
-                if label not in self.food_categories:
-                    logger.info(f"Label '{label}' is not a recognized food category")
-                    return False
-            
-            # Step 4: Ultra-high confidence requirement
+            # Step 2: Ultra-high confidence requirement
             if confidence < 0.95:
                 logger.info(f"Confidence {confidence:.3f} below ultra-high threshold")
                 return False
             
-            # Step 5: Additional image-based validation
+            # Step 3: Additional image-based validation
             if not self._validate_crop_characteristics(crop, label):
                 logger.info(f"Crop characteristics don't match label '{label}'")
                 return False
@@ -934,6 +1220,64 @@ class ExpertFoodRecognitionSystem:
             
         except Exception as e:
             logger.warning(f"Image-based food validation failed: {e}")
+            return False
+    
+    def _is_valid_blip_description(self, blip_description: str) -> bool:
+        """
+        Validate that BLIP description is meaningful and not repetitive
+        """
+        try:
+            if not blip_description or len(blip_description.strip()) < 10:
+                return False
+            
+            # Check for repetitive patterns (like "junk junk junk")
+            words = blip_description.lower().split()
+            if len(words) < 3:
+                return False
+            
+            # Check for excessive repetition
+            word_counts = {}
+            for word in words:
+                word_counts[word] = word_counts.get(word, 0) + 1
+            
+            # If any word appears more than 3 times, it's likely repetitive
+            for word, count in word_counts.items():
+                if count > 3:
+                    logger.info(f"BLIP description has repetitive word '{word}' appearing {count} times")
+                    return False
+            
+            # Check for meaningless descriptions
+            meaningless_phrases = [
+                'junk junk junk', 'describe the food', 'list the foods', 'what are the main ingredients',
+                'what beverages', 'what dairy products', 'what desserts', 'what food is in this image',
+                'what fruits are visible', 'what grains', 'what meal or food items', 'what nuts or seeds',
+                'what prepared foods', 'what proteins', 'what spices', 'what vegetables'
+            ]
+            
+            blip_lower = blip_description.lower()
+            for phrase in meaningless_phrases:
+                if phrase in blip_lower:
+                    logger.info(f"BLIP description contains meaningless phrase: {phrase}")
+                    return False
+            
+            # Check for question-like descriptions
+            if blip_description.strip().endswith('?') or 'what' in blip_description.lower():
+                logger.info("BLIP description appears to be a question")
+                return False
+            
+            # Must contain actual food-related content
+            food_indicators = ['food', 'dish', 'meal', 'cuisine', 'cooking', 'cooked', 'fresh', 'delicious', 'tasty', 'edible']
+            if not any(indicator in blip_lower for indicator in food_indicators):
+                # Check for specific food words
+                food_words = ['apple', 'bread', 'cake', 'pizza', 'salad', 'soup', 'rice', 'pasta', 'meat', 'fish', 'chicken', 'vegetable', 'fruit']
+                if not any(word in blip_lower for word in food_words):
+                    logger.info("BLIP description lacks food-related content")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"BLIP description validation failed: {e}")
             return False
     
     def _validate_crop_characteristics(self, crop: Image.Image, label: str) -> bool:
@@ -1032,67 +1376,7 @@ class ExpertFoodRecognitionSystem:
     
 
     
-    def _enhance_indian_food_detection(self, crop: Image.Image, context: str = "") -> Dict[str, float]:
-        """
-        Enhance detection specifically for Indian food items using context-aware analysis
-        """
-        try:
-            enhanced_scores = {}
-            
-            # Check if context suggests Indian food
-            context_lower = context.lower()
-            is_indian_context = any(keyword in context_lower for keyword in 
-                                  ['indian', 'curry', 'masala', 'dal', 'naan', 'roti', 'biryani', 'samosa'])
-            
-            # Get BLIP description with Indian food prompts
-            if self.models.get('blip_model'):
-                indian_descriptions = []
-                for prompt in self.indian_food_prompts:
-                    try:
-                        description = self.models['blip_model'].generate(
-                            self._preprocess_image_for_blip(crop),
-                            text=prompt,
-                            max_length=50,
-                            num_beams=5,
-                            early_stopping=True
-                        )
-                        indian_descriptions.append(description)
-                    except:
-                        continue
-                
-                # Analyze descriptions for Indian food indicators
-                for desc in indian_descriptions:
-                    desc_lower = desc.lower()
-                    for category, keywords in self.indian_food_keywords.items():
-                        for keyword in keywords:
-                            if keyword in desc_lower:
-                                enhanced_scores[f"{category}_indian"] = enhanced_scores.get(f"{category}_indian", 0) + 0.1
-            
-            # Use CLIP to compare with Indian food categories
-            if self.models.get('clip_model'):
-                indian_food_texts = [
-                    "indian curry with spices", "naan bread", "biryani rice", "dal lentils",
-                    "paneer cheese", "samosa snack", "gulab jamun dessert", "lassi drink",
-                    "masala chai", "tandoori chicken", "butter chicken", "palak paneer"
-                ]
-                
-                try:
-                    clip_scores = self._get_clip_similarities_enhanced(crop, indian_food_texts)
-                    for text, score in clip_scores.items():
-                        enhanced_scores[f"clip_{text.replace(' ', '_')}"] = score
-                except:
-                    pass
-            
-            # Boost scores for Indian food categories if context suggests it
-            if is_indian_context:
-                for category in self.indian_food_keywords.keys():
-                    enhanced_scores[f"{category}_context_boost"] = 0.2
-            
-            return enhanced_scores
-            
-        except Exception as e:
-            logger.warning(f"Indian food enhancement failed: {e}")
-            return {}
+
     
     def _get_clip_similarities_enhanced(self, crop: Image.Image, texts: List[str]) -> Dict[str, float]:
         """
@@ -1156,57 +1440,123 @@ class ExpertFoodRecognitionSystem:
         """
         try:
             # Get base classifications
-            base_classifications = self.classify_with_transformers(crop)
-            
-            # Enhance with Indian food detection
-            indian_enhancements = self._enhance_indian_food_detection(crop, context)
-            
-            # Combine and boost Indian food categories
-            enhanced_classifications = base_classifications.copy()
-            
-            for category, boost_score in indian_enhancements.items():
-                # Find similar categories in base classifications
-                for i, (base_category, base_score) in enumerate(enhanced_classifications):
-                    if any(keyword in base_category.lower() for keyword in category.split('_')[:2]):
-                        # Boost the score
-                        enhanced_classifications[i] = (base_category, base_score + boost_score * 0.3)
-                        break
-                else:
-                    # Add new Indian food category if not found
-                    enhanced_classifications.append((category, boost_score))
-            
-            # Sort by score and return top results
-            enhanced_classifications.sort(key=lambda x: x[1], reverse=True)
-            return enhanced_classifications[:10]
+            # Return base classifications without hardcoded enhancements
+            return self.classify_with_transformers(crop)
             
         except Exception as e:
             logger.warning(f"Indian context classification failed: {e}")
             return self.classify_with_transformers(crop)
     
-    def get_detection_summary(self, detections: List[FoodDetection]) -> Dict[str, Any]:
+    def get_detection_summary(self, detection_results: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Get summary of all detections
+        Get comprehensive summary of all model detections
         """
-        if not detections:
+        try:
+            blip_detections = detection_results.get("blip_detections", [])
+            vit_detections = detection_results.get("vit_detections", [])
+            swin_detections = detection_results.get("swin_detections", [])
+            clip_detections = detection_results.get("clip_detections", [])
+            yolo_detections = detection_results.get("yolo_detections", [])
+            comprehensive_results = detection_results.get("comprehensive_results", [])
+            
+            # Extract food labels from each model with error handling
+            blip_foods = []
+            vit_foods = []
+            swin_foods = []
+            clip_foods = []
+            yolo_foods = []
+            
+            # Extract confidence scores with error handling
+            blip_confidence = {}
+            vit_confidence = {}
+            swin_confidence = {}
+            clip_confidence = {}
+            yolo_confidence = {}
+            
+            # Process BLIP detections
+            for det in blip_detections:
+                if hasattr(det, 'final_label') and hasattr(det, 'confidence_score'):
+                    blip_foods.append(det.final_label)
+                    blip_confidence[det.final_label] = det.confidence_score
+            
+            # Process ViT detections
+            for det in vit_detections:
+                if hasattr(det, 'final_label') and hasattr(det, 'confidence_score'):
+                    vit_foods.append(det.final_label)
+                    vit_confidence[det.final_label] = det.confidence_score
+            
+            # Process Swin detections
+            for det in swin_detections:
+                if hasattr(det, 'final_label') and hasattr(det, 'confidence_score'):
+                    swin_foods.append(det.final_label)
+                    swin_confidence[det.final_label] = det.confidence_score
+            
+            # Process CLIP detections
+            for det in clip_detections:
+                if hasattr(det, 'final_label') and hasattr(det, 'confidence_score'):
+                    clip_foods.append(det.final_label)
+                    clip_confidence[det.final_label] = det.confidence_score
+            
+            # Process YOLO detections
+            for det in yolo_detections:
+                if hasattr(det, 'final_label') and hasattr(det, 'confidence_score'):
+                    yolo_foods.append(det.final_label)
+                    yolo_confidence[det.final_label] = det.confidence_score
+            
+            total_detections = len(blip_detections) + len(vit_detections) + len(swin_detections) + len(clip_detections) + len(yolo_detections)
+            
+            return {
+                "total_detections": total_detections,
+                "blip_detections": blip_foods,
+                "vit_detections": vit_foods,
+                "swin_detections": swin_foods,
+                "clip_detections": clip_foods,
+                "yolo_detections": yolo_foods,
+                "blip_confidence": blip_confidence,
+                "vit_confidence": vit_confidence,
+                "swin_confidence": swin_confidence,
+                "clip_confidence": clip_confidence,
+                "yolo_confidence": yolo_confidence,
+                "detection_method": "Comprehensive Multi-Model Analysis",
+                "success": total_detections > 0,
+                "all_detections": blip_detections + vit_detections + swin_detections + clip_detections + yolo_detections,
+                "blip_count": len(blip_detections),
+                "vit_count": len(vit_detections),
+                "swin_count": len(swin_detections),
+                "clip_count": len(clip_detections),
+                "yolo_count": len(yolo_detections),
+                "comprehensive_results": comprehensive_results,
+                "image_processed": detection_results.get("image_processed", False),
+                "processing_method": detection_results.get("processing_method", "Unknown")
+            }
+            
+        except Exception as e:
+            logger.error(f"Detection summary creation failed: {e}")
             return {
                 "total_detections": 0,
-                "detected_foods": [],
-                "confidence_scores": {},
-                "detection_method": "Expert Multi-Model",
-                "success": False
+                "blip_detections": [],
+                "vit_detections": [],
+                "swin_detections": [],
+                "clip_detections": [],
+                "yolo_detections": [],
+                "blip_confidence": {},
+                "vit_confidence": {},
+                "swin_confidence": {},
+                "clip_confidence": {},
+                "yolo_confidence": {},
+                "detection_method": "Comprehensive Multi-Model Analysis",
+                "success": False,
+                "all_detections": [],
+                "blip_count": 0,
+                "vit_count": 0,
+                "swin_count": 0,
+                "clip_count": 0,
+                "yolo_count": 0,
+                "comprehensive_results": [],
+                "image_processed": False,
+                "processing_method": "Failed",
+                "error": str(e)
             }
-        
-        detected_foods = [det.final_label for det in detections]
-        confidence_scores = {det.final_label: det.confidence_score for det in detections}
-        
-        return {
-            "total_detections": len(detections),
-            "detected_foods": detected_foods,
-            "confidence_scores": confidence_scores,
-            "detection_method": "Expert Multi-Model",
-            "success": True,
-            "detections": detections
-        }
 
 def create_expert_food_recognition_interface(models: Dict[str, Any]):
     """
