@@ -447,6 +447,123 @@ def create_complex_nutrition_charts(nutrition_data):
         plt.tight_layout()
         charts['radar_chart'] = fig5
         
+        # 6. Complex Stacked Area Chart
+        fig6 = plt.figure(figsize=(14, 8))
+        ax6 = fig6.add_subplot(111)
+        
+        # Create data for stacked area chart
+        categories = ['Protein', 'Carbs', 'Fats']
+        values = [
+            nutrition_data.get('total_protein', 0) * 4,  # Convert to calories
+            nutrition_data.get('total_carbs', 0) * 4,   # Convert to calories
+            nutrition_data.get('total_fats', 0) * 9     # Convert to calories
+        ]
+        
+        # Create gradient colors for stacked areas
+        colors_area = ['#4ECDC4', '#45B7D1', '#FFD93D']
+        
+        # Create stacked area chart with gradient effects
+        ax6.fill_between([0, 1], 0, values[0], alpha=0.8, color=colors_area[0], 
+                        label=f'Protein ({values[0]:.0f} kcal)', edgecolor='white', linewidth=2)
+        ax6.fill_between([0, 1], values[0], values[0] + values[1], alpha=0.8, color=colors_area[1],
+                        label=f'Carbs ({values[1]:.0f} kcal)', edgecolor='white', linewidth=2)
+        ax6.fill_between([0, 1], values[0] + values[1], sum(values), alpha=0.8, color=colors_area[2],
+                        label=f'Fats ({values[2]:.0f} kcal)', edgecolor='white', linewidth=2)
+        
+        # Add value labels
+        y_positions = [values[0]/2, values[0] + values[1]/2, values[0] + values[1] + values[2]/2]
+        for i, (value, y_pos, color) in enumerate(zip(values, y_positions, colors_area)):
+            ax6.text(0.5, y_pos, f'{value:.0f} kcal', ha='center', va='center', 
+                    fontweight='bold', fontsize=14, color='white',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor=color, alpha=0.8))
+        
+        # Enhanced styling
+        ax6.set_title('Advanced Macronutrient Composition Analysis', fontsize=18, fontweight='bold', pad=30,
+                     bbox=dict(boxstyle="round,pad=0.5", facecolor='lightcoral', alpha=0.3))
+        ax6.set_ylabel('Calories (kcal)', fontsize=14, fontweight='bold')
+        ax6.set_xlabel('Nutritional Components', fontsize=14, fontweight='bold')
+        ax6.set_xlim(0, 1)
+        ax6.set_ylim(0, sum(values) * 1.1)
+        ax6.legend(loc='upper right', fontsize=12)
+        ax6.grid(axis='y', alpha=0.2, linestyle='--')
+        ax6.spines['top'].set_visible(False)
+        ax6.spines['right'].set_visible(False)
+        ax6.set_xticks([])  # Remove x-axis ticks for cleaner look
+        
+        # Add background gradient
+        ax6.set_facecolor('#f8f9fa')
+        fig6.patch.set_facecolor('white')
+        
+        plt.tight_layout()
+        charts['stacked_area_chart'] = fig6
+        
+        # 7. Complex Waterfall Chart
+        fig7 = plt.figure(figsize=(14, 8))
+        ax7 = fig7.add_subplot(111)
+        
+        # Create waterfall chart data
+        components = ['Protein', 'Carbs', 'Fats', 'Total']
+        values_waterfall = [
+            nutrition_data.get('total_protein', 0) * 4,
+            nutrition_data.get('total_carbs', 0) * 4,
+            nutrition_data.get('total_fats', 0) * 9,
+            nutrition_data.get('total_calories', 0)
+        ]
+        
+        # Calculate positions for waterfall
+        positions = np.arange(len(components))
+        running_total = 0
+        waterfall_positions = []
+        waterfall_values = []
+        
+        for i, value in enumerate(values_waterfall[:-1]):  # Exclude total
+            waterfall_positions.append(running_total)
+            waterfall_values.append(value)
+            running_total += value
+        
+        # Add total bar
+        waterfall_positions.append(0)
+        waterfall_values.append(values_waterfall[-1])
+        
+        # Create waterfall chart with 3D effects
+        colors_waterfall = ['#4ECDC4', '#45B7D1', '#FFD93D', '#FF6B6B']
+        
+        for i, (pos, value, color) in enumerate(zip(waterfall_positions, waterfall_values, colors_waterfall)):
+            # Main bar with gradient
+            bar = ax7.bar(i, value, bottom=pos, color=color, alpha=0.8, 
+                         edgecolor='white', linewidth=3, width=0.6)
+            
+            # Add shadow effect
+            shadow = ax7.bar(i + 0.02, value, bottom=pos, color='black', alpha=0.3, width=0.6)
+            
+            # Add value labels
+            if i < len(waterfall_positions) - 1:  # Not the total bar
+                ax7.text(i, pos + value/2, f'{value:.0f}', ha='center', va='center',
+                        fontweight='bold', fontsize=12, color='white',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor=color, alpha=0.8))
+            else:  # Total bar
+                ax7.text(i, value/2, f'{value:.0f}', ha='center', va='center',
+                        fontweight='bold', fontsize=14, color='white',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor=color, alpha=0.8))
+        
+        # Enhanced styling
+        ax7.set_title('Advanced Calorie Accumulation Analysis', fontsize=18, fontweight='bold', pad=30,
+                     bbox=dict(boxstyle="round,pad=0.5", facecolor='lightblue', alpha=0.3))
+        ax7.set_ylabel('Calories (kcal)', fontsize=14, fontweight='bold')
+        ax7.set_xlabel('Nutritional Components', fontsize=14, fontweight='bold')
+        ax7.set_xticks(positions)
+        ax7.set_xticklabels(components, fontsize=12, fontweight='bold')
+        ax7.grid(axis='y', alpha=0.2, linestyle='--')
+        ax7.spines['top'].set_visible(False)
+        ax7.spines['right'].set_visible(False)
+        
+        # Add background gradient
+        ax7.set_facecolor('#f8f9fa')
+        fig7.patch.set_facecolor('white')
+        
+        plt.tight_layout()
+        charts['waterfall_chart'] = fig7
+        
         return charts
         
     except Exception as e:
