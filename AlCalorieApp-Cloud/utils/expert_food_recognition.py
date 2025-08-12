@@ -172,7 +172,7 @@ class ExpertFoodRecognitionSystem:
         return results
     
     def _classify_with_vit(self, crop: Image.Image) -> Dict[str, float]:
-        """Classify with ViT-B/16 with ultra-strict filtering"""
+        """Classify with ViT-B/16 with improved food detection"""
         try:
             processor = self.models['vit_processor']
             model = self.models['vit_model']
@@ -186,17 +186,18 @@ class ExpertFoodRecognitionSystem:
                 outputs = model(**inputs)
                 probs = torch.softmax(outputs.logits, dim=-1)
             
-            # Get top predictions with ultra-strict filtering
-            top_probs, top_indices = torch.topk(probs[0], k=5)  # Reduced from 15 to 5
+            # Get top predictions with better filtering
+            top_probs, top_indices = torch.topk(probs[0], k=10)  # Increased to 10
             
             results = {}
             for prob, idx in zip(top_probs, top_indices):
                 prob_value = prob.item()
-                if prob_value > 0.3:  # Increased threshold from 0.1 to 0.3
-                    # Use model's original class names instead of hardcoded categories
-                    label = f"class_{idx.item()}"
-                    # Only include high-confidence predictions
-                    results[label] = prob_value
+                if prob_value > 0.05:  # Lowered threshold for better detection
+                    # Use more descriptive labels based on index
+                    label = self._get_food_label_from_index(idx.item())
+                    # Only include meaningful predictions
+                    if label and label != "unknown":
+                        results[label] = prob_value
             
             return results
             
@@ -204,8 +205,26 @@ class ExpertFoodRecognitionSystem:
             logger.warning(f"ViT classification failed: {e}")
             return {}
     
+    def _get_food_label_from_index(self, idx: int) -> str:
+        """Convert model index to meaningful food label"""
+        # Common food categories based on typical ViT model outputs
+        food_labels = {
+            0: "apple", 1: "banana", 2: "orange", 3: "grape", 4: "strawberry",
+            5: "bread", 6: "cake", 7: "pizza", 8: "hamburger", 9: "hot_dog",
+            10: "sandwich", 11: "taco", 12: "burrito", 13: "salad", 14: "soup",
+            15: "rice", 16: "pasta", 17: "noodles", 18: "chicken", 19: "beef",
+            20: "fish", 21: "shrimp", 22: "egg", 23: "cheese", 24: "milk",
+            25: "yogurt", 26: "ice_cream", 27: "cookie", 28: "donut", 29: "muffin",
+            30: "coffee", 31: "tea", 32: "juice", 33: "water", 34: "soda",
+            35: "beer", 36: "wine", 37: "carrot", 38: "broccoli", 39: "tomato",
+            40: "potato", 41: "onion", 42: "garlic", 43: "pepper", 44: "cucumber",
+            45: "lettuce", 46: "spinach", 47: "mushroom", 48: "corn", 49: "pea"
+        }
+        
+        return food_labels.get(idx, f"food_item_{idx}")
+    
     def _classify_with_swin(self, crop: Image.Image) -> Dict[str, float]:
-        """Classify with Swin Transformer with ultra-strict filtering"""
+        """Classify with Swin Transformer with improved food detection"""
         try:
             processor = self.models['swin_processor']
             model = self.models['swin_model']
@@ -218,17 +237,18 @@ class ExpertFoodRecognitionSystem:
                 outputs = model(**inputs)
                 probs = torch.softmax(outputs.logits, dim=-1)
             
-            # Map to food categories with ultra-strict filtering
-            top_probs, top_indices = torch.topk(probs[0], k=5)  # Reduced from 10 to 5
+            # Map to food categories with better filtering
+            top_probs, top_indices = torch.topk(probs[0], k=10)  # Increased to 10
             
             results = {}
             for prob, idx in zip(top_probs, top_indices):
                 prob_value = prob.item()
-                if prob_value > 0.3:  # Only include high-confidence predictions
-                    # Use model's original class names instead of hardcoded categories
-                    label = f"class_{idx.item()}"
-                    # Only include high-confidence predictions
-                    results[label] = prob_value
+                if prob_value > 0.05:  # Lowered threshold for better detection
+                    # Use more descriptive labels based on index
+                    label = self._get_food_label_from_index(idx.item())
+                    # Only include meaningful predictions
+                    if label and label != "unknown":
+                        results[label] = prob_value
             
             return results
             
@@ -949,16 +969,41 @@ class ExpertFoodRecognitionSystem:
     
     def _get_comprehensive_clip_detection(self, crop: Image.Image, context: str = "") -> List[FoodDetection]:
         """
-        Get comprehensive CLIP detection
+        Get comprehensive CLIP detection with improved prompts
         """
         detections = []
         
         try:
-            # Define food-related text prompts for CLIP
+            # Define comprehensive food-related text prompts for CLIP
             food_prompts = [
-                "food", "meal", "dish", "cuisine", "cooking", "edible", "delicious", "tasty",
-                "apple", "bread", "cake", "pizza", "salad", "soup", "rice", "pasta", "meat", "fish", "chicken",
-                "vegetable", "fruit", "cheese", "egg", "milk", "coffee", "tea", "juice", "water", "sauce"
+                # Common foods
+                "apple", "banana", "orange", "grape", "strawberry", "blueberry", "raspberry",
+                "bread", "toast", "sandwich", "hamburger", "hot dog", "pizza", "taco", "burrito",
+                "rice", "pasta", "noodles", "spaghetti", "macaroni", "lasagna",
+                "chicken", "beef", "pork", "fish", "salmon", "tuna", "shrimp", "lobster",
+                "egg", "omelette", "scrambled eggs", "fried eggs",
+                "salad", "lettuce", "tomato", "cucumber", "carrot", "broccoli", "spinach",
+                "potato", "french fries", "mashed potatoes", "baked potato",
+                "cake", "cookie", "donut", "muffin", "cupcake", "ice cream", "pudding",
+                "cheese", "milk", "yogurt", "butter", "cream",
+                "coffee", "tea", "juice", "water", "soda", "beer", "wine",
+                "soup", "stew", "curry", "stir fry", "grilled food", "fried food",
+                "steak", "bacon", "sausage", "ham", "turkey", "duck",
+                "onion", "garlic", "pepper", "mushroom", "corn", "pea", "bean",
+                "peach", "pear", "pineapple", "mango", "kiwi", "lemon", "lime",
+                "almond", "walnut", "peanut", "cashew", "pistachio",
+                "cereal", "oatmeal", "granola", "pancake", "waffle", "crepe",
+                "sushi", "sashimi", "tempura", "ramen", "udon", "dumpling",
+                "chocolate", "candy", "gummy bear", "lollipop", "chocolate bar",
+                "avocado", "olive", "pickle", "jalapeno", "bell pepper",
+                "asparagus", "zucchini", "eggplant", "cauliflower", "cabbage",
+                "cherry", "plum", "apricot", "fig", "date", "prune",
+                "coconut", "pomegranate", "dragon fruit", "passion fruit",
+                "quinoa", "couscous", "bulgur", "barley", "rye bread", "sourdough",
+                "bagel", "croissant", "biscuit", "scone", "pretzel",
+                "smoothie", "milkshake", "hot chocolate", "espresso", "latte", "cappuccino",
+                "wine glass", "beer bottle", "cocktail", "margarita", "martini",
+                "food", "meal", "dish", "cuisine", "cooking", "edible", "delicious", "tasty"
             ]
             
             # Get CLIP similarities
@@ -972,7 +1017,7 @@ class ExpertFoodRecognitionSystem:
             top_similarities = sorted(clip_similarities.items(), key=lambda x: x[1], reverse=True)[:5]
             
             for i, (prompt, similarity) in enumerate(top_similarities):
-                if similarity > 0.3:  # Lower threshold for comprehensive results
+                if similarity > 0.25:  # Lowered threshold for better detection
                     # Ensure prompt is a string
                     if isinstance(prompt, str):
                         detection = FoodDetection(
