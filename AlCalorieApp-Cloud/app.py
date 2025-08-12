@@ -752,6 +752,124 @@ def create_history_trends(history_data):
     """Create trend charts for history data (backward compatibility)"""
     return create_complex_history_trends(history_data)
 
+def improve_food_name_display(food_name: str) -> str:
+    """Improve food name display by mapping technical names to user-friendly names"""
+    # Map technical/underscore names to user-friendly names
+    food_name_mappings = {
+        # Common mappings
+        'hot_dog': 'Hot Dog',
+        'ice_cream': 'Ice Cream',
+        'bell_pepper': 'Bell Pepper',
+        'sweet_potato': 'Sweet Potato',
+        'cream_cheese': 'Cream Cheese',
+        'cottage_cheese': 'Cottage Cheese',
+        'sour_cream': 'Sour Cream',
+        'whipping_cream': 'Whipping Cream',
+        'heavy_cream': 'Heavy Cream',
+        'light_cream': 'Light Cream',
+        'half_and_half': 'Half & Half',
+        'cheddar_cheese': 'Cheddar Cheese',
+        'mozzarella_cheese': 'Mozzarella Cheese',
+        'parmesan_cheese': 'Parmesan Cheese',
+        'swiss_cheese': 'Swiss Cheese',
+        'provolone_cheese': 'Provolone Cheese',
+        'gouda_cheese': 'Gouda Cheese',
+        'brie_cheese': 'Brie Cheese',
+        'camembert_cheese': 'Camembert Cheese',
+        'blue_cheese': 'Blue Cheese',
+        'feta_cheese': 'Feta Cheese',
+        'goat_cheese': 'Goat Cheese',
+        'ricotta_cheese': 'Ricotta Cheese',
+        'mascarpone_cheese': 'Mascarpone Cheese',
+        'burger_bun': 'Burger Bun',
+        'french_toast': 'French Toast',
+        'sunflower_seed': 'Sunflower Seeds',
+        'pumpkin_seed': 'Pumpkin Seeds',
+        'sesame_seed': 'Sesame Seeds',
+        'poppy_seed': 'Poppy Seeds',
+        'caraway_seed': 'Caraway Seeds',
+        'fennel_seed': 'Fennel Seeds',
+        'mustard_seed': 'Mustard Seeds',
+        'coriander_seed': 'Coriander Seeds',
+        'cumin_seed': 'Cumin Seeds',
+        'cardamom_seed': 'Cardamom Seeds',
+        'nutmeg_seed': 'Nutmeg Seeds',
+        'clove_seed': 'Clove Seeds',
+        'allspice_seed': 'Allspice Seeds',
+        'star_anise_seed': 'Star Anise Seeds',
+        'saffron_seed': 'Saffron Seeds',
+        'vanilla_seed': 'Vanilla Seeds',
+        'cocoa_seed': 'Cocoa Seeds',
+        'green_onion': 'Green Onion',
+        'red_onion': 'Red Onion',
+        'white_onion': 'White Onion',
+        'yellow_onion': 'Yellow Onion',
+        'sweet_onion': 'Sweet Onion',
+        'vidalia_onion': 'Vidalia Onion',
+        'walla_walla_onion': 'Walla Walla Onion',
+        'maui_onion': 'Maui Onion',
+        'bermuda_onion': 'Bermuda Onion',
+        'spanish_onion': 'Spanish Onion',
+        'egyptian_onion': 'Egyptian Onion',
+        'tree_onion': 'Tree Onion',
+        'multiplier_onion': 'Multiplier Onion',
+        'potato_onion': 'Potato Onion',
+        'shallot_onion': 'Shallot Onion',
+        'garlic_onion': 'Garlic Onion',
+        'chive_onion': 'Chive Onion',
+        'quail_egg': 'Quail Egg',
+        'duck_egg': 'Duck Egg',
+        'turkey_egg': 'Turkey Egg',
+        'goose_egg': 'Goose Egg',
+        'ostrich_egg': 'Ostrich Egg',
+        'emu_egg': 'Emu Egg',
+        'chicken_breast': 'Chicken Breast',
+        'chicken_thigh': 'Chicken Thigh',
+        'chicken_wing': 'Chicken Wing',
+        'chicken_leg': 'Chicken Leg',
+        'chicken_drumstick': 'Chicken Drumstick',
+        'beef_steak': 'Beef Steak',
+        'beef_roast': 'Beef Roast',
+        'beef_ground': 'Ground Beef',
+        'beef_brisket': 'Beef Brisket',
+        'beef_ribs': 'Beef Ribs',
+        'pork_chop': 'Pork Chop',
+        'pork_roast': 'Pork Roast',
+        'pork_belly': 'Pork Belly',
+        'pork_ribs': 'Pork Ribs',
+        'ground_meat': 'Ground Meat',
+        'ice_cream': 'Ice Cream',
+        'creme_brulee': 'Crème Brûlée',
+        'hot_chocolate': 'Hot Chocolate',
+        'iced_tea': 'Iced Tea',
+        'english_breakfast_tea': 'English Breakfast Tea',
+        'earl_grey_tea': 'Earl Grey Tea',
+        'chai_tea': 'Chai Tea',
+        'jasmine_tea': 'Jasmine Tea',
+        'chamomile_tea': 'Chamomile Tea',
+        'peppermint_tea': 'Peppermint Tea',
+        'rooibos_tea': 'Rooibos Tea',
+        'oolong_tea': 'Oolong Tea',
+        'white_tea': 'White Tea',
+        'pu_erh_tea': 'Pu-erh Tea',
+        'black_tea': 'Black Tea',
+        'green_tea': 'Green Tea',
+        'herbal_tea': 'Herbal Tea',
+        'leafy_green': 'Leafy Greens',
+        'root_vegetable': 'Root Vegetable',
+        'food_item': 'Food Item',
+        'edible_item': 'Edible Item',
+        'workshop': 'Food Workshop',
+        'produce': 'Fresh Produce'
+    }
+    
+    # Check if we have a specific mapping
+    if food_name.lower() in food_name_mappings:
+        return food_name_mappings[food_name.lower()]
+    
+    # Otherwise, just replace underscores and title case
+    return food_name.replace('_', ' ').title()
+
 def calculate_nutrition_from_expert_detections(detections):
     """Calculate nutrition data from expert detections"""
     total_calories = 0
@@ -802,8 +920,6 @@ def calculate_nutrition_from_expert_detections(detections):
         'total_fiber': 0  # Default value
     }
 
-
-
 def display_expert_results(detections, summary):
     """Display expert analysis results with comprehensive report format"""
     
@@ -847,7 +963,7 @@ def display_expert_results(detections, summary):
     # Create comprehensive report header
     if valid_detections:
         # Generate description for detected items
-        detected_items = [detection.final_label.replace('_', ' ').title() for detection in valid_detections]
+        detected_items = [improve_food_name_display(detection.final_label) for detection in valid_detections]
         description = ", ".join(detected_items[:5])  # Show first 5 items
         if len(detected_items) > 5:
             description += f" and {len(detected_items) - 5} more items"
@@ -886,7 +1002,7 @@ def display_expert_results(detections, summary):
         for detection in valid_detections:
             nutrition = estimate_basic_nutrition(detection.final_label)
             nutritional_data.append({
-                'food': detection.final_label.replace('_', ' ').title(),
+                'food': improve_food_name_display(detection.final_label),
                 'calories': nutrition['calories'],
                 'protein': nutrition['protein'],
                 'carbs': nutrition['carbs'],
@@ -945,7 +1061,7 @@ def display_expert_results(detections, summary):
             
             # Show detected items summary
             st.markdown("#### 🍽️ Detected Food Items")
-            detected_items_list = [detection.final_label.replace('_', ' ').title() for detection in valid_detections]
+            detected_items_list = [improve_food_name_display(detection.final_label) for detection in valid_detections]
             for i, item in enumerate(detected_items_list, 1):
                 st.write(f"**{i}.** {item}")
             
@@ -978,12 +1094,12 @@ def display_expert_results(detections, summary):
             # Detailed food analysis
             st.markdown("#### 🔍 Detailed Food Analysis")
             for i, detection in enumerate(valid_detections, 1):
-                st.markdown(f"**{i}. {detection.final_label.replace('_', ' ').title()}**")
+                st.markdown(f"**{i}. {improve_food_name_display(detection.final_label)}**")
                 col1, col2 = st.columns(2)
                 
                 with col1:
                     st.markdown("**Detection Parameters:**")
-                    st.write(f"• **Final Label:** {detection.final_label.replace('_', ' ').title()}")
+                    st.write(f"• **Final Label:** {improve_food_name_display(detection.final_label)}")
                     st.write(f"• **Detection Method:** {detection.detection_method}")
                     st.write(f"• **Bounding Box:** {detection.bounding_box}")
                     st.write(f"• **Final Confidence:** {detection.confidence_score:.3f}")
@@ -996,7 +1112,7 @@ def display_expert_results(detections, summary):
                         for j, alternative in enumerate(detection.top_3_alternatives, 1):
                             if isinstance(alternative, tuple):
                                 label, score = alternative
-                                st.write(f"• **{j}.** {label.replace('_', ' ').title()}: {score:.3f}")
+                                st.write(f"• **{j}.** {improve_food_name_display(label)}: {score:.3f}")
                             else:
                                 st.write(f"• **{j}.** {str(alternative)}")
                     
