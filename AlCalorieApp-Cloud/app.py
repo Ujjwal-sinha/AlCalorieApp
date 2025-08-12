@@ -872,7 +872,7 @@ def main():
                 st.error("❌ AI models not available. Please check the configuration.")
 
 def display_analysis_results(analysis_result):
-    """Display standard analysis results with classification report"""
+    """Display standard analysis results with charts and detailed analysis"""
     if analysis_result["success"]:
         description = analysis_result.get('description', 'Food items detected')
         
@@ -897,16 +897,38 @@ def display_analysis_results(analysis_result):
         </div>
         """, unsafe_allow_html=True)
         
-        # Show detailed analysis only
-        if analysis_result.get("analysis"):
-            st.markdown("#### 📝 Detailed Analysis")
-            with st.expander("🔍 Complete Analysis Report", expanded=True):
-                st.markdown(analysis_result["analysis"])
+        # Nutrition Charts
+        if analysis_result.get("nutritional_data"):
+            st.markdown("#### 📊 Nutrition Visualization")
+            
+            # Create nutrition charts
+            nutrition_charts = create_complex_nutrition_charts(analysis_result["nutritional_data"])
+            
+            if nutrition_charts:
+                chart_tab1, chart_tab2, chart_tab3, chart_tab4 = st.tabs([
+                    "🔥 3D-Style Bar Chart", "🎯 Radar Chart", "📈 Stacked Area Chart", "🌊 Waterfall Chart"
+                ])
+                
+                with chart_tab1:
+                    if 'complex_bar_chart' in nutrition_charts:
+                        st.pyplot(nutrition_charts['complex_bar_chart'])
+                
+                with chart_tab2:
+                    if 'radar_chart' in nutrition_charts:
+                        st.pyplot(nutrition_charts['radar_chart'])
+                
+                with chart_tab3:
+                    if 'stacked_area_chart' in nutrition_charts:
+                        st.pyplot(nutrition_charts['stacked_area_chart'])
+                
+                with chart_tab4:
+                    if 'waterfall_chart' in nutrition_charts:
+                        st.pyplot(nutrition_charts['waterfall_chart'])
         
         # Show detailed analysis
         if analysis_result.get("analysis"):
             st.markdown("#### 📝 Detailed Analysis")
-            with st.expander("🔍 Complete Analysis Report", expanded=False):
+            with st.expander("🔍 Complete Analysis Report", expanded=True):
                 st.markdown(analysis_result["analysis"])
 
 def display_expert_results(detections, summary):
