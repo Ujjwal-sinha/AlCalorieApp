@@ -27,7 +27,6 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 # Import utilities with error handling
 try:
     from utils.models import load_models, get_model_status
-    from utils.analysis import analyze_food_image, extract_nutrition_data
     from utils.ui import create_header, create_sidebar, create_upload_section
     UTILS_AVAILABLE = True
 except ImportError:
@@ -753,300 +752,57 @@ def create_history_trends(history_data):
     """Create trend charts for history data (backward compatibility)"""
     return create_complex_history_trends(history_data)
 
-def main():
-    # Header
-    st.markdown("""
-    <div class="header-card">
-        <h1>🍱 AI Calorie Tracker</h1>
-        <p>Track your nutrition with AI-powered food analysis</p>
-    </div>
-    """, unsafe_allow_html=True)
+def calculate_nutrition_from_expert_detections(detections):
+    """Calculate nutrition data from expert detections"""
+    total_calories = 0
+    total_protein = 0
+    total_carbs = 0
+    total_fats = 0
     
-    # Model status in sidebar
-    with st.sidebar:
-        # Add refresh button
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.markdown("### 🤖 AI Models Status")
-        with col2:
-            if st.button("🔄", help="Refresh model status and clear cache"):
-                with st.spinner("Refreshing models..."):
-                    st.cache_resource.clear()
-                    # Force reload
-                    import time
-                    time.sleep(1)
-                st.success("Models refreshed!")
-                st.rerun()
-        
-        if UTILS_AVAILABLE and "error" not in models:
-            # Get fresh model status to avoid caching issues
-            try:
-                fresh_status = get_fresh_model_status()
-                model_status = fresh_status if fresh_status else get_model_status(models)
-            except:
-                model_status = get_model_status(models)
-            
-            for model, status in model_status.items():
-                status_class = "status-success" if status else "status-error"
-                status_icon = "✅" if status else "❌"
-                status_text = "Available" if status else "Not Available"
-                # Display model names as-is (they are pre-trained, not fine-tuned)
-                st.markdown(f'<span class="{status_class}">{status_icon} **{model}**: {status_text}</span>', unsafe_allow_html=True)
-        else:
-            st.error("Models not available. Check deployment configuration.")
-        
-        st.markdown("---")
-        
-        # User settings
-        st.markdown("### 👤 Settings")
-        st.number_input("Daily Calorie Target (kcal)", min_value=1000, max_value=5000, 
-                       value=st.session_state.calorie_target, step=100, key="calorie_target")
-        
-        # Today's progress
-        st.markdown("### 📊 Today's Progress")
-        today = date.today().isoformat()
-        today_cals = st.session_state.daily_calories.get(today, 0)
-        progress = min(today_cals / st.session_state.calorie_target, 1.0) if st.session_state.calorie_target > 0 else 0
-        
-        st.metric("Calories", f"{today_cals} / {st.session_state.calorie_target}")
-        st.progress(progress)
-        
-        # Clear history
-        if st.button("🗑️ Clear History"):
-            st.session_state.history.clear()
-            st.session_state.daily_calories.clear()
-            st.success("History cleared!")
-            st.rerun()
+    # Handle different detection formats
+    if isinstance(detections, dict):
+        # New comprehensive format - extract all detections
+        all_detections = []
+        if "blip_detections" in detections:
+            all_detections.extend(detections["blip_detections"])
+        if "vit_detections" in detections:
+            all_detections.extend(detections["vit_detections"])
+        if "swin_detections" in detections:
+            all_detections.extend(detections["swin_detections"])
+        if "clip_detections" in detections:
+            all_detections.extend(detections["clip_detections"])
+        if "yolo_detections" in detections:
+            all_detections.extend(detections["yolo_detections"])
+        detections = all_detections
     
-    # Main content
-    tab1, tab2, tab3 = st.tabs(["🍽️ Food Analysis & Enhanced Agent", "📊 History", "📈 Analytics"])
+    # Ensure detections is a list
+    if not isinstance(detections, list):
+        return {
+            'total_calories': 0,
+            'total_protein': 0,
+            'total_carbs': 0,
+            'total_fats': 0,
+            'total_fiber': 0
+        }
     
-    with tab1:
-        st.markdown("""
-        <div class="metric-card">
-            <h3>🍽️ Food Analysis & Enhanced Agent</h3>
-            <p>Upload a food image for comprehensive analysis with AI-powered insights and web-sourced information.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Enhanced tips for ultra-comprehensive detection
-        with st.expander("💡 Tips for Ultra-Enhanced Food Detection"):
-            st.markdown("""
-            ### 📸 **Image Quality Tips:**
-            - Take clear, well-lit photos with good contrast
-            - Ensure all food items are visible and not obscured
-            - Use natural lighting when possible for best color accuracy
-            - Avoid shadows that might hide food details
-            
-            ### 🍽️ **Food Arrangement Tips:**
-            - Spread food items out when possible for better individual detection
-            - Include all components of your meal in the frame
-            - Show different angles of complex dishes if needed
-            - Include garnishes, sauces, and condiments in the shot
-            
-            ### 📝 **Context Enhancement:**
-            - Add descriptions for unusual or regional foods
-            - Mention cooking methods if not visually obvious
-            - Include ingredient details for complex dishes
-            - Specify portion sizes if significantly different from standard
-            
-            ### 🎯 **Ultra-Enhanced Features:**
-            - **Multi-Pass Detection:** Uses 8+ different AI prompts for comprehensive coverage
-            - **YOLO Integration:** Multiple confidence levels for maximum food item detection
-            - **Web Intelligence:** Searches for nutritional and cultural information
-            - **Quality Assessment:** Evaluates food safety and freshness indicators
-            - **Category Analysis:** Specialized detection for fruits, vegetables, proteins, etc.
-            
-            ### 🌐 **Enhanced Agent Benefits:**
-            - Comprehensive web search for detailed food information
-            - Cultural and historical context for dishes
-            - Recipe suggestions and cooking tips
-            - Health benefits and dietary considerations
-            - Food safety and storage recommendations
-            """)
-        
-        # Enhanced detection status
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); 
-                    padding: 15px; border-radius: 10px; color: white; margin: 10px 0;">
-            <div style="display: flex; align-items: center;">
-                <span style="font-size: 20px; margin-right: 10px;">⚡</span>
-                <div>
-                    <strong>Ultra-Enhanced Detection Active</strong><br>
-                    <small>Using 8+ AI prompts + YOLO + Web Intelligence for maximum accuracy</small>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Single file upload for both analysis types
-        uploaded_file = st.file_uploader(
-            "📸 Upload a food image",
-            type=['jpg', 'jpeg', 'png', 'webp'],
-            help="Upload a clear image of your food for analysis"
-        )
-        
-        # Single context input for both analysis types
-        context = st.text_area(
-            "Additional Context (Optional)", 
-            placeholder="Describe the meal if needed (e.g., 'chicken curry with rice')", 
-            height=80
-        )
-        
-        # Display uploaded image if available
-        if uploaded_file:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Food Image", use_column_width=True)
-        
-        # Comprehensive analysis
-        st.markdown("### 🚀 Comprehensive Analysis")
-        
-        if st.button("🔍🧠 Run Comprehensive Analysis (Standard + Expert)", disabled=not uploaded_file, type="primary"):
-            if uploaded_file and UTILS_AVAILABLE and "error" not in models:
-                # Progress tracking
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                try:
-                    status_text.text("📷 Loading image...")
-                    progress_bar.progress(5)
-                    
-                    image = Image.open(uploaded_file)
-                    
-                    # Step 1: Standard Analysis
-                    status_text.text("🔍 Running standard food detection...")
-                    progress_bar.progress(20)
-                    
-                    analysis_result = analyze_food_image(image, context, models)
-                    
-                    # Step 2: Expert Analysis
-                    status_text.text("🧠 Running expert multi-model analysis...")
-                    progress_bar.progress(50)
-                    
-                    expert_result = None
-                    try:
-                        from utils.expert_food_recognition import ExpertFoodRecognitionSystem
-                        expert_system = ExpertFoodRecognitionSystem(models)
-                        detections = expert_system.recognize_food(image)
-                        expert_summary = expert_system.get_detection_summary(detections)
-                        expert_result = {"detections": detections, "summary": expert_summary}
-                    except Exception as e:
-                        st.warning(f"Expert system not available: {str(e)}")
-                    
-                    status_text.text("📊 Finalizing comprehensive analysis...")
-                    progress_bar.progress(95)
-                    
-                    progress_bar.progress(100)
-                    status_text.text("✅ Comprehensive analysis complete!")
-                    
-                    # Clear progress
-                    progress_bar.empty()
-                    status_text.empty()
-                    
-                    # Display results
-                    if analysis_result["success"]:
-                        st.success("✅ Comprehensive analysis completed!")
-                        
-                        # Display all results in tabs
-                        tab1, tab2 = st.tabs(["🔍 Standard Analysis", "🧠 Expert Analysis"])
-                        
-                        with tab1:
-                            display_analysis_results(analysis_result)
-                        
-                        with tab2:
-                            if expert_result and expert_result["summary"]["success"]:
-                                display_expert_results(expert_result["detections"], expert_result["summary"])
-                            else:
-                                st.info("Expert analysis not available or no detections found")
-                        
-                        # Save to history
-                        history_entry = {
-                            'timestamp': datetime.now(),
-                            'image_name': uploaded_file.name,
-                            'description': analysis_result.get('description', 'Comprehensive food analysis'),
-                            'analysis': analysis_result["analysis"],
-                            'nutritional_data': analysis_result["nutritional_data"],
-                            'context': context,
-                            'expert_detections': expert_result["detections"] if expert_result else []
-                        }
-                        
-                        st.session_state.history.append(history_entry)
-                        
-                        # Update daily calories
-                        today = date.today().isoformat()
-                        if today not in st.session_state.daily_calories:
-                            st.session_state.daily_calories[today] = 0
-                        st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
-                        
-                        st.success(f"📝 Added {analysis_result['nutritional_data']['total_calories']:.0f} calories to today's total!")
-                    
-                    else:
-                        st.error("❌ Analysis failed")
-                
-                except Exception as e:
-                    st.error(f"Error during comprehensive analysis: {str(e)}")
-            else:
-                st.error("❌ AI models not available. Please check the configuration.")
+    # Calculate nutrition for each detection
+    for detection in detections:
+        if hasattr(detection, 'final_label'):
+            nutrition = estimate_basic_nutrition(detection.final_label)
+            total_calories += nutrition['calories']
+            total_protein += nutrition['protein']
+            total_carbs += nutrition['carbs']
+            total_fats += nutrition['fat']
+    
+    return {
+        'total_calories': total_calories,
+        'total_protein': total_protein,
+        'total_carbs': total_carbs,
+        'total_fats': total_fats,
+        'total_fiber': 0  # Default value
+    }
 
-def display_analysis_results(analysis_result):
-    """Display standard analysis results with charts and detailed analysis"""
-    if analysis_result["success"]:
-        description = analysis_result.get('description', 'Food items detected')
-        
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    padding: 25px; border-radius: 20px; color: white; margin: 20px 0; 
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
-            <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px;">
-                    <span style="font-size: 24px;">🎯</span>
-                </div>
-                <div>
-                    <h3 style="color: white; margin: 0; font-size: 24px;">Standard Analysis Results</h3>
-                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Multi-Model Food Detection</p>
-                </div>
-            </div>
-            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px;">
-                <p style="font-size: 16px; margin: 0; line-height: 1.6; color: #333; font-weight: 500;">
-                    <strong style="color: #667eea;">Detected Items:</strong> {description}
-                </p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Nutrition Charts
-        if analysis_result.get("nutritional_data"):
-            st.markdown("#### 📊 Nutrition Visualization")
-            
-            # Create nutrition charts
-            nutrition_charts = create_complex_nutrition_charts(analysis_result["nutritional_data"])
-            
-            if nutrition_charts:
-                chart_tab1, chart_tab2, chart_tab3, chart_tab4 = st.tabs([
-                    "🔥 3D-Style Bar Chart", "🎯 Radar Chart", "📈 Stacked Area Chart", "🌊 Waterfall Chart"
-                ])
-                
-                with chart_tab1:
-                    if 'complex_bar_chart' in nutrition_charts:
-                        st.pyplot(nutrition_charts['complex_bar_chart'])
-                
-                with chart_tab2:
-                    if 'radar_chart' in nutrition_charts:
-                        st.pyplot(nutrition_charts['radar_chart'])
-                
-                with chart_tab3:
-                    if 'stacked_area_chart' in nutrition_charts:
-                        st.pyplot(nutrition_charts['stacked_area_chart'])
-                
-                with chart_tab4:
-                    if 'waterfall_chart' in nutrition_charts:
-                        st.pyplot(nutrition_charts['waterfall_chart'])
-        
-        # Show detailed analysis
-        if analysis_result.get("analysis"):
-            st.markdown("#### 📝 Detailed Analysis")
-            with st.expander("🔍 Complete Analysis Report", expanded=True):
-                st.markdown(analysis_result["analysis"])
+
 
 def display_expert_results(detections, summary):
     """Display expert analysis results with comprehensive report format"""
@@ -1548,10 +1304,10 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded Food Image", use_column_width=True)
         
-        # Comprehensive analysis
-        st.markdown("### 🚀 Comprehensive Analysis")
+        # Expert Analysis
+        st.markdown("### 🧠 Expert Analysis")
         
-        if st.button("🔍🧠 Run Comprehensive Analysis (Standard + Expert)", disabled=not uploaded_file, type="primary"):
+        if st.button("🧠 Run Expert Analysis", disabled=not uploaded_file, type="primary"):
             if uploaded_file and UTILS_AVAILABLE and "error" not in models:
                 # Progress tracking
                 progress_bar = st.progress(0)
@@ -1559,17 +1315,11 @@ def main():
                 
                 try:
                     status_text.text("📷 Loading image...")
-                    progress_bar.progress(5)
+                    progress_bar.progress(10)
                     
                     image = Image.open(uploaded_file)
                     
-                    # Step 1: Standard Analysis
-                    status_text.text("🔍 Running standard food detection...")
-                    progress_bar.progress(20)
-                    
-                    analysis_result = analyze_food_image(image, context, models)
-                    
-                    # Step 2: Expert Analysis
+                    # Expert Analysis
                     status_text.text("🧠 Running expert multi-model analysis...")
                     progress_bar.progress(50)
                     
@@ -1581,43 +1331,38 @@ def main():
                         expert_summary = expert_system.get_detection_summary(detections)
                         expert_result = {"detections": detections, "summary": expert_summary}
                     except Exception as e:
-                        st.warning(f"Expert system not available: {str(e)}")
+                        st.error(f"Expert system error: {str(e)}")
+                        return
                     
-                    status_text.text("📊 Finalizing comprehensive analysis...")
-                    progress_bar.progress(95)
+                    status_text.text("📊 Finalizing expert analysis...")
+                    progress_bar.progress(90)
                     
                     progress_bar.progress(100)
-                    status_text.text("✅ Comprehensive analysis complete!")
+                    status_text.text("✅ Expert analysis complete!")
                     
                     # Clear progress
                     progress_bar.empty()
                     status_text.empty()
                     
                     # Display results
-                    if analysis_result["success"]:
-                        st.success("✅ Comprehensive analysis completed!")
+                    if expert_result and expert_result["summary"]["success"]:
+                        st.success("✅ Expert analysis completed!")
                         
-                        # Display all results in tabs
-                        tab1, tab2 = st.tabs(["🔍 Standard Analysis", "🧠 Expert Analysis"])
+                        # Display expert results
+                        display_expert_results(expert_result["detections"], expert_result["summary"])
                         
-                        with tab1:
-                            display_analysis_results(analysis_result)
-                        
-                        with tab2:
-                            if expert_result and expert_result["summary"]["success"]:
-                                display_expert_results(expert_result["detections"], expert_result["summary"])
-                            else:
-                                st.info("Expert analysis not available or no detections found")
+                        # Calculate nutrition data from expert detections
+                        nutritional_data = calculate_nutrition_from_expert_detections(expert_result["detections"])
                         
                         # Save to history
                         history_entry = {
                             'timestamp': datetime.now(),
                             'image_name': uploaded_file.name,
-                            'description': analysis_result.get('description', 'Comprehensive food analysis'),
-                            'analysis': analysis_result["analysis"],
-                            'nutritional_data': analysis_result["nutritional_data"],
+                            'description': f"Expert analysis: {len(expert_result['detections'])} items detected",
+                            'analysis': f"Expert multi-model analysis with {expert_result['summary'].get('total_detections', 0)} detections",
+                            'nutritional_data': nutritional_data,
                             'context': context,
-                            'expert_detections': expert_result["detections"] if expert_result else []
+                            'expert_detections': expert_result["detections"]
                         }
                         
                         st.session_state.history.append(history_entry)
@@ -1626,15 +1371,15 @@ def main():
                         today = date.today().isoformat()
                         if today not in st.session_state.daily_calories:
                             st.session_state.daily_calories[today] = 0
-                        st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
+                        st.session_state.daily_calories[today] += nutritional_data["total_calories"]
                         
-                        st.success(f"📝 Added {analysis_result['nutritional_data']['total_calories']:.0f} calories to today's total!")
+                        st.success(f"📝 Added {nutritional_data['total_calories']:.0f} calories to today's total!")
                     
                     else:
-                        st.error("❌ Analysis failed")
+                        st.error("❌ Expert analysis failed or no detections found")
                 
                 except Exception as e:
-                    st.error(f"Error during comprehensive analysis: {str(e)}")
+                    st.error(f"Error during expert analysis: {str(e)}")
             else:
                 st.error("❌ AI models not available. Please check the configuration.")
     
