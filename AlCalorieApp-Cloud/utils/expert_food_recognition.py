@@ -69,7 +69,9 @@ class ExpertFoodRecognitionSystem:
         self.non_food_items = {
             'cup', 'plate', 'bowl', 'fork', 'spoon', 'knife', 'utensil', 'glass',
             'bottle', 'napkin', 'table', 'chair', 'background', 'wall', 'floor',
-            'counter', 'kitchen', 'restaurant', 'food', 'meal', 'dish'
+            'counter', 'kitchen', 'restaurant', 'food', 'meal', 'dish', 'what',
+            'how', 'when', 'where', 'why', 'food_item', 'unknown', 'other',
+            'container', 'object', 'item', 'thing', 'stuff'
         }
     
     def detect_food_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
@@ -574,8 +576,11 @@ class ExpertFoodRecognitionSystem:
                 # Step 8: Break ties if needed
                 final_label = self.break_ties(fused_scores, clip_similarities, blip_description)
                 
-                # Step 9: Filter out non-food items (relaxed filtering)
-                if final_label.lower() in self.non_food_items and len(detections) > 0:
+                # Step 9: Filter out non-food items (enhanced filtering)
+                label_lower = final_label.lower()
+                if (label_lower in self.non_food_items or 
+                    any(skip_word in label_lower for skip_word in ['what', 'how', 'when', 'where', 'why', 'food_item', 'unknown', 'other']) or
+                    any(non_food in label_lower for non_food in ['bottle', 'cup', 'plate', 'utensil', 'container', 'object', 'item', 'thing', 'stuff'])):
                     logger.info(f"Filtered out non-food item: {final_label}")
                     continue
                 

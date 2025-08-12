@@ -897,73 +897,11 @@ def display_analysis_results(analysis_result):
         </div>
         """, unsafe_allow_html=True)
         
-        # Classification Report
-        st.markdown("### 📊 Classification Report")
-        
-        # Extract detected foods from description
-        detected_foods = []
-        if "Detected foods:" in description:
-            foods_text = description.split("Detected foods:")[1].split("(via")[0].strip()
-            detected_foods = [food.strip() for food in foods_text.split(',') if food.strip()]
-        elif "Main Food Items Identified:" in description:
-            foods_text = description.split("Main Food Items Identified:")[1].strip()
-            detected_foods = [food.strip() for food in foods_text.split(',') if food.strip()]
-        
-        if detected_foods:
-            # Create classification report table
-            st.markdown("#### 🍽️ Detected Food Items")
-            
-            # Create a comprehensive table
-            report_data = []
-            for i, food in enumerate(detected_foods, 1):
-                # Extract detection method if available
-                detection_method = "Standard Analysis"
-                if "(ViT)" in food:
-                    detection_method = "Vision Transformer"
-                    food = food.replace(" (ViT)", "")
-                elif "(BLIP)" in food:
-                    detection_method = "BLIP Analysis"
-                    food = food.replace(" (BLIP)", "")
-                
-                # Estimate confidence based on detection method
-                confidence = 0.85 if detection_method == "Vision Transformer" else 0.75
-                
-                # Categorize food
-                category = categorize_food(food)
-                
-                # Estimate nutrition (basic)
-                nutrition = estimate_basic_nutrition(food)
-                
-                report_data.append({
-                    "Item #": i,
-                    "Food Item": food.title(),
-                    "Category": category,
-                    "Detection Method": detection_method,
-                    "Confidence": f"{confidence:.1%}",
-                    "Calories (est.)": f"{nutrition['calories']} kcal",
-                    "Protein (est.)": f"{nutrition['protein']}g",
-                    "Carbs (est.)": f"{nutrition['carbs']}g",
-                    "Fat (est.)": f"{nutrition['fat']}g"
-                })
-            
-            # Display as table
-            import pandas as pd
-            df = pd.DataFrame(report_data)
-            st.dataframe(df, use_container_width=True)
-            
-            # Summary statistics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Items", len(detected_foods))
-            with col2:
-                categories = set([item["Category"] for item in report_data])
-                st.metric("Categories", len(categories))
-            with col3:
-                avg_confidence = sum([float(item["Confidence"].rstrip('%')) for item in report_data]) / len(report_data)
-                st.metric("Avg Confidence", f"{avg_confidence:.1f}%")
-            with col4:
-                total_cals = sum([int(item["Calories (est.)"].split()[0]) for item in report_data])
-                st.metric("Total Calories", f"{total_cals} kcal")
+        # Show detailed analysis only
+        if analysis_result.get("analysis"):
+            st.markdown("#### 📝 Detailed Analysis")
+            with st.expander("🔍 Complete Analysis Report", expanded=True):
+                st.markdown(analysis_result["analysis"])
         
         # Show detailed analysis
         if analysis_result.get("analysis"):
@@ -972,66 +910,28 @@ def display_analysis_results(analysis_result):
                 st.markdown(analysis_result["analysis"])
 
 def display_expert_results(detections, summary):
-    """Display expert analysis results with comprehensive classification report"""
+    """Display expert analysis results with detailed analysis only"""
     st.markdown("### 🧠 Expert Multi-Model Analysis Results")
     
-    # Comprehensive Classification Report
-    st.markdown("#### 📊 Expert Classification Report")
+    # Filter out non-food items and generic detections
+    valid_detections = []
+    for detection in detections:
+        # Skip generic/non-food items
+        label_lower = detection.final_label.lower()
+        if any(skip_word in label_lower for skip_word in ['what', 'how', 'when', 'where', 'why', 'food_item', 'unknown', 'other']):
+            continue
+        # Skip items that are clearly not food
+        if any(non_food in label_lower for non_food in ['bottle', 'cup', 'plate', 'utensil', 'container']):
+            continue
+        valid_detections.append(detection)
     
-    if detections:
-        # Create detailed classification table
-        report_data = []
-        for i, detection in enumerate(detections, 1):
-            # Get top alternatives
-            alternatives = []
-            for label, score in detection.top_3_alternatives[:3]:
-                alternatives.append(f"{label.replace('_', ' ').title()} ({score:.3f})")
-            
-            # Categorize food
-            category = categorize_food(detection.final_label)
-            
-            # Estimate nutrition
-            nutrition = estimate_basic_nutrition(detection.final_label)
-            
-            report_data.append({
-                "Item #": i,
-                "Food Item": detection.final_label.replace('_', ' ').title(),
-                "Category": category,
-                "Detection Method": detection.detection_method,
-                "Final Confidence": f"{detection.confidence_score:.1%}",
-                "Classifier Prob": f"{detection.classifier_probability:.1%}",
-                "CLIP Similarity": f"{detection.clip_similarity:.1%}",
-                "Bounding Box": f"{detection.bounding_box}",
-                "Top Alternatives": " | ".join(alternatives),
-                "Calories (est.)": f"{nutrition['calories']} kcal",
-                "Protein (est.)": f"{nutrition['protein']}g",
-                "Carbs (est.)": f"{nutrition['carbs']}g",
-                "Fat (est.)": f"{nutrition['fat']}g"
-            })
+    if valid_detections:
+        st.success(f"✅ Expert analysis detected {len(valid_detections)} valid food items")
         
-        # Display as table
-        import pandas as pd
-        df = pd.DataFrame(report_data)
-        st.dataframe(df, use_container_width=True)
-        
-        # Summary statistics
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Detections", len(detections))
-        with col2:
-            categories = set([item["Category"] for item in report_data])
-            st.metric("Categories", len(categories))
-        with col3:
-            avg_confidence = sum([float(item["Final Confidence"].rstrip('%')) for item in report_data]) / len(report_data)
-            st.metric("Avg Confidence", f"{avg_confidence:.1f}%")
-        with col4:
-            total_cals = sum([int(item["Calories (est.)"].split()[0]) for item in report_data])
-            st.metric("Total Calories", f"{total_cals} kcal")
-        
-        # Detailed detection information
-        st.markdown("#### 🔍 Detailed Detection Information")
-        for detection in detections:
-            with st.expander(f"📋 {detection.final_label.replace('_', ' ').title()} - Detailed Analysis"):
+        # Show detailed detection information for valid foods only
+        st.markdown("#### 🔍 Detailed Food Analysis")
+        for detection in valid_detections:
+            with st.expander(f"📋 {detection.final_label.replace('_', ' ').title()} - Detailed Analysis", expanded=True):
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -1064,6 +964,8 @@ def display_expert_results(detections, summary):
                     st.metric("Carbs", f"{nutrition['carbs']}g")
                 with col_n4:
                     st.metric("Fat", f"{nutrition['fat']}g")
+    else:
+        st.info("No valid food items detected in expert analysis")
     
     # Show detection method
     st.markdown("### 🔬 Detection Method")
