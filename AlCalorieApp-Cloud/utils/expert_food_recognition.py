@@ -222,13 +222,19 @@ class ExpertFoodRecognitionSystem:
     
     def _create_grid_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
         """
-        Create grid-based crops for food detection
+        Create intelligent grid-based crops for food detection
         """
         crops = []
         width, height = image.size
         
-        # Create 2x2 grid
-        grid_size = 2
+        # Adaptive grid based on image size
+        if width > 800 and height > 600:
+            grid_size = 3  # 3x3 for large images
+        elif width > 400 and height > 300:
+            grid_size = 2  # 2x2 for medium images
+        else:
+            grid_size = 1  # Single crop for small images
+        
         crop_width = width // grid_size
         crop_height = height // grid_size
         
@@ -245,8 +251,9 @@ class ExpertFoodRecognitionSystem:
                 
                 crop = image.crop((x1, y1, x2, y2))
                 
-                # Only keep reasonable sized crops
-                if crop.width > 50 and crop.height > 50:
+                # Only keep reasonable sized crops with minimum area
+                min_area = 2500  # 50x50 minimum
+                if crop.width * crop.height >= min_area:
                     crops.append((crop, (x1, y1, x2, y2)))
         
         return crops
@@ -254,7 +261,7 @@ class ExpertFoodRecognitionSystem:
     def classify_with_transformers(self, crop: Image.Image) -> Dict[str, float]:
         """
         Get classification results from ViT-B/16 and Swin Transformer
-        Returns: Dict of {label: probability}
+        Returns: Dict of {label: probability} - only real detections
         """
         results = {}
         
@@ -265,8 +272,8 @@ class ExpertFoodRecognitionSystem:
             
             if not vit_available and not swin_available:
                 logger.warning("No transformer models available for classification")
-                # Return default probabilities for common foods
-                return self._get_default_food_probabilities()
+                # Return empty dict - no hardcoded suggestions
+                return {}
             
             # ViT-B/16 classification
             if vit_available:
@@ -284,52 +291,43 @@ class ExpertFoodRecognitionSystem:
                 
         except Exception as e:
             logger.warning(f"Transformer classification failed: {e}")
-            # Fallback to default probabilities
-            results = self._get_default_food_probabilities()
+            # Return empty dict - no fallback suggestions
+            return {}
         
         return results
     
-    def _get_default_food_probabilities(self) -> Dict[str, float]:
+    def _get_default_food_probabilities(self, crop: Image.Image = None) -> Dict[str, float]:
         """
-        Get default food probabilities when models are not available
+        Return empty dict - no hardcoded food suggestions
         """
-        # Common foods with reasonable probabilities
-        default_foods = {
-            'pizza': 0.8,
-            'hamburger': 0.7,
-            'chicken_wings': 0.6,
-            'french_fries': 0.6,
-            'ice_cream': 0.5,
-            'cake': 0.5,
-            'salad': 0.4,
-            'rice': 0.4,
-            'bread': 0.4,
-            'apple_pie': 0.3
-        }
-        return default_foods
+        # Return empty dict to ensure no hardcoded food items are suggested
+        return {}
     
     def _classify_with_vit(self, crop: Image.Image) -> Dict[str, float]:
-        """Classify with ViT-B/16"""
+        """Classify with ViT-B/16 with enhanced accuracy"""
         try:
             processor = self.models['vit_processor']
             model = self.models['vit_model']
+            device = self.models.get('device', 'cpu')
             
             # Preprocess image
-            inputs = processor(crop, return_tensors="pt")
+            inputs = processor(crop, return_tensors="pt").to(device)
             
             # Get predictions
             with torch.no_grad():
                 outputs = model(**inputs)
                 probs = torch.softmax(outputs.logits, dim=-1)
             
-            # Map to food categories
-            top_probs, top_indices = torch.topk(probs[0], k=10)
+            # Get top predictions with higher confidence
+            top_probs, top_indices = torch.topk(probs[0], k=15)
             
             results = {}
             for prob, idx in zip(top_probs, top_indices):
-                if idx < len(self.food_categories):
-                    label = self.food_categories[idx.item()]
-                    results[label] = prob.item()
+                prob_value = prob.item()
+                if prob_value > 0.1:  # Only include predictions with >10% confidence
+                    if idx < len(self.food_categories):
+                        label = self.food_categories[idx.item()]
+                        results[label] = prob_value
             
             return results
             
@@ -616,140 +614,423 @@ class ExpertFoodRecognitionSystem:
     
     def recognize_food(self, image: Image.Image, context: str = "") -> List[FoodDetection]:
         """
-        Main method to recognize food items in the image with enhanced Indian food detection
+        Comprehensive food analysis - only returns items actually found in the image
         """
         detections = []
         
         try:
-            logger.info("Starting expert food recognition with Indian food enhancement")
+            logger.info("Starting comprehensive food analysis - image-only detection")
             
-            # Step 1: Detect food crops
-            crops = self.detect_food_crops(image)
-            logger.info(f"Detected {len(crops)} food candidate crops")
+            # Step 1: Multi-scale crop detection for comprehensive coverage
+            crops = self._get_comprehensive_crops(image)
+            logger.info(f"Generated {len(crops)} comprehensive crop candidates")
             
             if not crops:
-                logger.warning("No crops detected, creating fallback detection")
-                # Create a fallback detection for the whole image
-                fallback_detection = self._create_fallback_detection(image)
-                if fallback_detection:
-                    detections.append(fallback_detection)
-                return detections
+                logger.warning("No crops generated, using whole image")
+                crops = [(image, (0, 0, image.width, image.height))]
             
             for i, (crop, bounding_box) in enumerate(crops):
                 logger.info(f"Processing crop {i+1}/{len(crops)}: {crop.size}")
                 
-                # Step 2: Enhanced classification with Indian food context
-                classifier_probs = self._classify_with_indian_context(crop, context)
+                # Step 2: Multi-model classification with strict validation
+                classification_result = self._get_strict_image_based_classification(crop, context)
                 
-                if not classifier_probs:
-                    logger.warning(f"No classification results for crop {i+1}")
+                if not classification_result:
+                    logger.info(f"No valid image-based classification for crop {i+1}")
                     continue
                 
-                # Step 3: Get top candidates
-                top_candidates = sorted(classifier_probs.items(), key=lambda x: x[1], reverse=True)[:3]
-                logger.info(f"Top candidates for crop {i+1}: {top_candidates}")
+                final_label, final_confidence, classifier_prob, clip_sim, blip_desc, alternatives = classification_result
                 
-                # Step 4: Get CLIP similarities
-                candidate_labels = [label for label, _ in top_candidates]
-                clip_similarities = self.get_clip_similarities(crop, candidate_labels)
-                
-                # Step 5: Get BLIP description
-                blip_description = self.get_blip_description(crop)
-                
-                # Step 6: Check confidence thresholds (relaxed for better detection)
-                best_classifier_prob = top_candidates[0][1] if top_candidates else 0
-                best_clip_sim = clip_similarities.get(top_candidates[0][0], 0) if top_candidates else 0
-                
-                # Relaxed thresholds for better detection
-                relaxed_classifier_threshold = 0.3  # Lowered from 0.45
-                relaxed_clip_threshold = 0.2  # Lowered from 0.28
-                
-                # Discard if both thresholds not met
-                if best_classifier_prob < relaxed_classifier_threshold and best_clip_sim < relaxed_clip_threshold:
-                    logger.info(f"Crop {i+1} below relaxed confidence thresholds")
+                # Step 3: Ultra-strict confidence validation (95%+ requirement)
+                if final_confidence < 0.95:
+                    logger.info(f"Crop {i+1} confidence {final_confidence:.3f} below 95% threshold")
                     continue
                 
-                # Step 7: Fuse evidence
-                fused_scores = self.fuse_evidence(classifier_probs, clip_similarities, blip_description)
-                
-                # Step 8: Break ties if needed
-                final_label = self.break_ties(fused_scores, clip_similarities, blip_description)
-                
-                # Step 9: Filter out non-food items (enhanced filtering)
-                label_lower = final_label.lower()
-                if (label_lower in self.non_food_items or 
-                    any(skip_word in label_lower for skip_word in ['what', 'how', 'when', 'where', 'why', 'food_item', 'unknown', 'other']) or
-                    any(non_food in label_lower for non_food in ['bottle', 'cup', 'plate', 'utensil', 'container', 'object', 'item', 'thing', 'stuff'])):
-                    logger.info(f"Filtered out non-food item: {final_label}")
+                # Step 4: Validate that this is actually food found in the image
+                if not self._validate_image_based_food_detection(final_label, blip_desc, final_confidence, crop):
+                    logger.info(f"Crop {i+1} failed image-based food validation")
                     continue
                 
-                # Step 10: Create detection result
-                final_confidence = fused_scores[0][1] if fused_scores else 0
-                
+                # Step 5: Create image-based detection
                 detection = FoodDetection(
                     bounding_box=bounding_box,
                     final_label=final_label,
                     confidence_score=final_confidence,
-                    top_3_alternatives=fused_scores[:3],
-                    detection_method="Expert Multi-Model",
-                    classifier_probability=best_classifier_prob,
-                    clip_similarity=best_clip_sim,
-                    blip_description=blip_description
+                    top_3_alternatives=alternatives[:3],
+                    detection_method="Image-Based Multi-Model",
+                    classifier_probability=classifier_prob,
+                    clip_similarity=clip_sim,
+                    blip_description=blip_desc
                 )
                 
                 detections.append(detection)
-                logger.info(f"Detected: {final_label} (confidence: {final_confidence:.3f})")
+                logger.info(f"Image-based detection: {final_label} (confidence: {final_confidence:.3f})")
             
-            # If no detections, create a fallback
-            if not detections:
-                logger.info("No detections found, creating fallback detection")
-                fallback_detection = self._create_fallback_detection(image)
-                if fallback_detection:
-                    detections.append(fallback_detection)
+            # Only return detections with 95%+ confidence
+            ultra_high_confidence_detections = [d for d in detections if d.confidence_score >= 0.95]
+            
+            if not ultra_high_confidence_detections:
+                logger.warning("No detections met 95% confidence threshold - no hardcoded items returned")
+                return []
+            
+            logger.info(f"Comprehensive food analysis completed with {len(ultra_high_confidence_detections)} image-based detections")
+            return ultra_high_confidence_detections
         
         except Exception as e:
-            logger.error(f"Food recognition failed: {e}")
-            # Create fallback detection on error
-            fallback_detection = self._create_fallback_detection(image)
-            if fallback_detection:
-                detections.append(fallback_detection)
+            logger.error(f"Comprehensive food analysis failed: {e}")
+            return []
+    
+    def _get_comprehensive_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
+        """
+        Generate comprehensive crop candidates using multiple strategies
+        """
+        crops = []
         
-        logger.info(f"Expert recognition completed with {len(detections)} detections")
-        return detections
+        try:
+            # Strategy 1: YOLO detection with high confidence
+            if self.models.get('yolo_model'):
+                logger.info("Using YOLO for high-confidence crop detection")
+                yolo_results = self.models['yolo_model'](image, verbose=False)
+                
+                for result in yolo_results:
+                    boxes = result.boxes
+                    if boxes is not None:
+                        for box in boxes:
+                            # Only use high-confidence YOLO detections
+                            confidence = box.conf[0].item() if hasattr(box, 'conf') else 0.5
+                            if confidence > 0.7:  # High confidence threshold
+                                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                                
+                                crop = image.crop((x1, y1, x2, y2))
+                                if crop.width * crop.height >= 2500:  # Minimum area
+                                    crops.append((crop, (x1, y1, x2, y2)))
+                                    logger.info(f"YOLO crop: {crop.width}x{crop.height} (conf: {confidence:.3f})")
+            
+            # Strategy 2: Intelligent grid cropping
+            if len(crops) < 3:  # Ensure we have enough candidates
+                grid_crops = self._create_adaptive_grid_crops(image)
+                crops.extend(grid_crops)
+            
+            # Strategy 3: Center crop for single food items
+            center_crop = self._create_center_crop(image)
+            if center_crop:
+                crops.append(center_crop)
+            
+            # Strategy 4: Whole image as fallback
+            if not crops:
+                crops.append((image, (0, 0, image.width, image.height)))
+            
+        except Exception as e:
+            logger.warning(f"Comprehensive crop generation failed: {e}")
+            crops.append((image, (0, 0, image.width, image.height)))
+        
+        return crops
+    
+    def _create_adaptive_grid_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
+        """
+        Create adaptive grid crops based on image characteristics
+        """
+        crops = []
+        width, height = image.size
+        
+        # Analyze image to determine optimal grid
+        aspect_ratio = width / height
+        
+        if aspect_ratio > 1.5:  # Wide image
+            grid_size = (3, 2)  # 3x2 grid
+        elif aspect_ratio < 0.7:  # Tall image
+            grid_size = (2, 3)  # 2x3 grid
+        else:  # Square-ish image
+            grid_size = (2, 2)  # 2x2 grid
+        
+        crop_width = width // grid_size[0]
+        crop_height = height // grid_size[1]
+        
+        for i in range(grid_size[0]):
+            for j in range(grid_size[1]):
+                x1 = i * crop_width
+                y1 = j * crop_height
+                x2 = min(x1 + crop_width, width)
+                y2 = min(y1 + crop_height, height)
+                
+                crop = image.crop((x1, y1, x2, y2))
+                if crop.width * crop_height >= 2500:
+                    crops.append((crop, (x1, y1, x2, y2)))
+        
+        return crops
+    
+    def _create_center_crop(self, image: Image.Image) -> Optional[Tuple[Image.Image, Tuple[int, int, int, int]]]:
+        """
+        Create center crop for single food items
+        """
+        width, height = image.size
+        center_size = min(width, height) // 2
+        
+        x1 = (width - center_size) // 2
+        y1 = (height - center_size) // 2
+        x2 = x1 + center_size
+        y2 = y1 + center_size
+        
+        crop = image.crop((x1, y1, x2, y2))
+        if crop.width * crop.height >= 2500:
+            return (crop, (x1, y1, x2, y2))
+        return None
+    
+    def _get_strict_image_based_classification(self, crop: Image.Image, context: str = "") -> Optional[Tuple]:
+        """
+        Get strict image-based classification - only real detections from the image
+        """
+        try:
+            # Get all available classifications
+            classifier_probs = self.classify_with_transformers(crop)
+            if not classifier_probs:
+                logger.info("No classifier probabilities available")
+                return None
+            
+            # Filter out low-confidence predictions
+            high_confidence_probs = {label: prob for label, prob in classifier_probs.items() if prob > 0.3}
+            if not high_confidence_probs:
+                logger.info("No high-confidence classifier predictions")
+                return None
+            
+            # Get top candidates
+            top_candidates = sorted(high_confidence_probs.items(), key=lambda x: x[1], reverse=True)[:3]
+            
+            # Get CLIP similarities for top candidates
+            candidate_labels = [label for label, _ in top_candidates]
+            clip_similarities = self.get_clip_similarities(crop, candidate_labels)
+            
+            # Filter CLIP similarities for high confidence
+            high_confidence_clip = {label: sim for label, sim in clip_similarities.items() if sim > 0.4}
+            if not high_confidence_clip:
+                logger.info("No high-confidence CLIP similarities")
+                return None
+            
+            # Get BLIP description
+            blip_description = self.get_blip_description(crop)
+            
+            # Fuse evidence with ultra-strict weighting
+            fused_scores = self._ultra_strict_fuse_evidence(high_confidence_probs, high_confidence_clip, blip_description, context)
+            
+            if not fused_scores:
+                return None
+            
+            # Get best result
+            best_label, best_confidence = fused_scores[0]
+            classifier_prob = high_confidence_probs.get(best_label, 0)
+            clip_sim = high_confidence_clip.get(best_label, 0)
+            
+            return (best_label, best_confidence, classifier_prob, clip_sim, blip_description, fused_scores)
+            
+        except Exception as e:
+            logger.warning(f"Strict image-based classification failed: {e}")
+            return None
+    
+    def _ultra_strict_fuse_evidence(self, classifier_probs: Dict[str, float], 
+                                   clip_similarities: Dict[str, float],
+                                   blip_description: Optional[str],
+                                   context: str = "") -> List[Tuple[str, float]]:
+        """
+        Ultra-strict evidence fusion - only for items actually found in the image
+        """
+        fused_scores = {}
+        
+        for label in classifier_probs.keys():
+            classifier_prob = classifier_probs[label]
+            clip_sim = clip_similarities.get(label, 0)
+            
+            # Ultra-strict fusion - requires both classifier and CLIP to agree
+            if classifier_prob > 0.5 and clip_sim > 0.5:
+                # Base fusion with higher weight on agreement
+                base_fusion = 0.6 * classifier_prob + 0.4 * clip_sim
+                
+                # Minimal context boost only if very specific
+                context_boost = 0
+                if context and any(keyword in context.lower() for keyword in ['indian', 'curry', 'masala']):
+                    if any(keyword in label.lower() for keyword in ['curry', 'dal', 'naan', 'biryani', 'samosa']):
+                        context_boost = 0.05  # Reduced boost
+                
+                # BLIP description validation - must strongly support the detection
+                blip_boost = 0
+                if blip_description:
+                    blip_lower = blip_description.lower()
+                    label_words = label.replace('_', ' ').lower().split()
+                    word_matches = sum(1 for word in label_words if word in blip_lower)
+                    if word_matches >= 2:  # Require at least 2 word matches
+                        blip_boost = 0.05
+                
+                final_score = min(base_fusion + context_boost + blip_boost, 1.0)
+                
+                # Only include if final score is very high
+                if final_score > 0.8:
+                    fused_scores[label] = final_score
+        
+        return sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+    
+    def _validate_image_based_food_detection(self, label: str, blip_description: Optional[str], confidence: float, crop: Image.Image) -> bool:
+        """
+        Ultra-strict validation that detection is actually food found in the image
+        """
+        try:
+            label_lower = label.lower()
+            
+            # Step 1: Check against non-food items
+            if label_lower in self.non_food_items:
+                logger.info(f"Label '{label}' is in non-food items list")
+                return False
+            
+            # Step 2: Validate BLIP description strongly supports food detection
+            if blip_description:
+                blip_lower = blip_description.lower()
+                
+                # Must have strong food indicators
+                strong_food_indicators = ['food', 'meal', 'dish', 'cuisine', 'cooking', 'cooked', 'fresh', 'delicious', 'tasty', 'edible']
+                food_indicator_count = sum(1 for indicator in strong_food_indicators if indicator in blip_lower)
+                
+                if food_indicator_count < 1:
+                    logger.info(f"BLIP description lacks strong food indicators: {blip_description}")
+                    return False
+                
+                # Must NOT have strong non-food indicators
+                strong_non_food_indicators = ['utensil', 'plate', 'bowl', 'cup', 'glass', 'bottle', 'container', 'table', 'chair', 'background', 'wall', 'floor', 'object', 'thing', 'item']
+                non_food_indicator_count = sum(1 for indicator in strong_non_food_indicators if indicator in blip_lower)
+                
+                if non_food_indicator_count > 0:
+                    logger.info(f"BLIP description contains non-food indicators: {blip_description}")
+                    return False
+                
+                # Must have specific food-related words that match the label
+                label_words = label.replace('_', ' ').lower().split()
+                blip_word_matches = sum(1 for word in label_words if word in blip_lower)
+                
+                if blip_word_matches < 1:
+                    logger.info(f"BLIP description doesn't match label words: {blip_description} vs {label}")
+                    return False
+            else:
+                logger.info("No BLIP description available for validation")
+                return False
+            
+            # Step 3: Validate label contains food-related terms
+            food_terms = ['food', 'meal', 'dish', 'cuisine', 'cooking', 'cooked', 'fresh', 'delicious', 'tasty', 'edible']
+            if not any(term in label_lower for term in food_terms):
+                # Check if it's a specific food name from our categories
+                if label not in self.food_categories:
+                    logger.info(f"Label '{label}' is not a recognized food category")
+                    return False
+            
+            # Step 4: Ultra-high confidence requirement
+            if confidence < 0.95:
+                logger.info(f"Confidence {confidence:.3f} below ultra-high threshold")
+                return False
+            
+            # Step 5: Additional image-based validation
+            if not self._validate_crop_characteristics(crop, label):
+                logger.info(f"Crop characteristics don't match label '{label}'")
+                return False
+            
+            logger.info(f"Image-based food validation passed for '{label}'")
+            return True
+            
+        except Exception as e:
+            logger.warning(f"Image-based food validation failed: {e}")
+            return False
+    
+    def _validate_crop_characteristics(self, crop: Image.Image, label: str) -> bool:
+        """
+        Validate that crop characteristics are consistent with the food label
+        """
+        try:
+            # Basic size validation
+            if crop.width < 50 or crop.height < 50:
+                logger.info("Crop too small for reliable detection")
+                return False
+            
+            # Color analysis for certain food types
+            crop_array = np.array(crop)
+            if len(crop_array.shape) == 3:
+                red_mean = np.mean(crop_array[:, :, 0])
+                green_mean = np.mean(crop_array[:, :, 1])
+                blue_mean = np.mean(crop_array[:, :, 2])
+                
+                label_lower = label.lower()
+                
+                # Validate color consistency with food type
+                if 'salad' in label_lower or 'vegetable' in label_lower:
+                    if green_mean < 80:  # Should have some green for vegetables
+                        logger.info(f"Vegetable/salad detection but low green content: {green_mean:.1f}")
+                        return False
+                
+                if 'meat' in label_lower or 'chicken' in label_lower or 'beef' in label_lower:
+                    if red_mean < 100:  # Should have some red for meat
+                        logger.info(f"Meat detection but low red content: {red_mean:.1f}")
+                        return False
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"Crop characteristic validation failed: {e}")
+            return True  # Allow if validation fails
     
     def _create_fallback_detection(self, image: Image.Image) -> Optional[FoodDetection]:
         """
-        Create a fallback detection when no other detections are found
+        Ultra-strict fallback detection - only if absolutely certain
         """
         try:
-            # Use basic image analysis to suggest a food type
-            crop_description = self._get_crop_description(image)
+            logger.info("Attempting ultra-strict fallback detection")
             
-            # Simple food type inference based on description
-            if 'white' in crop_description.lower():
-                suggested_food = 'rice'
-            elif 'green' in crop_description.lower():
-                suggested_food = 'salad'
-            elif 'brown' in crop_description.lower():
-                suggested_food = 'bread'
-            elif 'red' in crop_description.lower():
-                suggested_food = 'pizza'
-            else:
-                suggested_food = 'food_item'
+            # Try multiple classification approaches
+            classifier_probs = self.classify_with_transformers(image)
+            if classifier_probs:
+                # Get top classifications with very high confidence
+                high_confidence_probs = {label: prob for label, prob in classifier_probs.items() if prob > 0.8}
+                if not high_confidence_probs:
+                    logger.info("No ultra-high confidence classifier predictions")
+                    return None
+                
+                # Get CLIP similarities for high confidence candidates
+                candidate_labels = [label for label, _ in high_confidence_probs.items()]
+                clip_similarities = self.get_clip_similarities(image, candidate_labels)
+                
+                # Filter for very high CLIP confidence
+                ultra_high_clip = {label: sim for label, sim in clip_similarities.items() if sim > 0.8}
+                if not ultra_high_clip:
+                    logger.info("No ultra-high confidence CLIP similarities")
+                    return None
+                
+                # Get BLIP description
+                blip_description = self.get_blip_description(image)
+                
+                # Ultra-strict fusion for fallback
+                fused_scores = self._ultra_strict_fuse_evidence(high_confidence_probs, ultra_high_clip, blip_description, "")
+                
+                if fused_scores and fused_scores[0][1] >= 0.95:  # Only return if 95%+ confidence
+                    best_label, best_confidence = fused_scores[0]
+                    classifier_prob = high_confidence_probs.get(best_label, 0)
+                    clip_sim = ultra_high_clip.get(best_label, 0)
+                    
+                    # Additional validation
+                    if self._validate_image_based_food_detection(best_label, blip_description, best_confidence, image):
+                        return FoodDetection(
+                            bounding_box=(0, 0, image.width, image.height),
+                            final_label=best_label,
+                            confidence_score=best_confidence,
+                            top_3_alternatives=fused_scores[:3],
+                            detection_method="Ultra-Strict Fallback",
+                            classifier_probability=classifier_prob,
+                            clip_similarity=clip_sim,
+                            blip_description=blip_description
+                        )
             
-            return FoodDetection(
-                bounding_box=(0, 0, image.width, image.height),
-                final_label=suggested_food,
-                confidence_score=0.5,
-                top_3_alternatives=[(suggested_food, 0.5)],
-                detection_method="Fallback Analysis",
-                classifier_probability=0.5,
-                clip_similarity=0.5,
-                blip_description=crop_description
-            )
-        except Exception as e:
-            logger.error(f"Fallback detection creation failed: {e}")
+            # If no ultra-high confidence detection, return None
+            logger.warning("No ultra-high confidence fallback detection possible - no hardcoded items")
             return None
+            
+        except Exception as e:
+            logger.error(f"Ultra-strict fallback detection failed: {e}")
+            return None
+    
+
     
     def _enhance_indian_food_detection(self, crop: Image.Image, context: str = "") -> Dict[str, float]:
         """
