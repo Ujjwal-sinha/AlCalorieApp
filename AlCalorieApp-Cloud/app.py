@@ -1354,15 +1354,14 @@ def main():
     with st.sidebar:
         st.markdown("### ⚙️ Settings")
         
-        # Model status
-        st.markdown("#### 🤖 AI Model Status")
-        model_status = get_fresh_model_status()
-        
-        for model_name, is_available in model_status.items():
-            if is_available:
-                st.markdown(f"✅ {model_name}")
-            else:
-                st.markdown(f"❌ {model_name}")
+        # Model status with improved styling
+        with st.expander("🤖 AI Model Status", expanded=True):
+            model_status = get_fresh_model_status()
+            
+            for model_name, is_available in model_status.items():
+                # Status indicator and model name with "Finetune" prefix
+                status_icon = "✅" if is_available else "❌"
+                st.markdown(f"**{status_icon} Finetune {model_name}**")
         
         # Calorie target
         st.markdown("#### 🎯 Daily Calorie Target")
