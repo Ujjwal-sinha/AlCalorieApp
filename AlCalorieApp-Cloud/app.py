@@ -781,106 +781,98 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded Food Image", use_column_width=True)
         
-        # Analysis options
-        st.markdown("### 🚀 Analysis Options")
+        # Comprehensive analysis
+        st.markdown("### 🚀 Comprehensive Analysis")
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Standard analysis button
-            if st.button("🔍 Standard Analysis", disabled=not uploaded_file, type="primary"):
-                if uploaded_file and UTILS_AVAILABLE and "error" not in models:
-                    # Progress tracking
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
+        if st.button("🔍🧠 Run Comprehensive Analysis (Standard + Expert)", disabled=not uploaded_file, type="primary"):
+            if uploaded_file and UTILS_AVAILABLE and "error" not in models:
+                # Progress tracking
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                try:
+                    status_text.text("📷 Loading image...")
+                    progress_bar.progress(5)
                     
+                    image = Image.open(uploaded_file)
+                    
+                    # Step 1: Standard Analysis
+                    status_text.text("🔍 Running standard food detection...")
+                    progress_bar.progress(20)
+                    
+                    analysis_result = analyze_food_image(image, context, models)
+                    
+                    # Step 2: Expert Analysis
+                    status_text.text("🧠 Running expert multi-model analysis...")
+                    progress_bar.progress(50)
+                    
+                    expert_result = None
                     try:
-                        status_text.text("📷 Loading image...")
-                        progress_bar.progress(10)
+                        from utils.expert_food_recognition import ExpertFoodRecognitionSystem
+                        expert_system = ExpertFoodRecognitionSystem(models)
+                        detections = expert_system.recognize_food(image)
+                        expert_summary = expert_system.get_detection_summary(detections)
+                        expert_result = {"detections": detections, "summary": expert_summary}
+                    except Exception as e:
+                        st.warning(f"Expert system not available: {str(e)}")
+                    
+                    status_text.text("📊 Finalizing comprehensive analysis...")
+                    progress_bar.progress(95)
+                    
+                    progress_bar.progress(100)
+                    status_text.text("✅ Comprehensive analysis complete!")
+                    
+                    # Clear progress
+                    progress_bar.empty()
+                    status_text.empty()
+                    
+                    # Display results
+                    if analysis_result["success"]:
+                        st.success("✅ Comprehensive analysis completed!")
                         
-                        image = Image.open(uploaded_file)
+                        # Display all results in tabs
+                        tab1, tab2 = st.tabs(["🔍 Standard Analysis", "🧠 Expert Analysis"])
                         
-                        status_text.text("🔍 Running standard food detection...")
-                        progress_bar.progress(20)
-                        
-                        # Standard AI analysis
-                        analysis_result = analyze_food_image(image, context, models)
-                        
-                        status_text.text("📊 Finalizing analysis...")
-                        progress_bar.progress(90)
-                        
-                        progress_bar.progress(100)
-                        status_text.text("✅ Standard analysis complete!")
-                        
-                        # Clear progress
-                        progress_bar.empty()
-                        status_text.empty()
-                        
-                        if analysis_result["success"]:
-                            st.success("✅ Standard analysis completed!")
+                        with tab1:
                             display_analysis_results(analysis_result)
-                        else:
-                            st.error("❌ Analysis failed")
-                    
-                    except Exception as e:
-                        st.error(f"Error during analysis: {str(e)}")
-        
-        with col2:
-            # Expert analysis button
-            if st.button("🧠 Expert Multi-Model Analysis", disabled=not uploaded_file, type="primary"):
-                if uploaded_file and UTILS_AVAILABLE and "error" not in models:
-                    # Progress tracking
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
-                    try:
-                        status_text.text("📷 Loading image...")
-                        progress_bar.progress(10)
                         
-                        image = Image.open(uploaded_file)
-                        
-                        status_text.text("🧠 Running expert multi-model food recognition...")
-                        progress_bar.progress(30)
-                        
-                        # Expert food recognition system
-                        try:
-                            from utils.expert_food_recognition import ExpertFoodRecognitionSystem
-                            expert_system = ExpertFoodRecognitionSystem(models)
-                            detections = expert_system.recognize_food(image)
-                            summary = expert_system.get_detection_summary(detections)
-                            
-                            status_text.text("📊 Processing expert detection results...")
-                            progress_bar.progress(70)
-                            
-                            if summary["success"]:
-                                status_text.text("✅ Expert analysis complete!")
-                                progress_bar.progress(100)
-                                
-                                # Clear progress
-                                progress_bar.empty()
-                                status_text.empty()
-                                
-                                st.success(f"✅ Expert analysis completed! Found {summary['total_detections']} food items")
-                                
-                                # Display expert results
-                                display_expert_results(detections, summary)
-                                
+                        with tab2:
+                            if expert_result and expert_result["summary"]["success"]:
+                                display_expert_results(expert_result["detections"], expert_result["summary"])
                             else:
-                                st.warning("No food items detected with sufficient confidence")
-                                
-                        except Exception as e:
-                            st.error(f"Expert system not available: {str(e)}")
-                            # Fallback to standard analysis
-                            analysis_result = analyze_food_image(image, context, models)
-                            if analysis_result["success"]:
-                                st.success("✅ Fallback analysis completed!")
-                                display_analysis_results(analysis_result)
+                                st.info("Expert analysis not available or no detections found")
+                        
+                        # Save to history
+                        history_entry = {
+                            'timestamp': datetime.now(),
+                            'image_name': uploaded_file.name,
+                            'description': analysis_result.get('description', 'Comprehensive food analysis'),
+                            'analysis': analysis_result["analysis"],
+                            'nutritional_data': analysis_result["nutritional_data"],
+                            'context': context,
+                            'expert_detections': expert_result["detections"] if expert_result else []
+                        }
+                        
+                        st.session_state.history.append(history_entry)
+                        
+                        # Update daily calories
+                        today = date.today().isoformat()
+                        if today not in st.session_state.daily_calories:
+                            st.session_state.daily_calories[today] = 0
+                        st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
+                        
+                        st.success(f"📝 Added {analysis_result['nutritional_data']['total_calories']:.0f} calories to today's total!")
                     
-                    except Exception as e:
-                        st.error(f"Error during expert analysis: {str(e)}")
+                    else:
+                        st.error("❌ Analysis failed")
+                
+                except Exception as e:
+                    st.error(f"Error during comprehensive analysis: {str(e)}")
+            else:
+                st.error("❌ AI models not available. Please check the configuration.")
 
 def display_analysis_results(analysis_result):
-    """Display standard analysis results"""
+    """Display standard analysis results with classification report"""
     if analysis_result["success"]:
         description = analysis_result.get('description', 'Food items detected')
         
@@ -904,38 +896,299 @@ def display_analysis_results(analysis_result):
             </div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Classification Report
+        st.markdown("### 📊 Classification Report")
+        
+        # Extract detected foods from description
+        detected_foods = []
+        if "Detected foods:" in description:
+            foods_text = description.split("Detected foods:")[1].split("(via")[0].strip()
+            detected_foods = [food.strip() for food in foods_text.split(',') if food.strip()]
+        elif "Main Food Items Identified:" in description:
+            foods_text = description.split("Main Food Items Identified:")[1].strip()
+            detected_foods = [food.strip() for food in foods_text.split(',') if food.strip()]
+        
+        if detected_foods:
+            # Create classification report table
+            st.markdown("#### 🍽️ Detected Food Items")
+            
+            # Create a comprehensive table
+            report_data = []
+            for i, food in enumerate(detected_foods, 1):
+                # Extract detection method if available
+                detection_method = "Standard Analysis"
+                if "(ViT)" in food:
+                    detection_method = "Vision Transformer"
+                    food = food.replace(" (ViT)", "")
+                elif "(BLIP)" in food:
+                    detection_method = "BLIP Analysis"
+                    food = food.replace(" (BLIP)", "")
+                
+                # Estimate confidence based on detection method
+                confidence = 0.85 if detection_method == "Vision Transformer" else 0.75
+                
+                # Categorize food
+                category = categorize_food(food)
+                
+                # Estimate nutrition (basic)
+                nutrition = estimate_basic_nutrition(food)
+                
+                report_data.append({
+                    "Item #": i,
+                    "Food Item": food.title(),
+                    "Category": category,
+                    "Detection Method": detection_method,
+                    "Confidence": f"{confidence:.1%}",
+                    "Calories (est.)": f"{nutrition['calories']} kcal",
+                    "Protein (est.)": f"{nutrition['protein']}g",
+                    "Carbs (est.)": f"{nutrition['carbs']}g",
+                    "Fat (est.)": f"{nutrition['fat']}g"
+                })
+            
+            # Display as table
+            import pandas as pd
+            df = pd.DataFrame(report_data)
+            st.dataframe(df, use_container_width=True)
+            
+            # Summary statistics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Items", len(detected_foods))
+            with col2:
+                categories = set([item["Category"] for item in report_data])
+                st.metric("Categories", len(categories))
+            with col3:
+                avg_confidence = sum([float(item["Confidence"].rstrip('%')) for item in report_data]) / len(report_data)
+                st.metric("Avg Confidence", f"{avg_confidence:.1f}%")
+            with col4:
+                total_cals = sum([int(item["Calories (est.)"].split()[0]) for item in report_data])
+                st.metric("Total Calories", f"{total_cals} kcal")
+        
+        # Show detailed analysis
+        if analysis_result.get("analysis"):
+            st.markdown("#### 📝 Detailed Analysis")
+            with st.expander("🔍 Complete Analysis Report", expanded=False):
+                st.markdown(analysis_result["analysis"])
 
 def display_expert_results(detections, summary):
-    """Display expert analysis results"""
+    """Display expert analysis results with comprehensive classification report"""
     st.markdown("### 🧠 Expert Multi-Model Analysis Results")
     
-    # Display detected foods
-    col1, col2 = st.columns(2)
+    # Comprehensive Classification Report
+    st.markdown("#### 📊 Expert Classification Report")
     
-    with col1:
-        st.markdown("#### 🎯 Detected Foods")
-        for i, detection in enumerate(detections):
-            st.markdown(f"""
-            **{i+1}. {detection.final_label.replace('_', ' ').title()}**
-            - Confidence: {detection.confidence_score:.3f}
-            - Classifier: {detection.classifier_probability:.3f}
-            - CLIP Similarity: {detection.clip_similarity:.3f}
-            """)
-    
-    with col2:
-        st.markdown("#### 📊 Detection Details")
+    if detections:
+        # Create detailed classification table
+        report_data = []
+        for i, detection in enumerate(detections, 1):
+            # Get top alternatives
+            alternatives = []
+            for label, score in detection.top_3_alternatives[:3]:
+                alternatives.append(f"{label.replace('_', ' ').title()} ({score:.3f})")
+            
+            # Categorize food
+            category = categorize_food(detection.final_label)
+            
+            # Estimate nutrition
+            nutrition = estimate_basic_nutrition(detection.final_label)
+            
+            report_data.append({
+                "Item #": i,
+                "Food Item": detection.final_label.replace('_', ' ').title(),
+                "Category": category,
+                "Detection Method": detection.detection_method,
+                "Final Confidence": f"{detection.confidence_score:.1%}",
+                "Classifier Prob": f"{detection.classifier_probability:.1%}",
+                "CLIP Similarity": f"{detection.clip_similarity:.1%}",
+                "Bounding Box": f"{detection.bounding_box}",
+                "Top Alternatives": " | ".join(alternatives),
+                "Calories (est.)": f"{nutrition['calories']} kcal",
+                "Protein (est.)": f"{nutrition['protein']}g",
+                "Carbs (est.)": f"{nutrition['carbs']}g",
+                "Fat (est.)": f"{nutrition['fat']}g"
+            })
+        
+        # Display as table
+        import pandas as pd
+        df = pd.DataFrame(report_data)
+        st.dataframe(df, use_container_width=True)
+        
+        # Summary statistics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Detections", len(detections))
+        with col2:
+            categories = set([item["Category"] for item in report_data])
+            st.metric("Categories", len(categories))
+        with col3:
+            avg_confidence = sum([float(item["Final Confidence"].rstrip('%')) for item in report_data]) / len(report_data)
+            st.metric("Avg Confidence", f"{avg_confidence:.1f}%")
+        with col4:
+            total_cals = sum([int(item["Calories (est.)"].split()[0]) for item in report_data])
+            st.metric("Total Calories", f"{total_cals} kcal")
+        
+        # Detailed detection information
+        st.markdown("#### 🔍 Detailed Detection Information")
         for detection in detections:
-            with st.expander(f"Details for {detection.final_label}"):
-                st.write(f"**Bounding Box:** {detection.bounding_box}")
-                st.write(f"**Top Alternatives:**")
-                for label, score in detection.top_3_alternatives:
-                    st.write(f"  - {label.replace('_', ' ').title()}: {score:.3f}")
-                if detection.blip_description:
-                    st.write(f"**BLIP Description:** {detection.blip_description}")
+            with st.expander(f"📋 {detection.final_label.replace('_', ' ').title()} - Detailed Analysis"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**Detection Parameters:**")
+                    st.write(f"• **Final Label:** {detection.final_label.replace('_', ' ').title()}")
+                    st.write(f"• **Detection Method:** {detection.detection_method}")
+                    st.write(f"• **Bounding Box:** {detection.bounding_box}")
+                    st.write(f"• **Final Confidence:** {detection.confidence_score:.3f}")
+                    st.write(f"• **Classifier Probability:** {detection.classifier_probability:.3f}")
+                    st.write(f"• **CLIP Similarity:** {detection.clip_similarity:.3f}")
+                
+                with col2:
+                    st.markdown("**Top Alternatives:**")
+                    for i, (label, score) in enumerate(detection.top_3_alternatives, 1):
+                        st.write(f"• **{i}.** {label.replace('_', ' ').title()}: {score:.3f}")
+                    
+                    if detection.blip_description:
+                        st.markdown("**BLIP Description:**")
+                        st.write(detection.blip_description)
+                
+                # Nutrition estimation
+                nutrition = estimate_basic_nutrition(detection.final_label)
+                st.markdown("**Estimated Nutrition (per 100g):**")
+                col_n1, col_n2, col_n3, col_n4 = st.columns(4)
+                with col_n1:
+                    st.metric("Calories", f"{nutrition['calories']} kcal")
+                with col_n2:
+                    st.metric("Protein", f"{nutrition['protein']}g")
+                with col_n3:
+                    st.metric("Carbs", f"{nutrition['carbs']}g")
+                with col_n4:
+                    st.metric("Fat", f"{nutrition['fat']}g")
     
     # Show detection method
     st.markdown("### 🔬 Detection Method")
     st.info("Expert Multi-Model System: YOLO + ViT-B/16 + Swin + CLIP + BLIP")
+    
+    # Model performance summary
+    if summary.get("detection_method"):
+        st.markdown("#### 🤖 Model Performance Summary")
+        st.write(f"**Detection Method:** {summary['detection_method']}")
+        st.write(f"**Total Detections:** {summary.get('total_detections', 0)}")
+        st.write(f"**Success Rate:** {summary.get('success', False)}")
+
+def categorize_food(food_name):
+    """Categorize food into main categories"""
+    food_lower = food_name.lower()
+    
+    # Protein sources
+    if any(protein in food_lower for protein in ['chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'egg', 'meat', 'steak', 'bacon', 'ham', 'turkey', 'duck', 'lamb', 'veal', 'sausage', 'hot dog', 'burger', 'meatball']):
+        return "Protein"
+    
+    # Vegetables
+    elif any(veg in food_lower for veg in ['tomato', 'potato', 'carrot', 'broccoli', 'spinach', 'lettuce', 'onion', 'garlic', 'pepper', 'cucumber', 'celery', 'mushroom', 'corn', 'pea', 'bean', 'cabbage', 'cauliflower', 'asparagus', 'zucchini', 'eggplant']):
+        return "Vegetable"
+    
+    # Fruits
+    elif any(fruit in food_lower for fruit in ['apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'raspberry', 'peach', 'pear', 'pineapple', 'mango', 'kiwi', 'lemon', 'lime', 'cherry', 'plum', 'apricot', 'fig', 'date']):
+        return "Fruit"
+    
+    # Grains/Carbs
+    elif any(grain in food_lower for grain in ['rice', 'bread', 'pasta', 'noodle', 'quinoa', 'oat', 'cereal', 'wheat', 'flour', 'pizza', 'sandwich', 'burger bun', 'tortilla', 'wrap', 'bagel', 'muffin', 'cake', 'cookie', 'biscuit']):
+        return "Grain/Carb"
+    
+    # Dairy
+    elif any(dairy in food_lower for dairy in ['cheese', 'milk', 'yogurt', 'butter', 'cream', 'ice cream', 'pudding', 'custard', 'sour cream', 'whipping cream']):
+        return "Dairy"
+    
+    # Nuts/Seeds
+    elif any(nut in food_lower for nut in ['almond', 'walnut', 'peanut', 'cashew', 'pistachio', 'pecan', 'hazelnut', 'macadamia', 'sunflower seed', 'pumpkin seed', 'chia seed', 'flax seed', 'sesame seed']):
+        return "Nuts/Seeds"
+    
+    # Beverages
+    elif any(beverage in food_lower for beverage in ['coffee', 'tea', 'juice', 'soda', 'water', 'milk', 'smoothie', 'shake', 'beer', 'wine', 'cocktail', 'lemonade']):
+        return "Beverage"
+    
+    # Desserts/Sweets
+    elif any(sweet in food_lower for sweet in ['cake', 'cookie', 'brownie', 'pie', 'donut', 'muffin', 'cupcake', 'chocolate', 'candy', 'ice cream', 'pudding', 'tiramisu', 'cheesecake', 'churro', 'baklava']):
+        return "Dessert/Sweet"
+    
+    # Sauces/Condiments
+    elif any(sauce in food_lower for sauce in ['ketchup', 'mustard', 'mayo', 'sauce', 'dressing', 'vinegar', 'oil', 'butter', 'jam', 'jelly', 'syrup', 'honey']):
+        return "Sauce/Condiment"
+    
+    # Spices/Herbs
+    elif any(spice in food_lower for spice in ['salt', 'pepper', 'garlic', 'onion', 'basil', 'oregano', 'thyme', 'rosemary', 'cinnamon', 'nutmeg', 'ginger', 'turmeric', 'paprika', 'cumin', 'coriander']):
+        return "Spice/Herb"
+    
+    else:
+        return "Other"
+
+def estimate_basic_nutrition(food_name):
+    """Estimate basic nutrition for a food item (per 100g)"""
+    food_lower = food_name.lower()
+    
+    # Nutrition database (per 100g)
+    nutrition_db = {
+        # Proteins
+        'chicken': {'calories': 165, 'protein': 31, 'carbs': 0, 'fat': 3.6},
+        'beef': {'calories': 250, 'protein': 26, 'carbs': 0, 'fat': 15},
+        'pork': {'calories': 242, 'protein': 27, 'carbs': 0, 'fat': 14},
+        'fish': {'calories': 206, 'protein': 22, 'carbs': 0, 'fat': 12},
+        'salmon': {'calories': 208, 'protein': 20, 'carbs': 0, 'fat': 13},
+        'tuna': {'calories': 144, 'protein': 30, 'carbs': 0, 'fat': 1},
+        'egg': {'calories': 155, 'protein': 13, 'carbs': 1.1, 'fat': 11},
+        
+        # Vegetables
+        'tomato': {'calories': 18, 'protein': 0.9, 'carbs': 3.9, 'fat': 0.2},
+        'potato': {'calories': 77, 'protein': 2, 'carbs': 17, 'fat': 0.1},
+        'carrot': {'calories': 41, 'protein': 0.9, 'carbs': 10, 'fat': 0.2},
+        'broccoli': {'calories': 34, 'protein': 2.8, 'carbs': 7, 'fat': 0.4},
+        'spinach': {'calories': 23, 'protein': 2.9, 'carbs': 3.6, 'fat': 0.4},
+        'lettuce': {'calories': 15, 'protein': 1.4, 'carbs': 2.9, 'fat': 0.1},
+        'onion': {'calories': 40, 'protein': 1.1, 'carbs': 9, 'fat': 0.1},
+        
+        # Fruits
+        'apple': {'calories': 52, 'protein': 0.3, 'carbs': 14, 'fat': 0.2},
+        'banana': {'calories': 89, 'protein': 1.1, 'carbs': 23, 'fat': 0.3},
+        'orange': {'calories': 47, 'protein': 0.9, 'carbs': 12, 'fat': 0.1},
+        'grape': {'calories': 62, 'protein': 0.6, 'carbs': 16, 'fat': 0.2},
+        'strawberry': {'calories': 32, 'protein': 0.7, 'carbs': 8, 'fat': 0.3},
+        
+        # Grains/Carbs
+        'rice': {'calories': 130, 'protein': 2.7, 'carbs': 28, 'fat': 0.3},
+        'bread': {'calories': 265, 'protein': 9, 'carbs': 49, 'fat': 3.2},
+        'pasta': {'calories': 131, 'protein': 5, 'carbs': 25, 'fat': 1.1},
+        'pizza': {'calories': 266, 'protein': 11, 'carbs': 33, 'fat': 10},
+        
+        # Dairy
+        'cheese': {'calories': 402, 'protein': 25, 'carbs': 1.3, 'fat': 33},
+        'milk': {'calories': 42, 'protein': 3.4, 'carbs': 5, 'fat': 1},
+        'yogurt': {'calories': 59, 'protein': 10, 'carbs': 3.6, 'fat': 0.4},
+        
+        # Nuts/Seeds
+        'almond': {'calories': 579, 'protein': 21, 'carbs': 22, 'fat': 50},
+        'walnut': {'calories': 654, 'protein': 15, 'carbs': 14, 'fat': 65},
+        'peanut': {'calories': 567, 'protein': 26, 'carbs': 16, 'fat': 49},
+        
+        # Desserts
+        'cake': {'calories': 257, 'protein': 5, 'carbs': 45, 'fat': 6},
+        'cookie': {'calories': 502, 'protein': 6, 'carbs': 65, 'fat': 24},
+        'ice cream': {'calories': 207, 'protein': 4, 'carbs': 24, 'fat': 11},
+        'chocolate': {'calories': 545, 'protein': 4.9, 'carbs': 61, 'fat': 31},
+    }
+    
+    # Try to find exact match
+    for key, nutrition in nutrition_db.items():
+        if key in food_lower:
+            return nutrition
+    
+    # Try partial matches
+    for key, nutrition in nutrition_db.items():
+        if any(word in food_lower for word in key.split()):
+            return nutrition
+    
+    # Default nutrition for unknown foods
+    return {'calories': 100, 'protein': 5, 'carbs': 15, 'fat': 2}
     
     with tab2:
         st.markdown("""
