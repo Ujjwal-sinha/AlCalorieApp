@@ -40,8 +40,9 @@ class ExpertFoodRecognitionSystem:
         self.clip_threshold = 0.28
         self.probability_tie_threshold = 0.12
         
-        # Food-101 categories (specific food names)
+        # Enhanced food categories including Indian and international cuisines
         self.food_categories = [
+            # Original Food-101 categories
             'apple_pie', 'baby_back_ribs', 'baklava', 'beef_carpaccio', 'beef_tartare',
             'beet_salad', 'beignets', 'bibimbap', 'bread_pudding', 'breakfast_burrito',
             'bruschetta', 'caesar_salad', 'cannoli', 'carrot_cake', 'ceviche',
@@ -62,7 +63,77 @@ class ExpertFoodRecognitionSystem:
             'ramen', 'ravioli', 'red_velvet_cake', 'risotto', 'samosa', 'sashimi',
             'scallops', 'seaweed_salad', 'shrimp_and_grits', 'spaghetti_bolognese',
             'spaghetti_carbonara', 'spring_rolls', 'steak', 'strawberry_shortcake',
-            'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare', 'waffles'
+            'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare', 'waffles',
+            
+            # Indian Food Categories (comprehensive)
+            'butter_chicken', 'tandoori_chicken', 'chicken_tikka_masala', 'dal_makhani',
+            'palak_paneer', 'paneer_butter_masala', 'malai_kofta', 'navratan_korma',
+            'biryani', 'pulao', 'jeera_rice', 'basmati_rice', 'naan', 'roti', 'paratha',
+            'chapati', 'poori', 'dosa', 'idli', 'vada', 'sambar', 'rasam', 'curd_rice',
+            'pongal', 'upma', 'poha', 'aloo_paratha', 'gobi_paratha', 'methi_paratha',
+            'rajma_chawal', 'chole_bhature', 'pav_bhaji', 'vada_pav', 'dahi_puri',
+            'pani_puri', 'bhel_puri', 'sev_puri', 'samosa_chat', 'aloo_tikki',
+            'gulab_jamun', 'rasgulla', 'jalebi', 'kheer', 'payasam', 'gajar_ka_halwa',
+            'kulfi', 'lassi', 'masala_chai', 'filter_coffee', 'pakora', 'bhajji',
+            'onion_bhaji', 'potato_bhaji', 'brinjal_bhaji', 'mushroom_bhaji',
+            'fish_curry', 'prawn_curry', 'crab_curry', 'mutton_curry', 'lamb_curry',
+            'goat_curry', 'beef_curry', 'egg_curry', 'mixed_vegetable_curry',
+            'cauliflower_curry', 'potato_curry', 'tomato_curry', 'onion_curry',
+            'garlic_curry', 'ginger_curry', 'turmeric_curry', 'coriander_curry',
+            'cumin_curry', 'cardamom_curry', 'clove_curry', 'cinnamon_curry',
+            'black_pepper_curry', 'red_chili_curry', 'green_chili_curry',
+            'tamarind_curry', 'coconut_curry', 'yogurt_curry', 'cream_curry',
+            'ghee_curry', 'oil_curry', 'mustard_curry', 'fenugreek_curry',
+            'curry_leaves_curry', 'mint_curry', 'basil_curry', 'oregano_curry',
+            'thyme_curry', 'rosemary_curry', 'bay_leaves_curry', 'star_anise_curry',
+            'fennel_curry', 'ajwain_curry', 'kalonji_curry', 'poppy_seeds_curry',
+            'sesame_seeds_curry', 'sunflower_seeds_curry', 'pumpkin_seeds_curry',
+            'chia_seeds_curry', 'flax_seeds_curry', 'hemp_seeds_curry',
+            'quinoa_curry', 'millet_curry', 'sorghum_curry', 'bajra_curry',
+            'jowar_curry', 'ragi_curry', 'amaranth_curry', 'buckwheat_curry',
+            'oats_curry', 'barley_curry', 'wheat_curry', 'corn_curry',
+            'peas_curry', 'beans_curry', 'lentils_curry', 'chickpeas_curry',
+            'kidney_beans_curry', 'black_beans_curry', 'pinto_beans_curry',
+            'navy_beans_curry', 'lima_beans_curry', 'fava_beans_curry',
+            'split_peas_curry', 'yellow_peas_curry', 'green_peas_curry',
+            'snow_peas_curry', 'sugar_snap_peas_curry', 'edamame_curry',
+            'soybeans_curry', 'tofu_curry', 'tempeh_curry', 'seitan_curry',
+            'quorn_curry', 'mycoprotein_curry', 'spirulina_curry', 'chlorella_curry',
+            'moringa_curry', 'neem_curry', 'tulsi_curry', 'ashwagandha_curry',
+            'turmeric_milk', 'golden_milk', 'masala_milk', 'saffron_milk',
+            'cardamom_milk', 'cinnamon_milk', 'ginger_milk', 'honey_milk',
+            'almond_milk', 'cashew_milk', 'pistachio_milk', 'walnut_milk',
+            'pecan_milk', 'hazelnut_milk', 'macadamia_milk', 'brazil_nut_milk',
+            'pine_nut_milk', 'pumpkin_seed_milk', 'sunflower_seed_milk',
+            'sesame_seed_milk', 'hemp_seed_milk', 'flax_seed_milk', 'chia_seed_milk',
+            'quinoa_milk', 'oat_milk', 'rice_milk', 'coconut_milk', 'soy_milk',
+            'pea_milk', 'hemp_milk', 'flax_milk', 'chia_milk', 'quinoa_milk',
+            'millet_milk', 'sorghum_milk', 'bajra_milk', 'jowar_milk', 'ragi_milk',
+            'amaranth_milk', 'buckwheat_milk', 'barley_milk', 'wheat_milk',
+            'corn_milk', 'pea_milk', 'bean_milk', 'lentil_milk', 'chickpea_milk',
+            'kidney_bean_milk', 'black_bean_milk', 'pinto_bean_milk',
+            'navy_bean_milk', 'lima_bean_milk', 'fava_bean_milk', 'split_pea_milk',
+            'yellow_pea_milk', 'green_pea_milk', 'snow_pea_milk',
+            'sugar_snap_pea_milk', 'edamame_milk', 'soybean_milk', 'tofu_milk',
+            'tempeh_milk', 'seitan_milk', 'quorn_milk', 'mycoprotein_milk',
+            'spirulina_milk', 'chlorella_milk', 'moringa_milk', 'neem_milk',
+            'tulsi_milk', 'ashwagandha_milk', 'turmeric_tea', 'golden_tea',
+            'masala_tea', 'saffron_tea', 'cardamom_tea', 'cinnamon_tea',
+            'ginger_tea', 'honey_tea', 'lemon_tea', 'mint_tea', 'basil_tea',
+            'oregano_tea', 'thyme_tea', 'rosemary_tea', 'bay_leaves_tea',
+            'star_anise_tea', 'fennel_tea', 'ajwain_tea', 'kalonji_tea',
+            'poppy_seeds_tea', 'sesame_seeds_tea', 'sunflower_seeds_tea',
+            'pumpkin_seeds_tea', 'chia_seeds_tea', 'flax_seeds_tea',
+            'hemp_seeds_tea', 'quinoa_tea', 'millet_tea', 'sorghum_tea',
+            'bajra_tea', 'jowar_tea', 'ragi_tea', 'amaranth_tea', 'buckwheat_tea',
+            'oats_tea', 'barley_tea', 'wheat_tea', 'corn_tea', 'pea_tea',
+            'bean_tea', 'lentil_tea', 'chickpea_tea', 'kidney_bean_tea',
+            'black_bean_tea', 'pinto_bean_tea', 'navy_bean_tea', 'lima_bean_tea',
+            'fava_bean_tea', 'split_pea_tea', 'yellow_pea_tea', 'green_pea_tea',
+            'snow_pea_tea', 'sugar_snap_pea_tea', 'edamame_tea', 'soybean_tea',
+            'tofu_tea', 'tempeh_tea', 'seitan_tea', 'quorn_tea', 'mycoprotein_tea',
+            'spirulina_tea', 'chlorella_tea', 'moringa_tea', 'neem_tea',
+            'tulsi_tea', 'ashwagandha_tea'
         ]
         
         # Non-food items to ignore
@@ -73,6 +144,34 @@ class ExpertFoodRecognitionSystem:
             'how', 'when', 'where', 'why', 'food_item', 'unknown', 'other',
             'container', 'object', 'item', 'thing', 'stuff'
         }
+        
+        # Indian food context keywords for enhanced detection
+        self.indian_food_keywords = {
+            'curry': ['curry', 'masala', 'gravy', 'sauce', 'spicy', 'aromatic'],
+            'bread': ['naan', 'roti', 'chapati', 'paratha', 'poori', 'bhatura'],
+            'rice': ['biryani', 'pulao', 'jeera', 'basmati', 'steamed'],
+            'lentils': ['dal', 'lentil', 'pulse', 'legume', 'bean'],
+            'vegetables': ['aloo', 'gobi', 'baingan', 'bhindi', 'palak', 'methi'],
+            'dairy': ['paneer', 'curd', 'dahi', 'ghee', 'butter'],
+            'spices': ['turmeric', 'cumin', 'coriander', 'cardamom', 'clove', 'cinnamon'],
+            'desserts': ['gulab', 'jamun', 'rasgulla', 'jalebi', 'kheer', 'halwa'],
+            'snacks': ['samosa', 'pakora', 'bhajji', 'vada', 'dosa', 'idli'],
+            'drinks': ['lassi', 'chai', 'masala', 'filter', 'coffee', 'tea']
+        }
+        
+        # Indian food detection prompts for BLIP
+        self.indian_food_prompts = [
+            "This is an Indian food dish with aromatic spices and rich flavors",
+            "Traditional Indian cuisine with curry, rice, and bread",
+            "Indian restaurant food with masala and gravy",
+            "South Indian food with dosa, idli, and sambar",
+            "North Indian food with naan, roti, and curry",
+            "Indian street food with chaat and snacks",
+            "Indian dessert with sweet syrup and milk",
+            "Indian vegetarian food with dal and vegetables",
+            "Indian non-vegetarian food with chicken and meat",
+            "Indian breakfast food with paratha and chutney"
+        ]
     
     def detect_food_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
         """
@@ -515,14 +614,14 @@ class ExpertFoodRecognitionSystem:
         
         return best_label
     
-    def recognize_food(self, image: Image.Image) -> List[FoodDetection]:
+    def recognize_food(self, image: Image.Image, context: str = "") -> List[FoodDetection]:
         """
-        Main method to recognize food items in the image
+        Main method to recognize food items in the image with enhanced Indian food detection
         """
         detections = []
         
         try:
-            logger.info("Starting expert food recognition")
+            logger.info("Starting expert food recognition with Indian food enhancement")
             
             # Step 1: Detect food crops
             crops = self.detect_food_crops(image)
@@ -539,8 +638,8 @@ class ExpertFoodRecognitionSystem:
             for i, (crop, bounding_box) in enumerate(crops):
                 logger.info(f"Processing crop {i+1}/{len(crops)}: {crop.size}")
                 
-                # Step 2: Classify with transformers
-                classifier_probs = self.classify_with_transformers(crop)
+                # Step 2: Enhanced classification with Indian food context
+                classifier_probs = self._classify_with_indian_context(crop, context)
                 
                 if not classifier_probs:
                     logger.warning(f"No classification results for crop {i+1}")
@@ -651,6 +750,157 @@ class ExpertFoodRecognitionSystem:
         except Exception as e:
             logger.error(f"Fallback detection creation failed: {e}")
             return None
+    
+    def _enhance_indian_food_detection(self, crop: Image.Image, context: str = "") -> Dict[str, float]:
+        """
+        Enhance detection specifically for Indian food items using context-aware analysis
+        """
+        try:
+            enhanced_scores = {}
+            
+            # Check if context suggests Indian food
+            context_lower = context.lower()
+            is_indian_context = any(keyword in context_lower for keyword in 
+                                  ['indian', 'curry', 'masala', 'dal', 'naan', 'roti', 'biryani', 'samosa'])
+            
+            # Get BLIP description with Indian food prompts
+            if self.models.get('blip_model'):
+                indian_descriptions = []
+                for prompt in self.indian_food_prompts:
+                    try:
+                        description = self.models['blip_model'].generate(
+                            self._preprocess_image_for_blip(crop),
+                            text=prompt,
+                            max_length=50,
+                            num_beams=5,
+                            early_stopping=True
+                        )
+                        indian_descriptions.append(description)
+                    except:
+                        continue
+                
+                # Analyze descriptions for Indian food indicators
+                for desc in indian_descriptions:
+                    desc_lower = desc.lower()
+                    for category, keywords in self.indian_food_keywords.items():
+                        for keyword in keywords:
+                            if keyword in desc_lower:
+                                enhanced_scores[f"{category}_indian"] = enhanced_scores.get(f"{category}_indian", 0) + 0.1
+            
+            # Use CLIP to compare with Indian food categories
+            if self.models.get('clip_model'):
+                indian_food_texts = [
+                    "indian curry with spices", "naan bread", "biryani rice", "dal lentils",
+                    "paneer cheese", "samosa snack", "gulab jamun dessert", "lassi drink",
+                    "masala chai", "tandoori chicken", "butter chicken", "palak paneer"
+                ]
+                
+                try:
+                    clip_scores = self._get_clip_similarities_enhanced(crop, indian_food_texts)
+                    for text, score in clip_scores.items():
+                        enhanced_scores[f"clip_{text.replace(' ', '_')}"] = score
+                except:
+                    pass
+            
+            # Boost scores for Indian food categories if context suggests it
+            if is_indian_context:
+                for category in self.indian_food_keywords.keys():
+                    enhanced_scores[f"{category}_context_boost"] = 0.2
+            
+            return enhanced_scores
+            
+        except Exception as e:
+            logger.warning(f"Indian food enhancement failed: {e}")
+            return {}
+    
+    def _get_clip_similarities_enhanced(self, crop: Image.Image, texts: List[str]) -> Dict[str, float]:
+        """
+        Enhanced CLIP similarity calculation with better error handling
+        """
+        try:
+            if not self.models.get('clip_model'):
+                return {}
+            
+            # Preprocess image for CLIP
+            processor = self.models.get('clip_processor')
+            if not processor:
+                return {}
+            
+            # Process image and text
+            inputs = processor(
+                images=crop,
+                text=texts,
+                return_tensors="pt",
+                padding=True,
+                truncation=True
+            )
+            
+            # Get embeddings
+            with torch.no_grad():
+                image_features = self.models['clip_model'].get_image_features(**inputs)
+                text_features = self.models['clip_model'].get_text_features(**inputs)
+                
+                # Normalize features
+                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+                text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+                
+                # Calculate similarities
+                similarities = torch.matmul(image_features, text_features.T)
+                similarities = similarities.squeeze().cpu().numpy()
+                
+                return {text: float(similarity) for text, similarity in zip(texts, similarities)}
+                
+        except Exception as e:
+            logger.warning(f"Enhanced CLIP similarity calculation failed: {e}")
+            return {}
+    
+    def _preprocess_image_for_blip(self, image: Image.Image) -> torch.Tensor:
+        """
+        Preprocess image for BLIP model
+        """
+        try:
+            if not self.models.get('blip_processor'):
+                return None
+            
+            processor = self.models['blip_processor']
+            inputs = processor(images=image, return_tensors="pt")
+            return inputs
+        except Exception as e:
+            logger.warning(f"BLIP preprocessing failed: {e}")
+            return None
+    
+    def _classify_with_indian_context(self, crop: Image.Image, context: str = "") -> List[Tuple[str, float]]:
+        """
+        Enhanced classification with Indian food context awareness
+        """
+        try:
+            # Get base classifications
+            base_classifications = self.classify_with_transformers(crop)
+            
+            # Enhance with Indian food detection
+            indian_enhancements = self._enhance_indian_food_detection(crop, context)
+            
+            # Combine and boost Indian food categories
+            enhanced_classifications = base_classifications.copy()
+            
+            for category, boost_score in indian_enhancements.items():
+                # Find similar categories in base classifications
+                for i, (base_category, base_score) in enumerate(enhanced_classifications):
+                    if any(keyword in base_category.lower() for keyword in category.split('_')[:2]):
+                        # Boost the score
+                        enhanced_classifications[i] = (base_category, base_score + boost_score * 0.3)
+                        break
+                else:
+                    # Add new Indian food category if not found
+                    enhanced_classifications.append((category, boost_score))
+            
+            # Sort by score and return top results
+            enhanced_classifications.sort(key=lambda x: x[1], reverse=True)
+            return enhanced_classifications[:10]
+            
+        except Exception as e:
+            logger.warning(f"Indian context classification failed: {e}")
+            return self.classify_with_transformers(crop)
     
     def get_detection_summary(self, detections: List[FoodDetection]) -> Dict[str, Any]:
         """
