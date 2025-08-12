@@ -1189,6 +1189,260 @@ def estimate_basic_nutrition(food_name):
     
     # Default nutrition for unknown foods
     return {'calories': 100, 'protein': 5, 'carbs': 15, 'fat': 2}
+
+def create_complex_history_trends(history):
+    """Create complex trend charts from history data"""
+    try:
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from datetime import datetime, timedelta
+        
+        if not history:
+            return None
+        
+        charts = {}
+        
+        # Prepare data
+        dates = []
+        calories = []
+        proteins = []
+        carbs = []
+        fats = []
+        
+        for entry in history:
+            if 'timestamp' in entry and 'nutritional_data' in entry:
+                dates.append(entry['timestamp'])
+                calories.append(entry['nutritional_data'].get('total_calories', 0))
+                proteins.append(entry['nutritional_data'].get('total_protein', 0))
+                carbs.append(entry['nutritional_data'].get('total_carbs', 0))
+                fats.append(entry['nutritional_data'].get('total_fats', 0))
+        
+        if not dates:
+            return None
+        
+        # Convert to datetime if needed
+        if isinstance(dates[0], str):
+            dates = [datetime.fromisoformat(d) for d in dates]
+        
+        # Sort by date
+        sorted_data = sorted(zip(dates, calories, proteins, carbs, fats))
+        dates, calories, proteins, carbs, fats = zip(*sorted_data)
+        
+        # 1. Complex Calorie Trend
+        fig1, ax1 = plt.subplots(figsize=(12, 6))
+        ax1.plot(dates, calories, 'o-', linewidth=3, markersize=8, color='#FF6B6B', alpha=0.8)
+        ax1.fill_between(dates, calories, alpha=0.3, color='#FF6B6B')
+        ax1.set_title('🔥 Advanced Calorie Trend Analysis', fontsize=16, fontweight='bold')
+        ax1.set_xlabel('Date', fontsize=12)
+        ax1.set_ylabel('Calories', fontsize=12)
+        ax1.grid(True, alpha=0.3)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        charts['complex_calorie_trend'] = fig1
+        
+        # 2. Macro Trend
+        fig2, ax2 = plt.subplots(figsize=(12, 6))
+        ax2.plot(dates, proteins, 'o-', label='Protein', linewidth=2, markersize=6, color='#4ECDC4')
+        ax2.plot(dates, carbs, 's-', label='Carbs', linewidth=2, markersize=6, color='#45B7D1')
+        ax2.plot(dates, fats, '^-', label='Fats', linewidth=2, markersize=6, color='#FFD93D')
+        ax2.set_title('📊 Advanced Macro Trend Analysis', fontsize=16, fontweight='bold')
+        ax2.set_xlabel('Date', fontsize=12)
+        ax2.set_ylabel('Grams', fontsize=12)
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        charts['complex_macro_trend'] = fig2
+        
+        # 3. Progress Trend
+        fig3, ax3 = plt.subplots(figsize=(12, 6))
+        cumulative_calories = np.cumsum(calories)
+        ax3.plot(dates, cumulative_calories, 'o-', linewidth=3, markersize=8, color='#9B59B6', alpha=0.8)
+        ax3.fill_between(dates, cumulative_calories, alpha=0.3, color='#9B59B6')
+        ax3.set_title('🎯 Advanced Progress Trend Analysis', fontsize=16, fontweight='bold')
+        ax3.set_xlabel('Date', fontsize=12)
+        ax3.set_ylabel('Cumulative Calories', fontsize=12)
+        ax3.grid(True, alpha=0.3)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        charts['complex_progress_trend'] = fig3
+        
+        return charts
+        
+    except Exception as e:
+        st.error(f"Error creating trend charts: {e}")
+        return None
+
+def main():
+    """Main Streamlit application"""
+    
+    # Header
+    st.markdown("""
+    <div class="header-card">
+        <h1>🍱 AI Calorie Tracker</h1>
+        <p>Advanced AI-powered food analysis and nutrition tracking</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Sidebar
+    with st.sidebar:
+        st.markdown("### ⚙️ Settings")
+        
+        # Model status
+        st.markdown("#### 🤖 AI Model Status")
+        model_status = get_fresh_model_status()
+        
+        for model_name, is_available in model_status.items():
+            if is_available:
+                st.markdown(f"✅ {model_name}")
+            else:
+                st.markdown(f"❌ {model_name}")
+        
+        # Calorie target
+        st.markdown("#### 🎯 Daily Calorie Target")
+        calorie_target = st.number_input(
+            "Target Calories", 
+            min_value=1000, 
+            max_value=5000, 
+            value=st.session_state.calorie_target,
+            step=100
+        )
+        st.session_state.calorie_target = calorie_target
+        
+        # Today's progress
+        today = date.today().isoformat()
+        today_calories = st.session_state.daily_calories.get(today, 0)
+        progress = min(today_calories / calorie_target, 1.0)
+        
+        st.markdown("#### 📊 Today's Progress")
+        st.progress(progress)
+        st.metric("Calories", f"{today_calories:.0f} / {calorie_target}")
+        
+        # Clear data button
+        if st.button("🗑️ Clear All Data"):
+            st.session_state.history = []
+            st.session_state.daily_calories = {}
+            st.success("Data cleared!")
+            st.rerun()
+    
+    # Main content
+    tab1, tab2, tab3 = st.tabs(["🔍 Food Analysis", "📊 History", "📈 Analytics"])
+    
+    with tab1:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>📸 Upload Food Image</h3>
+            <p>Upload a clear image of your food for AI-powered analysis and nutrition tracking.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # File upload
+        uploaded_file = st.file_uploader(
+            "Choose a food image...",
+            type=['png', 'jpg', 'jpeg', 'webp'],
+            help="Upload a clear image of your food"
+        )
+        
+        # Context input
+        context = st.text_area(
+            "Additional Context (Optional)",
+            placeholder="Describe the food, portion size, or any special preparation methods...",
+            help="Provide additional context to improve analysis accuracy"
+        )
+        
+        if uploaded_file:
+            image = Image.open(uploaded_file)
+            st.image(image, caption="Uploaded Food Image", use_column_width=True)
+        
+        # Comprehensive analysis
+        st.markdown("### 🚀 Comprehensive Analysis")
+        
+        if st.button("🔍🧠 Run Comprehensive Analysis (Standard + Expert)", disabled=not uploaded_file, type="primary"):
+            if uploaded_file and UTILS_AVAILABLE and "error" not in models:
+                # Progress tracking
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                try:
+                    status_text.text("📷 Loading image...")
+                    progress_bar.progress(5)
+                    
+                    image = Image.open(uploaded_file)
+                    
+                    # Step 1: Standard Analysis
+                    status_text.text("🔍 Running standard food detection...")
+                    progress_bar.progress(20)
+                    
+                    analysis_result = analyze_food_image(image, context, models)
+                    
+                    # Step 2: Expert Analysis
+                    status_text.text("🧠 Running expert multi-model analysis...")
+                    progress_bar.progress(50)
+                    
+                    expert_result = None
+                    try:
+                        from utils.expert_food_recognition import ExpertFoodRecognitionSystem
+                        expert_system = ExpertFoodRecognitionSystem(models)
+                        detections = expert_system.recognize_food(image)
+                        expert_summary = expert_system.get_detection_summary(detections)
+                        expert_result = {"detections": detections, "summary": expert_summary}
+                    except Exception as e:
+                        st.warning(f"Expert system not available: {str(e)}")
+                    
+                    status_text.text("📊 Finalizing comprehensive analysis...")
+                    progress_bar.progress(95)
+                    
+                    progress_bar.progress(100)
+                    status_text.text("✅ Comprehensive analysis complete!")
+                    
+                    # Clear progress
+                    progress_bar.empty()
+                    status_text.empty()
+                    
+                    # Display results
+                    if analysis_result["success"]:
+                        st.success("✅ Comprehensive analysis completed!")
+                        
+                        # Display all results in tabs
+                        tab1, tab2 = st.tabs(["🔍 Standard Analysis", "🧠 Expert Analysis"])
+                        
+                        with tab1:
+                            display_analysis_results(analysis_result)
+                        
+                        with tab2:
+                            if expert_result and expert_result["summary"]["success"]:
+                                display_expert_results(expert_result["detections"], expert_result["summary"])
+                            else:
+                                st.info("Expert analysis not available or no detections found")
+                        
+                        # Save to history
+                        history_entry = {
+                            'timestamp': datetime.now(),
+                            'image_name': uploaded_file.name,
+                            'description': analysis_result.get('description', 'Comprehensive food analysis'),
+                            'analysis': analysis_result["analysis"],
+                            'nutritional_data': analysis_result["nutritional_data"],
+                            'context': context,
+                            'expert_detections': expert_result["detections"] if expert_result else []
+                        }
+                        
+                        st.session_state.history.append(history_entry)
+                        
+                        # Update daily calories
+                        today = date.today().isoformat()
+                        if today not in st.session_state.daily_calories:
+                            st.session_state.daily_calories[today] = 0
+                        st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
+                        
+                        st.success(f"📝 Added {analysis_result['nutritional_data']['total_calories']:.0f} calories to today's total!")
+                    
+                    else:
+                        st.error("❌ Analysis failed")
+                
+                except Exception as e:
+                    st.error(f"Error during comprehensive analysis: {str(e)}")
+            else:
+                st.error("❌ AI models not available. Please check the configuration.")
     
     with tab2:
         st.markdown("""
@@ -1258,8 +1512,13 @@ def estimate_basic_nutrition(food_name):
                 st.metric("Avg Calories/Meal", f"{avg_calories:.0f}")
     
     # Footer
-    from utils.ui import create_footer
-    create_footer()
+    st.markdown("""
+    <div class="modern-footer">
+        <h3>🍱 AI Calorie Tracker</h3>
+        <p>Powered by advanced AI models for accurate food analysis and nutrition tracking</p>
+        <p>Built with Streamlit, PyTorch, and Transformers</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
