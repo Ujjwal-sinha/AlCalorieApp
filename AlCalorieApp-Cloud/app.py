@@ -60,8 +60,15 @@ def get_fresh_model_status():
         return get_model_status(fresh_models)
     return {}
 
-# Load models
-models = initialize_models()
+# Load models - Force refresh to ensure BLIP is loaded
+try:
+    # Clear any cached models to force reload
+    if hasattr(st, 'cache_resource'):
+        st.cache_resource.clear()
+    models = initialize_models()
+except Exception as e:
+    st.error(f"Error loading models: {e}")
+    models = {}
 
 # Custom CSS for better appearance
 st.markdown("""
@@ -774,307 +781,161 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded Food Image", use_column_width=True)
         
-        # Single comprehensive analysis button
-        st.markdown("### 🚀 Comprehensive Analysis")
-        st.markdown("Get both standard nutritional analysis and enhanced web-sourced insights in one click!")
+        # Analysis options
+        st.markdown("### 🚀 Analysis Options")
         
-        # Advanced analysis button
-        if st.button("🔍 Analyze Food (Advanced Multi-Model Detection)", disabled=not uploaded_file, type="primary"):
-            if uploaded_file and UTILS_AVAILABLE and "error" not in models:
-                # Progress tracking
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                try:
-                    status_text.text("📷 Loading image...")
-                    progress_bar.progress(10)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Standard analysis button
+            if st.button("🔍 Standard Analysis", disabled=not uploaded_file, type="primary"):
+                if uploaded_file and UTILS_AVAILABLE and "error" not in models:
+                    # Progress tracking
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
                     
-                    image = Image.open(uploaded_file)
-                    
-                    status_text.text("🔍 Running advanced multi-model food detection...")
-                    progress_bar.progress(20)
-                    
-                    # Advanced AI analysis with multi-model ensemble detection
-                    analysis_result = analyze_food_image(image, context, models)
-                    
-                    status_text.text("🤖 Running advanced multi-model agent...")
-                    progress_bar.progress(50)
-                    
-                    # Advanced multi-model agent analysis
-                    enhanced_result = None
                     try:
-                        from utils.food_agent import FoodAgent
-                        agent = FoodAgent(models)
-                        enhanced_result = agent.get_comprehensive_analysis(image)
-                        status_text.text("🌐 Processing advanced detection results...")
-                        progress_bar.progress(80)
-                    except Exception as e:
-                        st.warning(f"Advanced agent not available: {str(e)}")
-                    
-                    status_text.text("📊 Finalizing advanced multi-model analysis...")
-                    progress_bar.progress(95)
-                    
-                    progress_bar.progress(100)
-                    status_text.text("✅ Comprehensive analysis complete!")
-                    
-                    # Clear progress
-                    progress_bar.empty()
-                    status_text.empty()
-                    
-                    if analysis_result["success"]:
-                        st.success("✅ Comprehensive analysis completed!")
+                        status_text.text("📷 Loading image...")
+                        progress_bar.progress(10)
                         
-                        # Display results
-                        description = analysis_result.get('description', 'Food items detected')
+                        image = Image.open(uploaded_file)
                         
-                        # Enhanced results display with Vision Transformer detection info
-                        if description.startswith("Main Food Items Identified:"):
-                            food_items = description.replace("Main Food Items Identified:", "").strip()
-                            food_count = len([item.strip() for item in food_items.split(',') if item.strip()])
-                            display_title = f"🧠 Vision Transformer + Multi-Model Detection ({food_count} items found)"
-                        elif "via" in description and "Vision Transformer" in description:
-                            # Extract detection method from description
-                            detection_method = description.split("via ")[-1] if "via " in description else "Multi-Model"
-                            food_items = description.split(" (via")[0].replace("Detected foods: ", "")
-                            food_count = len([item.strip() for item in food_items.split(',') if item.strip()])
-                            display_title = f"🧠 {detection_method} Detection ({food_count} items found)"
+                        status_text.text("🔍 Running standard food detection...")
+                        progress_bar.progress(20)
+                        
+                        # Standard AI analysis
+                        analysis_result = analyze_food_image(image, context, models)
+                        
+                        status_text.text("📊 Finalizing analysis...")
+                        progress_bar.progress(90)
+                        
+                        progress_bar.progress(100)
+                        status_text.text("✅ Standard analysis complete!")
+                        
+                        # Clear progress
+                        progress_bar.empty()
+                        status_text.empty()
+                        
+                        if analysis_result["success"]:
+                            st.success("✅ Standard analysis completed!")
+                            display_analysis_results(analysis_result)
                         else:
-                            display_title = "🧠 Vision Transformer + Multi-Model Analysis Results"
-                            food_count = "Multiple"
-                        
-                        st.markdown(f"""
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                    padding: 25px; border-radius: 20px; color: white; margin: 20px 0; 
-                                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
-                            <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px;">
-                                    <span style="font-size: 24px;">🎯</span>
-                                </div>
-                                <div>
-                                    <h3 style="color: white; margin: 0; font-size: 24px;">{display_title}</h3>
-                                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Vision Transformer + Swin Transformer + BLIP + YOLO Ensemble</p>
-                                </div>
-                            </div>
-                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px;">
-                                <p style="font-size: 16px; margin: 0; line-height: 1.6; color: #333; font-weight: 500;">
-                                    <strong style="color: #667eea;">Detected Items:</strong> {description}
-                                </p>
-                            </div>
-                            <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 12px; opacity: 0.8;">ViT-B/16 + Swin-T + BLIP + YOLO Ensemble</span>
-                                <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;">🧠 AI-Powered</span>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Enhanced Agent Results (if available)
-                        if enhanced_result and "error" not in enhanced_result:
-                            st.markdown("### 🤖 Enhanced AI Agent Analysis")
-                            
-                            # Show detection method and models used
-                            detection_method = enhanced_result.get('detection_method', 'Multi-Model')
-                            models_used = enhanced_result.get('models_used', [])
-                            vit_detected = enhanced_result.get('vit_detected_foods', [])
-                            description_foods = enhanced_result.get('description_foods', [])
-                            
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.info(f"**Detection Method:** {detection_method}")
-                                if models_used:
-                                    st.info(f"**Models Used:** {', '.join(models_used)}")
-                            
-                            with col2:
-                                if vit_detected:
-                                    st.success(f"**Vision Transformer Detected:** {len(vit_detected)} items")
-                                if description_foods:
-                                    st.success(f"**Description Foods:** {len(description_foods)} items")
-                            
-                            # Show health score if available
-                            health_score = enhanced_result.get('health_score', None)
-                            if health_score is not None:
-                                st.markdown(f"### 🏥 Health Score: {health_score}/10")
-                                
-                                # Create a progress bar for health score
-                                health_percentage = (health_score / 10) * 100
-                                if health_percentage >= 80:
-                                    st.progress(health_percentage / 100, text="Excellent Health Score")
-                                elif health_percentage >= 60:
-                                    st.progress(health_percentage / 100, text="Good Health Score")
-                                else:
-                                    st.progress(health_percentage / 100, text="Needs Improvement")
-                            
-                            # Show recommendations if available
-                            recommendations = enhanced_result.get('recommendations', [])
-                            if recommendations:
-                                st.markdown("### 💡 AI Recommendations")
-                                for i, rec in enumerate(recommendations[:5], 1):  # Show top 5
-                                    st.markdown(f"{i}. {rec}")
-                        
-                        # Nutrition summary
-                        nutrition = analysis_result["nutritional_data"]
-                        
-                        st.markdown("### 📈 Nutrition Analysis")
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Calories", f"{nutrition['total_calories']} kcal")
-                        with col2:
-                            st.metric("Protein", f"{nutrition['total_protein']:.1f}g")
-                        with col3:
-                            st.metric("Carbs", f"{nutrition['total_carbs']:.1f}g")
-                        with col4:
-                            st.metric("Fats", f"{nutrition['total_fats']:.1f}g")
-                        
-                        # Create enhanced charts
-                        charts = create_complex_nutrition_charts(nutrition)
-                        if charts:
-                            st.markdown("### 📈 Enhanced Nutritional Visualizations")
-                            
-                            chart_tabs = st.tabs(["📊 Overview", "🥧 Distribution", "📈 Sources", "🎯 Progress", "🔍 Balance"])
-                            
-                            with chart_tabs[0]:
-                                if 'complex_bar_chart' in charts:
-                                    st.pyplot(charts['complex_bar_chart'])
-                            
-                            with chart_tabs[1]:
-                                if 'enhanced_pie_chart' in charts:
-                                    st.pyplot(charts['enhanced_pie_chart'])
-                            
-                            with chart_tabs[2]:
-                                if 'complex_calorie_sources' in charts:
-                                    st.pyplot(charts['complex_calorie_sources'])
-                            
-                            with chart_tabs[3]:
-                                if 'complex_daily_progress' in charts:
-                                    st.pyplot(charts['complex_daily_progress'])
-                            
-                            with chart_tabs[4]:
-                                if 'radar_chart' in charts:
-                                    st.pyplot(charts['radar_chart'])
-                        
-                        # Advanced multi-model agent results
-                        if enhanced_result and not enhanced_result.get("error"):
-                            st.markdown("### 🤖 Advanced Multi-Model AI Analysis")
-                            
-                            # Display Vision Transformer detection results
-                            detected_foods = enhanced_result.get('detected_foods', [])
-                            confidence_scores = enhanced_result.get('confidence_scores', {})
-                            food_details = enhanced_result.get('food_details', {})
-                            detection_details = enhanced_result.get('detection_details', {})
-                            total_detected = enhanced_result.get('total_foods_detected', 0)
-                            detection_method = enhanced_result.get('detection_method', 'standard')
-                            models_used = enhanced_result.get('models_used', [])
-                            
-                            # Detection summary
-                            col1, col2, col3, col4 = st.columns(4)
-                            with col1:
-                                st.metric("Foods Detected", total_detected)
-                            with col2:
-                                st.metric("Detection Method", detection_method.replace('_', ' ').title())
-                            with col3:
-                                avg_confidence = sum(confidence_scores.values()) / len(confidence_scores) if confidence_scores else 0
-                                st.metric("Avg Confidence", f"{avg_confidence:.1%}")
-                            with col4:
-                                st.metric("Models Used", len(models_used))
-                            
-                            # Show models used
-                            if models_used:
-                                st.markdown("#### 🤖 AI Models Used")
-                                for model in models_used:
-                                    st.write(f"• **{model}**")
-                            
-                            if detected_foods:
-                                st.markdown("#### 🍽️ Detected Foods with AI Analysis")
-                                for i, food in enumerate(detected_foods, 1):
-                                    confidence = confidence_scores.get(food, 0.8)
-                                    details = food_details.get(food, {})
-                                    category = details.get('category', 'unknown')
-                                    detection_methods = details.get('detection_methods', ['Unknown'])
-                                    
-                                    with st.expander(f"{i}. **{food.title()}** ({confidence:.1%} confidence)"):
-                                        col1, col2 = st.columns(2)
-                                        with col1:
-                                            st.write(f"**Category:** {category.title()}")
-                                            st.write(f"**Nutritional Type:** {details.get('nutritional_category', 'mixed').title()}")
-                                        with col2:
-                                            st.write(f"**Detection Methods:**")
-                                            for method in detection_methods:
-                                                st.write(f"• {method}")
-                            else:
-                                st.info("No specific foods detected in this image")
-                            
-                            # Display health score
-                            health_score = enhanced_result.get('health_score', 5)
-                            st.metric("Health Score", f"{health_score}/10")
-                            st.progress(health_score / 10)
-                            
-                            # Display LLM analysis
-                            llm_analysis = enhanced_result.get('llm_analysis', '')
-                            if llm_analysis and len(llm_analysis) > 20:
-                                st.markdown("#### 🤖 AI Analysis")
-                                st.write(llm_analysis)
-                            
-                            # Display recommendations
-                            recommendations = enhanced_result.get('recommendations', [])
-                            if recommendations:
-                                st.markdown("#### 💡 Recommendations")
-                                for rec in recommendations:
-                                    st.write(f"• {rec}")
-                            
-                            # Display web nutrition data
-                            web_nutrition = enhanced_result.get('web_nutrition', {})
-                            if web_nutrition:
-                                st.markdown("#### 🌐 Web-Sourced Nutrition Data")
-                                for food, data in web_nutrition.items():
-                                    with st.expander(f"📊 {food.title()} Nutrition"):
-                                        col1, col2, col3, col4 = st.columns(4)
-                                        with col1:
-                                            st.metric("Calories", f"{data.get('calories', 0)}")
-                                        with col2:
-                                            st.metric("Protein", f"{data.get('protein', 0)}g")
-                                        with col3:
-                                            st.metric("Carbs", f"{data.get('carbs', 0)}g")
-                                        with col4:
-                                            st.metric("Fat", f"{data.get('fat', 0)}g")
-
-
-
-                        
-                        # Detailed analysis
-                        st.markdown("### 📝 Detailed Analysis")
-                        with st.expander("🔍 Complete Analysis Report", expanded=True):
-                            st.markdown(analysis_result["analysis"])
-                        
-                        # Save to history
-                        history_entry = {
-                            'timestamp': datetime.now(),
-                            'image_name': uploaded_file.name,
-                            'description': analysis_result.get('description', 'Food analysis'),
-                            'analysis': analysis_result["analysis"],
-                            'nutritional_data': analysis_result["nutritional_data"],
-                            'context': context
-                        }
-                        
-                        st.session_state.history.append(history_entry)
-                        
-                        # Update daily calories
-                        today = date.today().isoformat()
-                        if today not in st.session_state.daily_calories:
-                            st.session_state.daily_calories[today] = 0
-                        st.session_state.daily_calories[today] += analysis_result["nutritional_data"]["total_calories"]
-                        
-                        st.success(f"📝 Added {analysis_result['nutritional_data']['total_calories']:.0f} calories to today's total!")
+                            st.error("❌ Analysis failed")
                     
-                    else:
-                        st.error("❌ Analysis failed. Please try again with a clearer image.")
-                
-                except Exception as e:
-                    progress_bar.empty()
-                    status_text.empty()
-                    st.error(f"❌ Analysis error: {str(e)}")
-                    logger.error(f"Analysis error: {e}")
-            
-            else:
-                st.error("❌ AI models not available. Please check the configuration.")
+                    except Exception as e:
+                        st.error(f"Error during analysis: {str(e)}")
+        
+        with col2:
+            # Expert analysis button
+            if st.button("🧠 Expert Multi-Model Analysis", disabled=not uploaded_file, type="primary"):
+                if uploaded_file and UTILS_AVAILABLE and "error" not in models:
+                    # Progress tracking
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    try:
+                        status_text.text("📷 Loading image...")
+                        progress_bar.progress(10)
+                        
+                        image = Image.open(uploaded_file)
+                        
+                        status_text.text("🧠 Running expert multi-model food recognition...")
+                        progress_bar.progress(30)
+                        
+                        # Expert food recognition system
+                        try:
+                            from utils.expert_food_recognition import ExpertFoodRecognitionSystem
+                            expert_system = ExpertFoodRecognitionSystem(models)
+                            detections = expert_system.recognize_food(image)
+                            summary = expert_system.get_detection_summary(detections)
+                            
+                            status_text.text("📊 Processing expert detection results...")
+                            progress_bar.progress(70)
+                            
+                            if summary["success"]:
+                                status_text.text("✅ Expert analysis complete!")
+                                progress_bar.progress(100)
+                                
+                                # Clear progress
+                                progress_bar.empty()
+                                status_text.empty()
+                                
+                                st.success(f"✅ Expert analysis completed! Found {summary['total_detections']} food items")
+                                
+                                # Display expert results
+                                display_expert_results(detections, summary)
+                                
+                            else:
+                                st.warning("No food items detected with sufficient confidence")
+                                
+                        except Exception as e:
+                            st.error(f"Expert system not available: {str(e)}")
+                            # Fallback to standard analysis
+                            analysis_result = analyze_food_image(image, context, models)
+                            if analysis_result["success"]:
+                                st.success("✅ Fallback analysis completed!")
+                                display_analysis_results(analysis_result)
+                    
+                    except Exception as e:
+                        st.error(f"Error during expert analysis: {str(e)}")
+
+def display_analysis_results(analysis_result):
+    """Display standard analysis results"""
+    if analysis_result["success"]:
+        description = analysis_result.get('description', 'Food items detected')
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 25px; border-radius: 20px; color: white; margin: 20px 0; 
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px;">
+                    <span style="font-size: 24px;">🎯</span>
+                </div>
+                <div>
+                    <h3 style="color: white; margin: 0; font-size: 24px;">Standard Analysis Results</h3>
+                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Multi-Model Food Detection</p>
+                </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px;">
+                <p style="font-size: 16px; margin: 0; line-height: 1.6; color: #333; font-weight: 500;">
+                    <strong style="color: #667eea;">Detected Items:</strong> {description}
+                </p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def display_expert_results(detections, summary):
+    """Display expert analysis results"""
+    st.markdown("### 🧠 Expert Multi-Model Analysis Results")
+    
+    # Display detected foods
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 🎯 Detected Foods")
+        for i, detection in enumerate(detections):
+            st.markdown(f"""
+            **{i+1}. {detection.final_label.replace('_', ' ').title()}**
+            - Confidence: {detection.confidence_score:.3f}
+            - Classifier: {detection.classifier_probability:.3f}
+            - CLIP Similarity: {detection.clip_similarity:.3f}
+            """)
+    
+    with col2:
+        st.markdown("#### 📊 Detection Details")
+        for detection in detections:
+            with st.expander(f"Details for {detection.final_label}"):
+                st.write(f"**Bounding Box:** {detection.bounding_box}")
+                st.write(f"**Top Alternatives:**")
+                for label, score in detection.top_3_alternatives:
+                    st.write(f"  - {label.replace('_', ' ').title()}: {score:.3f}")
+                if detection.blip_description:
+                    st.write(f"**BLIP Description:** {detection.blip_description}")
+    
+    # Show detection method
+    st.markdown("### 🔬 Detection Method")
+    st.info("Expert Multi-Model System: YOLO + ViT-B/16 + Swin + CLIP + BLIP")
     
     with tab2:
         st.markdown("""

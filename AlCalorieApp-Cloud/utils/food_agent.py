@@ -109,22 +109,13 @@ class FoodAgent:
             # Extract food items from the description
             description_foods = self._extract_foods_from_description(food_description)
             
-            # Combine all detected foods with comprehensive strategy
+            # Combine all detected foods from real model predictions only
             all_detected_foods = list(set(vit_detected_foods + description_foods))
             
-            # Add generic food categories if not already present
-            generic_categories = ['vegetables', 'protein', 'grains', 'fruits', 'dairy', 'beverages', 'spices', 'herbs']
-            for category in generic_categories:
-                if category not in all_detected_foods:
-                    all_detected_foods.append(category)
-            
-            # Ensure we have comprehensive coverage
-            if len(all_detected_foods) < 5:
-                # Add more generic foods for better coverage
-                additional_foods = ['mixed food', 'meal', 'dish', 'ingredients', 'food items']
-                for food in additional_foods:
-                    if food not in all_detected_foods:
-                        all_detected_foods.append(food)
+            # NO HARDCODED VALUES: Only use real model predictions
+            logger.info("Using only real model predictions - no hardcoded values")
+            if len(all_detected_foods) == 0:
+                logger.warning("No real detections found - this indicates a model issue")
             
             # Get nutritional estimates
             nutrition_estimates = self._estimate_nutrition(all_detected_foods)

@@ -369,14 +369,10 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
                 food_sources[food] = food_sources.get(food, []) + ["YOLO"]
             logger.info(f"Added YOLO foods: {yolo_foods}")
         
-        # Priority 4: Color-based fallback for any missing categories
-        color_fallback = _detect_common_foods_by_color(image)
-        if color_fallback:
-            combined_foods.update(color_fallback)
-            detection_sources.append("Color Analysis")
-            for food in color_fallback:
-                food_sources[food] = food_sources.get(food, []) + ["Color"]
-            logger.info(f"Added color-based foods: {color_fallback}")
+        # NO HARDCODED VALUES: Only use real model predictions
+        logger.info("Using only real model predictions - no color-based fallback")
+        if len(combined_foods) == 0:
+            logger.warning("No real detections found - this indicates a model issue")
         
         # Validate detected foods but be more permissive
         validated_foods = validate_food_items(combined_foods, "food image")
@@ -403,13 +399,11 @@ def describe_image_enhanced(image: Image.Image, models: Dict[str, Any]) -> str:
             logger.info(f"Total foods detected: {len(food_list)}")
             return result
         
-        # Strategy 4: Fallback with common food detection
-        fallback_foods = _detect_common_foods_by_color(image)
-        if fallback_foods:
-            return f"Possible foods detected: {', '.join(fallback_foods)}"
-        
-        # Final fallback
-        return "Food image detected but specific items could not be identified clearly. Please try a clearer image with better lighting."
+        # NO HARDCODED VALUES: Only return real detections
+        if len(combined_foods) == 0:
+            return "No food items detected. Please try a clearer image with better lighting."
+        else:
+            return "Food detection completed with available models."
         
     except Exception as e:
         logger.error(f"Enhanced food detection error: {e}")

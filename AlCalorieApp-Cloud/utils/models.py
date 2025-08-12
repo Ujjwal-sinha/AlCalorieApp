@@ -59,6 +59,12 @@ try:
 except ImportError:
     LIME_AVAILABLE = False
 
+try:
+    from transformers import CLIPProcessor, CLIPModel
+    CLIP_AVAILABLE = True
+except ImportError:
+    CLIP_AVAILABLE = False
+
 def load_yolo_model_with_retry(max_retries=3, timeout=30):
     """Load YOLO model with retry logic and timeout"""
     if not YOLO_AVAILABLE:
@@ -255,6 +261,23 @@ def load_models() -> Dict[str, Any]:
     else:
         models['cnn_model'] = None
     
+    # Load CLIP model for similarity scoring
+    if CLIP_AVAILABLE and TORCH_AVAILABLE:
+        try:
+            device = models.get('device', torch.device("cpu"))
+            models['clip_processor'] = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+            models['clip_model'] = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+            models['clip_model'] = models['clip_model'].to(device).eval()
+            logger.info("CLIP model loaded successfully")
+        except Exception as e:
+            logger.warning(f"Failed to load CLIP model: {e}")
+            models['clip_processor'] = None
+            models['clip_model'] = None
+    else:
+        logger.warning("CLIP not available - similarity scoring features disabled")
+        models['clip_processor'] = None
+        models['clip_model'] = None
+    
     # Set availability flags
     models['GROQ_AVAILABLE'] = GROQ_AVAILABLE
     models['TRANSFORMERS_AVAILABLE'] = TRANSFORMERS_AVAILABLE
@@ -264,6 +287,7 @@ def load_models() -> Dict[str, Any]:
     models['CV2_AVAILABLE'] = CV2_AVAILABLE
     models['CAPTUM_AVAILABLE'] = CAPTUM_AVAILABLE
     models['LIME_AVAILABLE'] = LIME_AVAILABLE
+    models['CLIP_AVAILABLE'] = CLIP_AVAILABLE
     
     return models
 
@@ -273,6 +297,7 @@ def get_model_status(models: Dict[str, Any]) -> Dict[str, bool]:
         'BLIP (Image Analysis)': models.get('blip_model') is not None,
         'ViT-B/16 (Vision Transformer)': models.get('vit_model') is not None,
         'Swin Transformer': models.get('swin_model') is not None,
+        'CLIP (Similarity Scoring)': models.get('clip_model') is not None,
         'LLM (Nutrition Analysis)': models.get('llm') is not None,
         'YOLO (Object Detection)': models.get('yolo_model') is not None,
         'CNN (Visualizations)': models.get('cnn_model') is not None

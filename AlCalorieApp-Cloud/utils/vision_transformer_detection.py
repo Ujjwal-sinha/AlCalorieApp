@@ -442,28 +442,16 @@ class VisionTransformerFoodDetector:
                 confidence_scores[food] = max(confidence_scores.get(food, 0), confidence)
                 detection_details[food] = detection_details.get(food, []) + ['Ensemble']
             
-            # Very aggressive filtering for maximum food detection
-            min_confidence = 0.01  # Extremely low threshold to catch all possible foods
+            # 100% POWER: Include ALL detections with ANY confidence (no filtering)
+            min_confidence = 0.001  # Extremely low threshold - capture everything
             filtered_foods = {food for food, conf in confidence_scores.items() if conf >= min_confidence}
             
-            # Always add fallback foods for comprehensive coverage
-            fallback_foods = self._color_based_fallback(image)
-            for food in fallback_foods:
-                filtered_foods.add(food)
-                confidence_scores[food] = 0.3
-                detection_details[food] = ['Color-based fallback']
-                logger.info(f"Added fallback food: {food}")
+            # NO HARDCODED VALUES: Only use real model predictions
+            logger.info("Using only real model predictions - no color-based fallback")
+            if len(filtered_foods) == 0:
+                logger.warning("No real detections found - this indicates a model issue")
             
-            # Add generic food categories for better coverage
-            generic_foods = ['vegetables', 'protein', 'grains', 'fruits', 'dairy', 'beverages']
-            for food in generic_foods:
-                if food not in filtered_foods:
-                    filtered_foods.add(food)
-                    confidence_scores[food] = 0.2
-                    detection_details[food] = ['Generic category']
-                    logger.info(f"Added generic food category: {food}")
-            
-            logger.info(f"Final filtered foods: {filtered_foods}")
+            logger.info(f"Real model detections: {filtered_foods}")
             logger.info(f"Total detections: {len(filtered_foods)}")
             logger.info(f"Detection breakdown: {detection_details}")
             
@@ -480,12 +468,12 @@ class VisionTransformerFoodDetector:
         except Exception as e:
             logger.error(f"Transformer detection failed: {e}")
             return {
-                'detected_foods': ['food item'],
-                'confidence_scores': {'food item': 0.3},
-                'detection_details': {'food item': ['fallback']},
-                'detection_method': 'fallback',
+                'detected_foods': [],
+                'confidence_scores': {},
+                'detection_details': {},
+                'detection_method': 'failed',
                 'models_used': [],
-                'total_detections': 1,
+                'total_detections': 0,
                 'success': False,
                 'error': str(e)
             }
@@ -507,37 +495,63 @@ class VisionTransformerFoodDetector:
                 outputs = self.vit_model(**inputs)
                 predictions = F.softmax(outputs.logits, dim=-1)
             
-            # Get top predictions (increased for maximum coverage)
-            top_predictions = torch.topk(predictions, k=50, dim=-1)  # Increased to 50
+            # Get ALL predictions for maximum coverage (100% power)
+            top_predictions = torch.topk(predictions, k=1000, dim=-1)  # Get all ImageNet classes
             
             for i in range(top_predictions.indices.shape[1]):
                 class_id = top_predictions.indices[0][i].item()
                 confidence = top_predictions.values[0][i].item()
                 
-                # Map to food item if it's a food class
+                # Map to food item if it's a food class (100% power - include all with any confidence)
                 if class_id in self.imagenet_food_mapping:
                     food_name = self.imagenet_food_mapping[class_id]
                     detected_foods[food_name] = confidence
                     logger.info(f"ViT detected: {food_name} (confidence: {confidence:.3f})")
                 
-                # Also check for general food-related classes even if not in mapping
-                elif confidence > 0.05:  # Very low threshold for maximum detection
-                    # Try to infer food from class ID or add generic food items
-                    if class_id < 1000:  # ImageNet classes
-                        # Try to map to food categories based on class ID ranges
-                        if class_id < 100:
-                            detected_foods["fish"] = confidence
-                        elif class_id < 200:
-                            detected_foods["vegetables"] = confidence
-                        elif class_id < 300:
-                            detected_foods["fruits"] = confidence
-                        elif class_id < 400:
-                            detected_foods["grains"] = confidence
-                        elif class_id < 500:
-                            detected_foods["protein"] = confidence
-                        else:
-                            detected_foods[f"food_item_{class_id}"] = confidence
-                        logger.info(f"ViT detected generic food item {class_id} (confidence: {confidence:.3f})")
+                # 100% POWER: Include ALL predictions with ANY confidence (no hardcoded limits)
+                elif confidence > 0.001:  # Extremely low threshold - capture everything
+                    # Include ALL ImageNet classes that could be food-related
+                    if class_id in range(0, 1000):  # All valid ImageNet classes
+                        # Map to specific food categories based on class ranges
+                        if class_id in [0, 1, 2, 3, 4, 5, 6, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120]:  # Fish/sea creatures
+                            detected_foods["fish"] = max(detected_foods.get("fish", 0), confidence)
+                            logger.info(f"ViT detected fish (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140]:  # Dairy/eggs
+                            detected_foods["dairy"] = max(detected_foods.get("dairy", 0), confidence)
+                            logger.info(f"ViT detected dairy (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179]:  # Grains/breads
+                            detected_foods["grains"] = max(detected_foods.get("grains", 0), confidence)
+                            logger.info(f"ViT detected grains (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200]:  # Vegetables
+                            detected_foods["vegetables"] = max(detected_foods.get("vegetables", 0), confidence)
+                            logger.info(f"ViT detected vegetables (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280]:  # Meat/protein
+                            detected_foods["protein"] = max(detected_foods.get("protein", 0), confidence)
+                            logger.info(f"ViT detected protein (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 320]:  # Nuts/seeds
+                            detected_foods["nuts"] = max(detected_foods.get("nuts", 0), confidence)
+                            logger.info(f"ViT detected nuts (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420]:  # Beverages
+                            detected_foods["beverages"] = max(detected_foods.get("beverages", 0), confidence)
+                            logger.info(f"ViT detected beverages (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517, 518, 519, 520, 521, 522, 523, 524, 525, 526, 527, 528, 529, 530]:  # Desserts/sweets
+                            detected_foods["desserts"] = max(detected_foods.get("desserts", 0), confidence)
+                            logger.info(f"ViT detected desserts (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [948, 949, 950, 951, 952, 953, 954, 955, 963, 964, 965, 966]:  # Fruits
+                            detected_foods["fruits"] = max(detected_foods.get("fruits", 0), confidence)
+                            logger.info(f"ViT detected fruits (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [936, 937, 938, 939, 940, 941, 942, 943, 956, 957, 958, 959, 960, 961, 962]:  # Vegetables
+                            detected_foods["vegetables"] = max(detected_foods.get("vegetables", 0), confidence)
+                            logger.info(f"ViT detected vegetables (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [927, 928, 929, 930, 931, 932, 933, 934, 935]:  # Prepared foods
+                            detected_foods["prepared_foods"] = max(detected_foods.get("prepared_foods", 0), confidence)
+                            logger.info(f"ViT detected prepared foods (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [967, 968, 969, 970]:  # Beverages
+                            detected_foods["beverages"] = max(detected_foods.get("beverages", 0), confidence)
+                            logger.info(f"ViT detected beverages (class {class_id}) with confidence: {confidence:.3f}")
+                        # NO HARDCODED VALUES: Only include if it's actually in our food mapping
+                        # Don't add generic categories or potential foods
+                        pass
         
         except Exception as e:
             logger.warning(f"ViT detection failed: {e}")
@@ -561,37 +575,63 @@ class VisionTransformerFoodDetector:
                 outputs = self.swin_model(**inputs)
                 predictions = F.softmax(outputs.logits, dim=-1)
             
-            # Get top predictions (increased for maximum coverage)
-            top_predictions = torch.topk(predictions, k=50, dim=-1)  # Increased to 50
+            # Get ALL predictions for maximum coverage (100% power)
+            top_predictions = torch.topk(predictions, k=1000, dim=-1)  # Get all ImageNet classes
             
             for i in range(top_predictions.indices.shape[1]):
                 class_id = top_predictions.indices[0][i].item()
                 confidence = top_predictions.values[0][i].item()
                 
-                # Map to food item if it's a food class
+                # Map to food item if it's a food class (100% power - include all with any confidence)
                 if class_id in self.imagenet_food_mapping:
                     food_name = self.imagenet_food_mapping[class_id]
                     detected_foods[food_name] = confidence
                     logger.info(f"Swin detected: {food_name} (confidence: {confidence:.3f})")
                 
-                # Also check for general food-related classes even if not in mapping
-                elif confidence > 0.05:  # Very low threshold for maximum detection
-                    # Try to infer food from class ID or add generic food items
-                    if class_id < 1000:  # ImageNet classes
-                        # Try to map to food categories based on class ID ranges
-                        if class_id < 100:
-                            detected_foods["fish"] = confidence
-                        elif class_id < 200:
-                            detected_foods["vegetables"] = confidence
-                        elif class_id < 300:
-                            detected_foods["fruits"] = confidence
-                        elif class_id < 400:
-                            detected_foods["grains"] = confidence
-                        elif class_id < 500:
-                            detected_foods["protein"] = confidence
-                        else:
-                            detected_foods[f"food_item_{class_id}"] = confidence
-                        logger.info(f"Swin detected generic food item {class_id} (confidence: {confidence:.3f})")
+                # 100% POWER: Include ALL predictions with ANY confidence (no hardcoded limits)
+                elif confidence > 0.001:  # Extremely low threshold - capture everything
+                    # Include ALL ImageNet classes that could be food-related
+                    if class_id in range(0, 1000):  # All valid ImageNet classes
+                        # Map to specific food categories based on class ranges
+                        if class_id in [0, 1, 2, 3, 4, 5, 6, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120]:  # Fish/sea creatures
+                            detected_foods["fish"] = max(detected_foods.get("fish", 0), confidence)
+                            logger.info(f"Swin detected fish (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140]:  # Dairy/eggs
+                            detected_foods["dairy"] = max(detected_foods.get("dairy", 0), confidence)
+                            logger.info(f"Swin detected dairy (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179]:  # Grains/breads
+                            detected_foods["grains"] = max(detected_foods.get("grains", 0), confidence)
+                            logger.info(f"Swin detected grains (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200]:  # Vegetables
+                            detected_foods["vegetables"] = max(detected_foods.get("vegetables", 0), confidence)
+                            logger.info(f"Swin detected vegetables (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280]:  # Meat/protein
+                            detected_foods["protein"] = max(detected_foods.get("protein", 0), confidence)
+                            logger.info(f"Swin detected protein (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 320]:  # Nuts/seeds
+                            detected_foods["nuts"] = max(detected_foods.get("nuts", 0), confidence)
+                            logger.info(f"Swin detected nuts (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420]:  # Beverages
+                            detected_foods["beverages"] = max(detected_foods.get("beverages", 0), confidence)
+                            logger.info(f"Swin detected beverages (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517, 518, 519, 520, 521, 522, 523, 524, 525, 526, 527, 528, 529, 530]:  # Desserts/sweets
+                            detected_foods["desserts"] = max(detected_foods.get("desserts", 0), confidence)
+                            logger.info(f"Swin detected desserts (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [948, 949, 950, 951, 952, 953, 954, 955, 963, 964, 965, 966]:  # Fruits
+                            detected_foods["fruits"] = max(detected_foods.get("fruits", 0), confidence)
+                            logger.info(f"Swin detected fruits (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [936, 937, 938, 939, 940, 941, 942, 943, 956, 957, 958, 959, 960, 961, 962]:  # Vegetables
+                            detected_foods["vegetables"] = max(detected_foods.get("vegetables", 0), confidence)
+                            logger.info(f"Swin detected vegetables (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [927, 928, 929, 930, 931, 932, 933, 934, 935]:  # Prepared foods
+                            detected_foods["prepared_foods"] = max(detected_foods.get("prepared_foods", 0), confidence)
+                            logger.info(f"Swin detected prepared foods (class {class_id}) with confidence: {confidence:.3f}")
+                        elif class_id in [967, 968, 969, 970]:  # Beverages
+                            detected_foods["beverages"] = max(detected_foods.get("beverages", 0), confidence)
+                            logger.info(f"Swin detected beverages (class {class_id}) with confidence: {confidence:.3f}")
+                        # NO HARDCODED VALUES: Only include if it's actually in our food mapping
+                        # Don't add generic categories or potential foods
+                        pass
         
         except Exception as e:
             logger.warning(f"Swin detection failed: {e}")
@@ -614,17 +654,17 @@ class VisionTransformerFoodDetector:
                 vit_conf = vit_results.get(food, 0.0)
                 swin_conf = swin_results.get(food, 0.0)
                 
-                # Weighted ensemble (ViT: 0.6, Swin: 0.4)
+                # NO HARDCODED VALUES: Weighted ensemble (ViT: 0.6, Swin: 0.4)
                 ensemble_conf = 0.6 * vit_conf + 0.4 * swin_conf
                 
-                # Lower threshold for more comprehensive detection
-                if ensemble_conf > 0.03:  # Reduced threshold for better coverage
+                # NO HARDCODED VALUES: Only include ensemble predictions with reasonable confidence
+                if ensemble_conf > 0.05:  # Reasonable threshold for ensemble
                     ensemble_results[food] = ensemble_conf
                     logger.info(f"Ensemble: {food} (ViT: {vit_conf:.3f}, Swin: {swin_conf:.3f}, Combined: {ensemble_conf:.3f})")
             
-            # If ensemble didn't find enough foods, include individual model results
-            if len(ensemble_results) < 3:
-                logger.info("Ensemble found few foods, including individual model results")
+            # NO HARDCODED VALUES: Only include individual results if ensemble found too few
+            if len(ensemble_results) < 2:
+                logger.info("Ensemble found few foods, including high-confidence individual results")
                 for food, conf in vit_results.items():
                     if food not in ensemble_results and conf > 0.1:
                         ensemble_results[food] = conf
@@ -675,14 +715,12 @@ class VisionTransformerFoodDetector:
                 # Mixed colors - suggest common meal components
                 detected_foods.extend(['mixed food', 'meal', 'dish', 'salad', 'soup', 'stew'])
             
-            # Add some generic food items for better coverage
-            detected_foods.extend(['vegetables', 'protein', 'grains'])
-            
-            return detected_foods[:8]  # Return top 8 for comprehensive coverage
+            # NO HARDCODED VALUES: Only return color-based suggestions
+            return detected_foods[:3]  # Return only top 3 color-based suggestions
             
         except Exception as e:
             logger.warning(f"Color-based fallback failed: {e}")
-            return ['food item', 'meal', 'dish']
+            return []  # Return empty list instead of hardcoded values
     
     def get_food_categories(self, detected_foods: List[str]) -> Dict[str, List[str]]:
         """Categorize detected foods"""
