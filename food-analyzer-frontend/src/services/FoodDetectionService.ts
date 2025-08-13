@@ -1,70 +1,34 @@
-import type { FoodCategories, VisualFeatures, AnalysisResult } from '../types';
+import type { AnalysisResult } from '../types';
 
-export class AdvancedFoodDetector {
+export class FoodDetectionService {
+  private static instance: FoodDetectionService;
+  private apiBaseUrl: string;
+  private models: Record<string, any> = {};
   private confidenceThreshold: number = 0.3;
   private ensembleThreshold: number = 0.6;
-  private models: Record<string, any> = {};
-  private apiBaseUrl: string;
 
-  constructor(apiBaseUrl: string = 'http://localhost:8000') {
-    this.apiBaseUrl = apiBaseUrl;
+  private constructor() {
+    this.apiBaseUrl = 'http://localhost:8000';
   }
 
-  async initializeModels(): Promise<void> {
+  public static getInstance(): FoodDetectionService {
+    if (!FoodDetectionService.instance) {
+      FoodDetectionService.instance = new FoodDetectionService();
+    }
+    return FoodDetectionService.instance;
+  }
+
+  private async initializeModels(): Promise<void> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/api/models/status`);
-      if (response.ok) {
-        this.models = await response.json();
-      }
+      // This would typically load TensorFlow.js models
+      // For now, we'll simulate model loading
+      this.models = {
+        'food-detection': 'loaded',
+        'nutrition-analysis': 'loaded'
+      };
     } catch (error) {
       console.warn('Failed to initialize models:', error);
     }
-  }
-
-  private async loadFoodVocabulary(): Promise<Set<string>> {
-    try {
-      const response = await fetch(`${this.apiBaseUrl}/api/food/vocabulary`);
-      if (response.ok) {
-        const data = await response.json();
-        return new Set(data.vocabulary || []);
-      }
-    } catch (error) {
-      console.warn('Failed to load food vocabulary from API:', error);
-    }
-    return new Set();
-  }
-
-  private async loadFoodCategories(): Promise<FoodCategories> {
-    try {
-      const response = await fetch(`${this.apiBaseUrl}/api/food/categories`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.categories || {};
-      }
-    } catch (error) {
-      console.warn('Failed to load food categories from API:', error);
-    }
-    return {
-      proteins: [], vegetables: [], fruits: [], grains: [],
-      dairy: [], prepared: [], snacks: [], desserts: [], beverages: []
-    };
-  }
-
-  private async loadVisualFeatures(): Promise<VisualFeatures> {
-    try {
-      const response = await fetch(`${this.apiBaseUrl}/api/food/visual-features`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.features || {};
-      }
-    } catch (error) {
-      console.warn('Failed to load visual features from API:', error);
-    }
-    return {
-      color_profiles: {},
-      texture_patterns: {},
-      shape_characteristics: {}
-    };
   }
 
   async detectFoodsAdvanced(imageFile: File): Promise<AnalysisResult> {
@@ -117,9 +81,9 @@ export class AdvancedFoodDetector {
       console.error('Advanced food detection failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        description: 'Detection failed',
-        analysis: 'Unable to analyze image. Please check your connection and try again.',
+        error: error instanceof Error ? error.message : 'Detection failed',
+        description: 'Failed to detect foods in image',
+        analysis: 'Please try again with a clearer image',
         nutritional_data: {
           total_calories: 0,
           total_protein: 0,
@@ -131,14 +95,74 @@ export class AdvancedFoodDetector {
     }
   }
 
-  // All detection methods now handled by backend API
-  // This class serves as a client interface to the Python backend
+  async detectFoodsWithModel(imageFile: File, modelType: string): Promise<AnalysisResult> {
+    try {
+      // Initialize models if not already done
+      if (Object.keys(this.models).length === 0) {
+        await this.initializeModels();
+      }
+
+      // Create FormData for image upload
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      formData.append('confidence_threshold', this.confidenceThreshold.toString());
+
+      // Send to backend for processing with specific model
+      const response = await fetch(`${this.apiBaseUrl}/api/analyze/model/${modelType}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`${modelType} analysis failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        return {
+          success: true,
+          description: `${modelType} analysis completed`,
+          analysis: result.analysis || `${modelType} analysis completed successfully`,
+          nutritional_data: result.nutritional_data || {
+            total_calories: 0,
+            total_protein: 0,
+            total_carbs: 0,
+            total_fats: 0,
+            items: []
+          },
+          confidence_scores: result.confidence_scores,
+          food_details: result.food_details,
+          detection_methods: result.detection_methods,
+          image_analysis: result.image_analysis
+        };
+      } else {
+        throw new Error(result.error || `${modelType} analysis failed`);
+      }
+    } catch (error) {
+      console.error(`${modelType} detection failed:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : `${modelType} detection failed`,
+        description: `Failed to detect foods with ${modelType}`,
+        analysis: `Please try again with a clearer image or different model`,
+        nutritional_data: {
+          total_calories: 0,
+          total_protein: 0,
+          total_carbs: 0,
+          total_fats: 0,
+          items: []
+        }
+      };
+    }
+  }
 
   async getModelStatus(): Promise<Record<string, boolean>> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/models/status`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return data.summary || {};
       }
     } catch (error) {
       console.warn('Failed to get model status:', error);
@@ -146,69 +170,31 @@ export class AdvancedFoodDetector {
     return {};
   }
 
-  async detectWithSpecificModel(imageFile: File, modelType: string): Promise<AnalysisResult> {
+  async getServiceHealth(): Promise<any> {
     try {
-      const formData = new FormData();
-      formData.append('image', imageFile);
-      formData.append('model_type', modelType);
-
-      const response = await fetch(`${this.apiBaseUrl}/api/analyze/model/${modelType}`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(`Model ${modelType} analysis failed: ${response.status}`);
+      const response = await fetch(`${this.apiBaseUrl}/health`);
+      if (response.ok) {
+        return await response.json();
       }
-
-      return await response.json();
     } catch (error) {
-      console.error(`${modelType} detection failed:`, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        description: `${modelType} detection failed`,
-        analysis: 'Unable to analyze image with this model',
-        nutritional_data: {
-          total_calories: 0,
-          total_protein: 0,
-          total_carbs: 0,
-          total_fats: 0,
-          items: []
-        }
-      };
+      console.warn('Failed to get service health:', error);
     }
+    return { status: 'unknown' };
   }
 
-  async detectWithYOLO(imageFile: File): Promise<AnalysisResult> {
-    return this.detectWithSpecificModel(imageFile, 'yolo');
+  setConfidenceThreshold(threshold: number): void {
+    this.confidenceThreshold = Math.max(0, Math.min(1, threshold));
   }
 
-  async detectWithViT(imageFile: File): Promise<AnalysisResult> {
-    return this.detectWithSpecificModel(imageFile, 'vit');
+  setEnsembleThreshold(threshold: number): void {
+    this.ensembleThreshold = Math.max(0, Math.min(1, threshold));
   }
 
-  async detectWithBLIP(imageFile: File): Promise<AnalysisResult> {
-    return this.detectWithSpecificModel(imageFile, 'blip');
+  getConfidenceThreshold(): number {
+    return this.confidenceThreshold;
   }
 
-  async detectWithSwin(imageFile: File): Promise<AnalysisResult> {
-    return this.detectWithSpecificModel(imageFile, 'swin');
-  }
-
-  async detectWithCLIP(imageFile: File): Promise<AnalysisResult> {
-    return this.detectWithSpecificModel(imageFile, 'clip');
-  }
-
-  async detectLightweight(imageFile: File): Promise<AnalysisResult> {
-    return this.detectWithSpecificModel(imageFile, 'lightweight');
-  }
-
-  async detectRobust(imageFile: File): Promise<AnalysisResult> {
-    return this.detectWithSpecificModel(imageFile, 'robust');
-  }
-
-  async detectSimple(imageFile: File): Promise<AnalysisResult> {
-    return this.detectWithSpecificModel(imageFile, 'simple');
+  getEnsembleThreshold(): number {
+    return this.ensembleThreshold;
   }
 }

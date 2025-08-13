@@ -8,6 +8,8 @@ export const APP_CONFIG = {
   api: {
     baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
     timeout: 30000,
+    retries: 3,
+    retryDelay: 1000,
   },
   
   // Feature Flags
@@ -17,6 +19,8 @@ export const APP_CONFIG = {
     enableCameraCapture: true,
     enableExport: true,
     enableSocialSharing: false,
+    enableAdvancedDetection: true,
+    enableModelSelection: true,
   },
   
   // UI Configuration
@@ -25,6 +29,7 @@ export const APP_CONFIG = {
     supportedImageTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
     maxHistoryEntries: 100,
     defaultChartColors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#F9CA24', '#6C5CE7'],
+    uploadTimeout: 30000, // 30 seconds
   },
   
   // Analysis Configuration
@@ -33,6 +38,7 @@ export const APP_CONFIG = {
     ensembleThreshold: 0.6,
     maxDetectionTime: 15000, // 15 seconds
     fallbackEnabled: true,
+    enableProgressTracking: true,
   },
   
   // Storage Configuration
@@ -60,6 +66,13 @@ export const APP_CONFIG = {
       fats: '#45B7D1',
       calories: '#F9CA24',
     },
+  },
+
+  // Model Configuration
+  models: {
+    available: ['yolo', 'vit', 'swin', 'blip', 'clip', 'llm'],
+    default: 'ensemble',
+    fallback: 'simulated',
   },
 };
 

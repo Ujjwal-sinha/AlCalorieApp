@@ -1,5 +1,5 @@
 import type { AnalysisResult, FoodItem, NutritionalData } from '../types';
-import config, { APP_CONFIG } from '../config';
+import { APP_CONFIG } from '../config';
 
 export class AnalysisService {
   private static instance: AnalysisService;
@@ -16,6 +16,38 @@ export class AnalysisService {
     return AnalysisService.instance;
   }
 
+  private async makeRequest(url: string, options: RequestInit, retries = APP_CONFIG.api.retries): Promise<Response> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: AbortSignal.timeout(APP_CONFIG.api.timeout),
+        });
+        
+        if (response.ok) {
+          return response;
+        }
+        
+        // Don't retry on client errors (4xx)
+        if (response.status >= 400 && response.status < 500) {
+          return response;
+        }
+        
+        lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Network error');
+        
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, APP_CONFIG.api.retryDelay * (attempt + 1)));
+        }
+      }
+    }
+    
+    throw lastError || new Error('Request failed after all retries');
+  }
+
   async analyzeImage(file: File, context?: string): Promise<AnalysisResult> {
     try {
       const formData = new FormData();
@@ -29,7 +61,7 @@ export class AnalysisService {
       formData.append('confidence_threshold', APP_CONFIG.analysis.confidenceThreshold.toString());
       formData.append('ensemble_threshold', APP_CONFIG.analysis.ensembleThreshold.toString());
 
-      const response = await fetch(`${this.apiBaseUrl}/analyze/advanced`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/analyze/advanced`, {
         method: 'POST',
         body: formData,
       });
@@ -40,7 +72,7 @@ export class AnalysisService {
       }
 
       const result = await response.json();
-      return result;
+      return this.normalizeAnalysisResult(result);
     } catch (error) {
       console.error('Image analysis failed:', error);
       return {
@@ -70,7 +102,7 @@ export class AnalysisService {
 
       formData.append('confidence_threshold', APP_CONFIG.analysis.confidenceThreshold.toString());
 
-      const response = await fetch(`${this.apiBaseUrl}/analyze/model/${modelType}`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/analyze/model/${modelType}`, {
         method: 'POST',
         body: formData,
       });
@@ -81,7 +113,7 @@ export class AnalysisService {
       }
 
       const result = await response.json();
-      return result;
+      return this.normalizeAnalysisResult(result);
     } catch (error) {
       console.error(`${modelType} analysis failed:`, error);
       return {
@@ -116,7 +148,7 @@ export class AnalysisService {
       formData.append('confidence_threshold', APP_CONFIG.analysis.confidenceThreshold.toString());
       formData.append('ensemble_threshold', APP_CONFIG.analysis.ensembleThreshold.toString());
 
-      const response = await fetch(`${this.apiBaseUrl}/analyze/batch`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/analyze/batch`, {
         method: 'POST',
         body: formData,
       });
@@ -143,7 +175,7 @@ export class AnalysisService {
 
   async validateFoodItems(items: string[], context?: string): Promise<string[]> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/food/validate`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/food/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -176,7 +208,9 @@ export class AnalysisService {
         params.append('category', category);
       }
 
-      const response = await fetch(`${this.apiBaseUrl}/food/search?${params}`);
+      const response = await this.makeRequest(`${this.apiBaseUrl}/food/search?${params}`, {
+        method: 'GET',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -191,7 +225,9 @@ export class AnalysisService {
 
   async getFoodDetails(foodName: string): Promise<any> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/food/${encodeURIComponent(foodName)}/details`);
+      const response = await this.makeRequest(`${this.apiBaseUrl}/food/${encodeURIComponent(foodName)}/details`, {
+        method: 'GET',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -210,7 +246,7 @@ export class AnalysisService {
 
   async calculateNutrition(foods: string[]): Promise<NutritionalData> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/nutrition/calculate`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/nutrition/calculate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,7 +273,7 @@ export class AnalysisService {
 
   async compareFoods(foods: string[]): Promise<any> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/nutrition/compare`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/nutrition/compare`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -270,7 +306,9 @@ export class AnalysisService {
         }
       });
 
-      const response = await fetch(`${this.apiBaseUrl}/nutrition/recommendations/daily?${params}`);
+      const response = await this.makeRequest(`${this.apiBaseUrl}/nutrition/recommendations/daily?${params}`, {
+        method: 'GET',
+      });
 
       if (response.ok) {
         return await response.json();
@@ -284,7 +322,7 @@ export class AnalysisService {
 
   async analyzeMealBalance(foods: string[]): Promise<any> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/nutrition/analyze/balance`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/nutrition/analyze/balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -304,7 +342,9 @@ export class AnalysisService {
 
   async getModelStatus(): Promise<Record<string, boolean>> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/models/status`);
+      const response = await this.makeRequest(`${this.apiBaseUrl}/models/status`, {
+        method: 'GET',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -319,7 +359,9 @@ export class AnalysisService {
 
   async getServiceHealth(): Promise<any> {
     try {
-      const response = await fetch(`${this.apiBaseUrl.replace('/api', '')}/health`);
+      const response = await this.makeRequest(`${this.apiBaseUrl.replace('/api', '')}/health`, {
+        method: 'GET',
+      });
 
       if (response.ok) {
         return await response.json();
@@ -362,6 +404,31 @@ export class AnalysisService {
         }
       };
     }
+  }
+
+  private normalizeAnalysisResult(result: any): AnalysisResult {
+    // Handle different response formats from the backend
+    if (result.success !== undefined) {
+      return result;
+    }
+
+    // If the backend returns a different format, normalize it
+    return {
+      success: true,
+      description: result.description || 'Analysis completed',
+      analysis: result.analysis || result.text || 'Analysis results available',
+      nutritional_data: result.nutritional_data || result.nutrition || {
+        total_calories: 0,
+        total_protein: 0,
+        total_carbs: 0,
+        total_fats: 0,
+        items: []
+      },
+      detected_foods: result.detected_foods || result.foods || [],
+      confidence: result.confidence || 0,
+      processing_time: result.processing_time || 0,
+      model_used: result.model_used || 'ensemble'
+    };
   }
 
   private generateNutritionalAnalysis(data: NutritionalData): string {

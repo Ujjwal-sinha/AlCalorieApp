@@ -28,6 +28,12 @@ export interface AnalysisResult {
   food_details?: Record<string, FoodDetails>;
   detection_methods?: Record<string, string>;
   image_analysis?: ImageAnalysis;
+  detected_foods?: string[];
+  confidence?: number;
+  processing_time?: number;
+  model_used?: string;
+  sessionId?: string;
+  insights?: string[];
 }
 
 export interface FoodDetails {

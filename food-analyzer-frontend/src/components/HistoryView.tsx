@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Eye, Trash2, Calendar } from 'lucide-react';
+import { Clock, Eye, Calendar } from 'lucide-react';
 import type { HistoryEntry } from '../types';
 
 interface HistoryViewProps {

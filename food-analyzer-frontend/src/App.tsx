@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { Camera, BarChart3, History, TrendingUp } from 'lucide-react';
+import { Camera, BarChart3, History, TrendingUp, Settings } from 'lucide-react';
 import ImageUpload from './components/ImageUpload';
 import AnalysisResults from './components/AnalysisResults';
 import NutritionCharts from './components/NutritionCharts';
 import HistoryView from './components/HistoryView';
 import TrendsView from './components/TrendsView';
+import BackendStatus from './components/BackendStatus';
 import type { AnalysisResult, HistoryEntry } from './types';
 import { HistoryService } from './services/HistoryService';
 import './App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'upload' | 'results' | 'charts' | 'history' | 'trends'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'results' | 'charts' | 'history' | 'trends' | 'status'>('upload');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -45,7 +46,8 @@ function App() {
     { id: 'results' as const, label: 'Results', icon: BarChart3 },
     { id: 'charts' as const, label: 'Nutrition Charts', icon: BarChart3 },
     { id: 'history' as const, label: 'History', icon: History },
-    { id: 'trends' as const, label: 'Trends', icon: TrendingUp }
+    { id: 'trends' as const, label: 'Trends', icon: TrendingUp },
+    { id: 'status' as const, label: 'System Status', icon: Settings }
   ];
 
   return (
@@ -112,6 +114,28 @@ function App() {
         {activeTab === 'trends' && (
           <div className="tab-content">
             <TrendsView />
+          </div>
+        )}
+
+        {activeTab === 'status' && (
+          <div className="tab-content">
+            <div className="status-container">
+              <BackendStatus />
+              <div className="status-info">
+                <h3>System Information</h3>
+                <p>This application uses a hybrid TypeScript backend with Python AI models for advanced food recognition and nutritional analysis.</p>
+                <div className="features-list">
+                  <h4>Key Features:</h4>
+                  <ul>
+                    <li>Multiple AI models (YOLO, ViT, Swin, BLIP, CLIP, LLM)</li>
+                    <li>Real-time food detection and recognition</li>
+                    <li>Comprehensive nutritional analysis</li>
+                    <li>Advanced ensemble detection</li>
+                    <li>Health monitoring and status tracking</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
