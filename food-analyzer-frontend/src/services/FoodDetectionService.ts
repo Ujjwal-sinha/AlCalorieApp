@@ -46,7 +46,7 @@ export class FoodDetectionService {
       formData.append('ensemble_threshold', this.ensembleThreshold.toString());
 
       // Send to backend for processing
-      const response = await fetch(`${this.apiBaseUrl}/api/analyze/advanced`, {
+      const response = await fetch(`${this.apiBaseUrl}/analysis/advanced`, {
         method: 'POST',
         body: formData
       });
@@ -108,7 +108,7 @@ export class FoodDetectionService {
       formData.append('confidence_threshold', this.confidenceThreshold.toString());
 
       // Send to backend for processing with specific model
-      const response = await fetch(`${this.apiBaseUrl}/api/analyze/model/${modelType}`, {
+      const response = await fetch(`${this.apiBaseUrl}/analysis/model/${modelType}`, {
         method: 'POST',
         body: formData
       });

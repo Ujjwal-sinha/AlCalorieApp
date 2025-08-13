@@ -61,7 +61,7 @@ export class AnalysisService {
       formData.append('confidence_threshold', APP_CONFIG.analysis.confidenceThreshold.toString());
       formData.append('ensemble_threshold', APP_CONFIG.analysis.ensembleThreshold.toString());
 
-      const response = await this.makeRequest(`${this.apiBaseUrl}/analyze/advanced`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/analysis/advanced`, {
         method: 'POST',
         body: formData,
       });
@@ -102,25 +102,25 @@ export class AnalysisService {
 
       formData.append('confidence_threshold', APP_CONFIG.analysis.confidenceThreshold.toString());
 
-      const response = await this.makeRequest(`${this.apiBaseUrl}/analyze/model/${modelType}`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/analysis/model/${modelType}`, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `${modelType} analysis failed: ${response.status}`);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
       return this.normalizeAnalysisResult(result);
     } catch (error) {
-      console.error(`${modelType} analysis failed:`, error);
+      console.error(`Model-specific analysis failed for ${modelType}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : `${modelType} analysis failed`,
-        description: `${modelType} analysis failed`,
-        analysis: `Unable to analyze image with ${modelType} model`,
+        error: error instanceof Error ? error.message : 'Model-specific analysis failed',
+        description: `Unable to analyze image with ${modelType} model`,
+        analysis: 'Please try again or use a different model',
         nutritional_data: {
           total_calories: 0,
           total_protein: 0,
@@ -132,11 +132,11 @@ export class AnalysisService {
     }
   }
 
-  async analyzeBatch(files: File[], context?: string): Promise<any> {
+  async analyzeBatch(files: File[], context?: string): Promise<AnalysisResult[]> {
     try {
       const formData = new FormData();
 
-      files.forEach(file => {
+      files.forEach((file, index) => {
         formData.append('images', file);
       });
 
@@ -148,28 +148,38 @@ export class AnalysisService {
       formData.append('confidence_threshold', APP_CONFIG.analysis.confidenceThreshold.toString());
       formData.append('ensemble_threshold', APP_CONFIG.analysis.ensembleThreshold.toString());
 
-      const response = await this.makeRequest(`${this.apiBaseUrl}/analyze/batch`, {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/analysis/batch`, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Batch analysis failed: ${response.status}`);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      if (result.success && result.results) {
+        return result.results.map((item: any) => this.normalizeAnalysisResult(item.result));
+      }
+      
+      return [];
     } catch (error) {
       console.error('Batch analysis failed:', error);
-      return {
+      return files.map(() => ({
         success: false,
         error: error instanceof Error ? error.message : 'Batch analysis failed',
-        total: files.length,
-        successful: 0,
-        failed: files.length,
-        results: [],
-        errors: files.map((_, index) => ({ index, error: 'Analysis failed' }))
-      };
+        description: 'Unable to analyze images',
+        analysis: 'Please check your connection and try again',
+        nutritional_data: {
+          total_calories: 0,
+          total_protein: 0,
+          total_carbs: 0,
+          total_fats: 0,
+          items: []
+        }
+      }));
     }
   }
 
