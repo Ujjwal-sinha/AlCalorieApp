@@ -47,7 +47,7 @@ export const errorHandler = (
 
 export const notFoundHandler = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void => {
   const error: Error = new Error(`Route ${req.method} ${req.originalUrl} not found`);
@@ -55,8 +55,8 @@ export const notFoundHandler = (
   next(error);
 };
 
-export const createError = (message: string, statusCode: number = 500): Error => {
+export const createError = (message: string): Error => {
   const error: Error = new Error(message);
-  error.name = 'ValidationError'; // Assuming a common error name for validation
+  error.name = 'ValidationError';
   return error;
 };

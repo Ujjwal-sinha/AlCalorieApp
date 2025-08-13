@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { spawn } from 'child_process';
 import { NutritionService } from './NutritionService';
-import type { ProcessedImage, NutritionalData } from '../types';
+import type { ProcessedImage } from '../types';
 
 interface PythonModelResponse {
   success: boolean;

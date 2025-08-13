@@ -3,84 +3,113 @@ import Joi from 'joi';
 
 // Validation schemas
 const analysisRequestSchema = Joi.object({
-  context: Joi.string().optional().max(500),
+  context: Joi.string().optional(),
   confidence_threshold: Joi.number().min(0).max(1).optional(),
   ensemble_threshold: Joi.number().min(0).max(1).optional(),
-  use_advanced_detection: Joi.string().valid('true', 'false').optional(),
-  model_type: Joi.string().valid('yolo', 'vit', 'swin', 'blip', 'clip', 'lightweight', 'robust', 'simple').optional()
+  use_advanced_detection: Joi.boolean().optional()
 });
 
-const nutritionCalculateSchema = Joi.object({
-  foods: Joi.array().items(Joi.string().min(1).max(50)).min(1).max(20).required()
+const nutritionRequestSchema = Joi.object({
+  foods: Joi.array().items(Joi.string()).min(1).required()
 });
 
-const nutritionCompareSchema = Joi.object({
-  foods: Joi.array().items(Joi.string().min(1).max(50)).min(2).max(10).required()
+const nutritionComparisonSchema = Joi.object({
+  foods: Joi.array().items(Joi.string()).min(2).max(10).required()
 });
 
-const dailyRecommendationsSchema = Joi.object({
-  age: Joi.number().integer().min(1).max(120).optional(),
-  gender: Joi.string().valid('male', 'female').optional(),
-  weight: Joi.number().min(20).max(300).optional(),
-  height: Joi.number().min(100).max(250).optional(),
-  activity_level: Joi.string().valid('sedentary', 'light', 'moderate', 'active', 'very_active').optional()
+const balanceAnalysisSchema = Joi.object({
+  foods: Joi.array().items(Joi.string()).min(1).required()
 });
 
-// Validation middleware factory
-const createValidationMiddleware = (schema: Joi.ObjectSchema, source: 'body' | 'query' | 'params' = 'body') => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const data = req[source];
-    const { error, value } = schema.validate(data, {
-      abortEarly: false,
-      stripUnknown: true,
-      convert: true
+// Validation middleware
+export const validateAnalysisRequest = (req: Request, res: Response, next: NextFunction) => {
+  const { error } = analysisRequestSchema.validate(req.body);
+  
+  if (error) {
+    res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: error.details.map(detail => detail.message)
     });
-
-    if (error) {
-      const errorMessages = error.details.map(detail => detail.message);
-      res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errorMessages
-      });
-      return;
-    }
-
-    // Replace the original data with validated and sanitized data
-    req[source] = value;
-    next();
-  };
+    return;
+  }
+  
+  next();
 };
 
-// Specific validation middleware
-export const validateAnalysisRequest = createValidationMiddleware(analysisRequestSchema, 'body');
-export const validateNutritionCalculate = createValidationMiddleware(nutritionCalculateSchema, 'body');
-export const validateNutritionCompare = createValidationMiddleware(nutritionCompareSchema, 'body');
-export const validateDailyRecommendations = createValidationMiddleware(dailyRecommendationsSchema, 'query');
+export const validateNutritionRequest = (req: Request, res: Response, next: NextFunction) => {
+  const { error } = nutritionRequestSchema.validate(req.body);
+  
+  if (error) {
+    res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: error.details.map(detail => detail.message)
+    });
+    return;
+  }
+  
+  next();
+};
+
+export const validateNutritionComparison = (req: Request, res: Response, next: NextFunction) => {
+  const { error } = nutritionComparisonSchema.validate(req.body);
+  
+  if (error) {
+    res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: error.details.map(detail => detail.message)
+    });
+    return;
+  }
+  
+  next();
+};
+
+export const validateBalanceAnalysis = (req: Request, res: Response, next: NextFunction) => {
+  const { error } = balanceAnalysisSchema.validate(req.body);
+  
+  if (error) {
+    res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: error.details.map(detail => detail.message)
+    });
+    return;
+  }
+  
+  next();
+};
 
 // File validation middleware
 export const validateImageFile = (req: Request, res: Response, next: NextFunction) => {
   if (!req.file) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: 'No image file provided'
     });
+    return;
   }
 
   const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  
   if (!allowedMimeTypes.includes(req.file.mimetype)) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
-      error: `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`
+      error: 'Invalid file type. Only JPEG, PNG, and WebP images are allowed'
     });
+    return;
   }
 
   const maxSize = 10 * 1024 * 1024; // 10MB
+  
   if (req.file.size > maxSize) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
-      error: `File too large. Maximum size: ${maxSize / (1024 * 1024)}MB`
+      error: 'File size too large. Maximum size is 10MB'
     });
+    return;
   }
 
   next();

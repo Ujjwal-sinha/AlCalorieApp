@@ -149,7 +149,7 @@ export class NutritionService {
           });
 
           if (response.ok) {
-            const data = await response.json();
+            const data = await response.json() as any;
             return data.common?.map((item: any) => item.food_name) || [];
           }
         } catch (error) {
@@ -219,14 +219,14 @@ export class NutritionService {
             calories: Math.round(foodData.nf_calories * multiplier),
             protein: Math.round(foodData.nf_protein * multiplier * 10) / 10,
             carbs: Math.round(foodData.nf_total_carbohydrate * multiplier * 10) / 10,
-            fat: Math.round(foodData.nf_total_fat * multiplier * 10) / 10
+            fats: Math.round(foodData.nf_total_fat * multiplier * 10) / 10
           };
 
           items.push(item);
           totalCalories += item.calories;
           totalProtein += item.protein;
           totalCarbs += item.carbs;
-          totalFats += item.fat;
+          totalFats += item.fats;
         } else {
           // Fallback for unknown foods
           const fallbackItem: FoodItem = {
@@ -234,14 +234,14 @@ export class NutritionService {
             calories: 100,
             protein: 5,
             carbs: 15,
-            fat: 2
+            fats: 2
           };
 
           items.push(fallbackItem);
           totalCalories += fallbackItem.calories;
           totalProtein += fallbackItem.protein;
           totalCarbs += fallbackItem.carbs;
-          totalFats += fallbackItem.fat;
+          totalFats += fallbackItem.fats;
         }
       }
 
