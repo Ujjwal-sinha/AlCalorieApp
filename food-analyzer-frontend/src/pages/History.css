@@ -70,8 +70,15 @@
   box-shadow: 0 8px 32px rgba(76, 175, 80, 0.2);
 }
 
-.stat-card svg {
-  color: #4caf50;
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
   flex-shrink: 0;
 }
 
@@ -131,9 +138,16 @@
   color: #666666;
 }
 
+.filter-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .filter-buttons {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -146,6 +160,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
 .filter-btn:hover {
@@ -159,20 +174,121 @@
   border-color: #4caf50;
 }
 
+.sort-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sort-select {
+  padding: 8px 12px;
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #1a1a1a;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.sort-order-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #666666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.sort-order-btn:hover {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+  border-color: #4caf50;
+}
+
+/* Bulk Actions */
+.bulk-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.bulk-info {
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.bulk-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.bulk-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.bulk-btn.export {
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
+  color: white;
+}
+
+.bulk-btn.export:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
+}
+
+.bulk-btn.delete {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.bulk-btn.delete:hover {
+  background: rgba(244, 67, 54, 0.2);
+  transform: translateY(-2px);
+}
+
 .history-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  margin-bottom: 32px;
 }
 
 .history-item {
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(76, 175, 80, 0.2);
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   display: flex;
-  align-items: center;
-  gap: 20px;
+  align-items: flex-start;
+  gap: 16px;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(76, 175, 80, 0.1);
@@ -181,6 +297,17 @@
 .history-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 32px rgba(76, 175, 80, 0.2);
+}
+
+.item-checkbox {
+  margin-top: 4px;
+}
+
+.item-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4caf50;
+  cursor: pointer;
 }
 
 .item-image {
@@ -195,12 +322,6 @@
   justify-content: center;
 }
 
-.item-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .placeholder-image {
   width: 100%;
   height: 100%;
@@ -212,12 +333,10 @@
 
 .item-content {
   flex: 1;
+  min-width: 0;
 }
 
 .item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   margin-bottom: 12px;
 }
 
@@ -225,38 +344,48 @@
   font-size: 1.2rem;
   font-weight: 600;
   color: #1a1a1a;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
-.item-date {
+.item-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.item-date,
+.item-time,
+.item-confidence {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: #666666;
   font-size: 0.9rem;
-  flex-shrink: 0;
 }
 
 .item-details {
-  display: flex;
-  gap: 24px;
   margin-bottom: 12px;
 }
 
-.detail {
+.nutrition-breakdown {
   display: flex;
-  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.nutrition-item {
+  display: flex;
+  align-items: center;
   gap: 4px;
-}
-
-.label {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: #666666;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
-.value {
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.item-foods {
+.food-tags {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -275,6 +404,21 @@
 .food-tag.more {
   background: rgba(255, 255, 255, 0.8);
   color: #666666;
+}
+
+.item-footer {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: #666666;
+}
+
+.session-id,
+.model-used {
+  font-family: monospace;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .item-actions {
@@ -301,6 +445,17 @@
   background: rgba(76, 175, 80, 0.1);
   color: #4caf50;
   border-color: #4caf50;
+  transform: translateY(-1px);
+}
+
+.action-btn.view:hover {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.action-btn.export:hover {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
 }
 
 .action-btn.delete:hover {
@@ -319,7 +474,7 @@
   box-shadow: 0 4px 16px rgba(76, 175, 80, 0.1);
 }
 
-.empty-state svg {
+.empty-icon {
   color: #4caf50;
   margin-bottom: 24px;
 }
@@ -340,33 +495,58 @@
   margin-right: auto;
 }
 
-.loading-state {
+/* Results Summary */
+.results-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.1);
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   text-align: center;
-  padding: 80px 20px;
 }
 
-.loading-state svg {
-  color: #4caf50;
-  margin-bottom: 24px;
-  animation: spin 1s linear infinite;
+.summary-label {
+  font-size: 0.9rem;
+  color: #666666;
 }
 
-.loading-state h2 {
-  font-size: 2rem;
+.summary-value {
+  font-size: 1.1rem;
   font-weight: 600;
   color: #1a1a1a;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
   }
-  to {
-    transform: rotate(360deg);
+  
+  .search-box {
+    max-width: none;
+  }
+  
+  .filter-controls {
+    justify-content: space-between;
+  }
+  
+  .results-summary {
+    flex-direction: column;
+    gap: 16px;
   }
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .history-content {
     padding: 20px;
@@ -376,16 +556,16 @@
     font-size: 2.5rem;
   }
 
-  .filters-section {
+  .history-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filter-controls {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .search-box {
-    max-width: none;
-  }
-
-  .filter-buttons {
+  .sort-controls {
     justify-content: center;
   }
 
@@ -395,27 +575,44 @@
     gap: 16px;
   }
 
-  .item-header {
-    flex-direction: column;
-    gap: 8px;
+  .item-meta {
+    justify-content: center;
   }
 
-  .item-details {
+  .nutrition-breakdown {
+    justify-content: center;
+  }
+
+  .food-tags {
+    justify-content: center;
+  }
+
+  .item-footer {
     justify-content: center;
   }
 
   .item-actions {
     justify-content: center;
   }
+
+  .bulk-actions {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .bulk-buttons {
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
-  .header-content h1 {
-    font-size: 2rem;
-  }
-
   .history-stats {
     grid-template-columns: 1fr;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
   }
 
   .filter-buttons {
@@ -424,5 +621,20 @@
 
   .filter-btn {
     text-align: center;
+  }
+
+  .nutrition-breakdown {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .item-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .item-footer {
+    flex-direction: column;
+    gap: 8px;
   }
 }

@@ -1,128 +1,220 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  History as HistoryIcon, 
+  ArrowLeft, 
   Search, 
+  Filter, 
   Calendar,
-  BarChart3,
-  Trash2,
+  Clock,
+  Camera,
   Eye,
   Download,
-  ArrowLeft
+  Trash2,
+  BarChart3,
+  TrendingUp,
+  Target,
+  Apple,
+  Zap,
+  CalendarDays,
+  Clock3,
+  Users,
+  Award
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import type { HistoryEntry } from '../types';
-import { HistoryService } from '../services/HistoryService';
 import './History.css';
 
+// Mock data for history
+const mockHistoryData = {
+  totalAnalyses: 156,
+  thisWeek: 23,
+  thisMonth: 89,
+  averageCalories: 1850,
+  totalCalories: 288750,
+  weeklyTrend: [12, 15, 18, 14, 20, 16, 23],
+  monthlyTrend: [89, 92, 87, 95, 88, 91, 94, 89, 92, 87, 95, 88],
+  analyses: [
+    {
+      id: 1,
+      date: '2024-01-15',
+      time: '12:30 PM',
+      image: '/api/placeholder/150/150',
+      foods: ['Grilled Chicken', 'Quinoa', 'Mixed Vegetables', 'Olive Oil'],
+      totalCalories: 485,
+      protein: 35,
+      carbs: 45,
+      fats: 18,
+      confidence: 94,
+      model: 'expert_ensemble',
+      sessionId: 'sess_001_20240115_1230'
+    },
+    {
+      id: 2,
+      date: '2024-01-14',
+      time: '7:45 PM',
+      image: '/api/placeholder/150/150',
+      foods: ['Salmon', 'Brown Rice', 'Asparagus', 'Lemon'],
+      totalCalories: 520,
+      protein: 42,
+      carbs: 38,
+      fats: 22,
+      confidence: 96,
+      model: 'expert_ensemble',
+      sessionId: 'sess_002_20240114_1945'
+    },
+    {
+      id: 3,
+      date: '2024-01-14',
+      time: '1:15 PM',
+      image: '/api/placeholder/150/150',
+      foods: ['Turkey Sandwich', 'Apple', 'Greek Yogurt', 'Nuts'],
+      totalCalories: 420,
+      protein: 28,
+      carbs: 52,
+      fats: 15,
+      confidence: 91,
+      model: 'expert_ensemble',
+      sessionId: 'sess_003_20240114_1315'
+    },
+    {
+      id: 4,
+      date: '2024-01-13',
+      time: '8:30 PM',
+      image: '/api/placeholder/150/150',
+      foods: ['Pasta Carbonara', 'Parmesan', 'Bacon', 'Eggs'],
+      totalCalories: 650,
+      protein: 25,
+      carbs: 65,
+      fats: 28,
+      confidence: 93,
+      model: 'expert_ensemble',
+      sessionId: 'sess_004_20240113_2030'
+    },
+    {
+      id: 5,
+      date: '2024-01-13',
+      time: '12:00 PM',
+      image: '/api/placeholder/150/150',
+      foods: ['Caesar Salad', 'Chicken Breast', 'Croutons', 'Dressing'],
+      totalCalories: 380,
+      protein: 32,
+      carbs: 25,
+      fats: 18,
+      confidence: 89,
+      model: 'expert_ensemble',
+      sessionId: 'sess_005_20240113_1200'
+    },
+    {
+      id: 6,
+      date: '2024-01-12',
+      time: '6:45 PM',
+      image: '/api/placeholder/150/150',
+      foods: ['Beef Stir Fry', 'Broccoli', 'Carrots', 'Soy Sauce'],
+      totalCalories: 450,
+      protein: 38,
+      carbs: 35,
+      fats: 20,
+      confidence: 95,
+      model: 'expert_ensemble',
+      sessionId: 'sess_006_20240112_1845'
+    }
+  ]
+};
+
 const History: React.FC = () => {
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [filteredHistory, setFilteredHistory] = useState<HistoryEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState('date');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [selectedAnalyses, setSelectedAnalyses] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  // Filter and sort analyses
+  const filteredAnalyses = mockHistoryData.analyses
+    .filter(analysis => {
+      const matchesSearch = analysis.foods.some(food => 
+        food.toLowerCase().includes(searchTerm.toLowerCase())
+      ) || analysis.sessionId.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesFilter = selectedFilter === 'all' || 
+        (selectedFilter === 'today' && analysis.date === new Date().toISOString().split('T')[0]) ||
+        (selectedFilter === 'week' && isWithinWeek(analysis.date)) ||
+        (selectedFilter === 'month' && isWithinMonth(analysis.date));
+      
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(b.date).getTime() - new Date(a.date).getTime();
+          break;
+        case 'calories':
+          comparison = b.totalCalories - a.totalCalories;
+          break;
+        case 'confidence':
+          comparison = b.confidence - a.confidence;
+          break;
+        case 'time':
+          comparison = new Date(`${b.date} ${b.time}`).getTime() - new Date(`${a.date} ${a.time}`).getTime();
+          break;
+      }
+      return sortOrder === 'desc' ? comparison : -comparison;
+    });
 
-  useEffect(() => {
-    filterHistory();
-  }, [history, searchTerm, selectedFilter]);
-
-  const loadHistory = () => {
-    const historyService = HistoryService.getInstance();
-    const savedHistory = historyService.getHistory();
-    setHistory(savedHistory);
-    setIsLoading(false);
+  // Helper functions for date filtering
+  const isWithinWeek = (date: string) => {
+    const analysisDate = new Date(date);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return analysisDate >= weekAgo;
   };
 
-  const filterHistory = () => {
-    let filtered = history;
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(entry => 
-        entry.analysis_result.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.analysis_result.detected_foods?.some(food => 
-          food.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    }
-
-    // Apply date filter
-    switch (selectedFilter) {
-      case 'today':
-        filtered = filtered.filter(entry => {
-          const today = new Date();
-          const entryDate = new Date(entry.timestamp);
-          return entryDate.toDateString() === today.toDateString();
-        });
-        break;
-      case 'week':
-        filtered = filtered.filter(entry => {
-          const weekAgo = new Date();
-          weekAgo.setDate(weekAgo.getDate() - 7);
-          return new Date(entry.timestamp) >= weekAgo;
-        });
-        break;
-      case 'month':
-        filtered = filtered.filter(entry => {
-          const monthAgo = new Date();
-          monthAgo.setMonth(monthAgo.getMonth() - 1);
-          return new Date(entry.timestamp) >= monthAgo;
-        });
-        break;
-      default:
-        break;
-    }
-
-    setFilteredHistory(filtered);
+  const isWithinMonth = (date: string) => {
+    const analysisDate = new Date(date);
+    const monthAgo = new Date();
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    return analysisDate >= monthAgo;
   };
 
-  const deleteEntry = (id: string) => {
-    // Remove from localStorage and update state
-    const updatedHistory = history.filter(entry => entry.id !== id);
-    localStorage.setItem('analysisHistory', JSON.stringify(updatedHistory));
-    setHistory(updatedHistory);
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-
-  const getCalories = (entry: HistoryEntry) => {
-    return entry.analysis_result.nutritional_data?.total_calories || 0;
-  };
-
-  const getFoodCount = (entry: HistoryEntry) => {
-    return entry.analysis_result.detected_foods?.length || 0;
-  };
-
-  if (isLoading) {
-    return (
-      <div className="history-page">
-        <Navigation />
-        <div className="loading-state">
-          <HistoryIcon size={48} />
-          <h2>Loading History...</h2>
-        </div>
-      </div>
+  // Handle analysis selection
+  const toggleAnalysisSelection = (id: number) => {
+    setSelectedAnalyses(prev => 
+      prev.includes(id) 
+        ? prev.filter(item => item !== id)
+        : [...prev, id]
     );
-  }
+  };
+
+  // Handle bulk actions
+  const handleBulkDelete = () => {
+    if (selectedAnalyses.length > 0) {
+      if (confirm(`Are you sure you want to delete ${selectedAnalyses.length} analysis(es)?`)) {
+        // Here you would typically call an API to delete the analyses
+        console.log('Deleting analyses:', selectedAnalyses);
+        setSelectedAnalyses([]);
+      }
+    }
+  };
+
+  const handleBulkExport = () => {
+    if (selectedAnalyses.length > 0) {
+      // Here you would typically generate and download a report
+      console.log('Exporting analyses:', selectedAnalyses);
+    }
+  };
+
+  // Calculate statistics
+  const totalCalories = filteredAnalyses.reduce((sum, analysis) => sum + analysis.totalCalories, 0);
+  const averageCalories = filteredAnalyses.length > 0 ? Math.round(totalCalories / filteredAnalyses.length) : 0;
+  const averageConfidence = filteredAnalyses.length > 0 
+    ? Math.round(filteredAnalyses.reduce((sum, analysis) => sum + analysis.confidence, 0) / filteredAnalyses.length)
+    : 0;
 
   return (
     <div className="history-page">
       <Navigation />
-      
       <div className="history-content">
-        {/* Header */}
         <div className="history-header">
           <Link to="/dashboard" className="back-button">
             <ArrowLeft size={20} />
@@ -130,150 +222,263 @@ const History: React.FC = () => {
           </Link>
           <div className="header-content">
             <h1>Analysis History</h1>
-            <p>View and manage your past food analyses</p>
+            <p>Track your nutrition journey and view detailed analysis results</p>
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Enhanced Stats */}
         <div className="history-stats">
           <div className="stat-card">
-            <HistoryIcon size={24} />
+            <div className="stat-icon">
+              <Camera size={24} />
+            </div>
             <div className="stat-content">
-              <h3>{history.length}</h3>
+              <h3>{mockHistoryData.totalAnalyses}</h3>
               <p>Total Analyses</p>
             </div>
           </div>
+          
           <div className="stat-card">
-            <BarChart3 size={24} />
+            <div className="stat-icon">
+              <Calendar size={24} />
+            </div>
             <div className="stat-content">
-              <h3>{history.reduce((sum, entry) => sum + getCalories(entry), 0)}</h3>
+              <h3>{mockHistoryData.thisWeek}</h3>
+              <p>This Week</p>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <div className="stat-icon">
+              <Zap size={24} />
+            </div>
+            <div className="stat-content">
+              <h3>{totalCalories.toLocaleString()}</h3>
               <p>Total Calories</p>
             </div>
           </div>
+          
           <div className="stat-card">
-            <Calendar size={24} />
+            <div className="stat-icon">
+              <Target size={24} />
+            </div>
             <div className="stat-content">
-              <h3>{history.length > 0 ? formatDate(new Date(history[0].timestamp)).split(',')[0] : 'N/A'}</h3>
-              <p>Last Analysis</p>
+              <h3>{averageCalories}</h3>
+              <p>Avg Calories</p>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Enhanced Filters and Search */}
         <div className="filters-section">
           <div className="search-box">
             <Search size={20} />
             <input
               type="text"
-              placeholder="Search analyses..."
+              placeholder="Search by food items or session ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="filter-buttons">
-            <button
-              className={`filter-btn ${selectedFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setSelectedFilter('all')}
-            >
-              All
-            </button>
-            <button
-              className={`filter-btn ${selectedFilter === 'today' ? 'active' : ''}`}
-              onClick={() => setSelectedFilter('today')}
-            >
-              Today
-            </button>
-            <button
-              className={`filter-btn ${selectedFilter === 'week' ? 'active' : ''}`}
-              onClick={() => setSelectedFilter('week')}
-            >
-              This Week
-            </button>
-            <button
-              className={`filter-btn ${selectedFilter === 'month' ? 'active' : ''}`}
-              onClick={() => setSelectedFilter('month')}
-            >
-              This Month
-            </button>
+          
+          <div className="filter-controls">
+            <div className="filter-buttons">
+              <button 
+                className={`filter-btn ${selectedFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setSelectedFilter('all')}
+              >
+                All
+              </button>
+              <button 
+                className={`filter-btn ${selectedFilter === 'today' ? 'active' : ''}`}
+                onClick={() => setSelectedFilter('today')}
+              >
+                Today
+              </button>
+              <button 
+                className={`filter-btn ${selectedFilter === 'week' ? 'active' : ''}`}
+                onClick={() => setSelectedFilter('week')}
+              >
+                This Week
+              </button>
+              <button 
+                className={`filter-btn ${selectedFilter === 'month' ? 'active' : ''}`}
+                onClick={() => setSelectedFilter('month')}
+              >
+                This Month
+              </button>
+            </div>
+            
+            <div className="sort-controls">
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="sort-select"
+              >
+                <option value="date">Sort by Date</option>
+                <option value="calories">Sort by Calories</option>
+                <option value="confidence">Sort by Confidence</option>
+                <option value="time">Sort by Time</option>
+              </select>
+              
+              <button 
+                className="sort-order-btn"
+                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              >
+                {sortOrder === 'desc' ? '↓' : '↑'}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* History List */}
-        <div className="history-list">
-          {filteredHistory.length === 0 ? (
-            <div className="empty-state">
-              <HistoryIcon size={64} />
-              <h2>No analyses found</h2>
-              <p>Start analyzing your food to see your history here</p>
-              <Link to="/analysis" className="btn btn-primary">
-                Start Analysis
-              </Link>
+        {/* Bulk Actions */}
+        {selectedAnalyses.length > 0 && (
+          <div className="bulk-actions">
+            <div className="bulk-info">
+              <span>{selectedAnalyses.length} analysis(es) selected</span>
             </div>
-          ) : (
-            filteredHistory.map((entry) => (
-              <div key={entry.id} className="history-item">
-                <div className="item-image">
-                  {entry.image_url ? (
-                    <img src={entry.image_url} alt="Food analysis" />
-                  ) : (
-                    <div className="placeholder-image">
-                      <BarChart3 size={24} />
-                    </div>
-                  )}
+            <div className="bulk-buttons">
+              <button className="bulk-btn export" onClick={handleBulkExport}>
+                <Download size={16} />
+                Export
+              </button>
+              <button className="bulk-btn delete" onClick={handleBulkDelete}>
+                <Trash2 size={16} />
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Enhanced History List */}
+        <div className="history-list">
+          {filteredAnalyses.length > 0 ? (
+            filteredAnalyses.map((analysis) => (
+              <div key={analysis.id} className="history-item">
+                <div className="item-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={selectedAnalyses.includes(analysis.id)}
+                    onChange={() => toggleAnalysisSelection(analysis.id)}
+                  />
                 </div>
+                
+                <div className="item-image">
+                  <div className="placeholder-image">
+                    <Camera size={24} />
+                  </div>
+                </div>
+                
                 <div className="item-content">
                   <div className="item-header">
-                    <h3>{entry.analysis_result.description || 'Food Analysis'}</h3>
-                    <span className="item-date">{formatDate(entry.timestamp)}</span>
+                    <h3>
+                      {analysis.foods.slice(0, 2).join(', ')}
+                      {analysis.foods.length > 2 && ` +${analysis.foods.length - 2} more`}
+                    </h3>
+                    <div className="item-meta">
+                      <span className="item-date">
+                        <Calendar size={14} />
+                        {new Date(analysis.date).toLocaleDateString()}
+                      </span>
+                      <span className="item-time">
+                        <Clock size={14} />
+                        {analysis.time}
+                      </span>
+                      <span className="item-confidence">
+                        <Target size={14} />
+                        {analysis.confidence}% confidence
+                      </span>
+                    </div>
                   </div>
+                  
                   <div className="item-details">
-                    <div className="detail">
-                      <span className="label">Calories:</span>
-                      <span className="value">{getCalories(entry)} cal</span>
-                    </div>
-                    <div className="detail">
-                      <span className="label">Foods:</span>
-                      <span className="value">{getFoodCount(entry)} items</span>
-                    </div>
-                    <div className="detail">
-                      <span className="label">Confidence:</span>
-                      <span className="value">
-                        {Math.round((entry.analysis_result.confidence || 0) * 100)}%
+                    <div className="nutrition-breakdown">
+                      <span className="nutrition-item">
+                        <Zap size={14} />
+                        {analysis.totalCalories} cal
                       </span>
+                      <span className="nutrition-item">
+                        <Apple size={14} />
+                        P: {analysis.protein}g
+                      </span>
+                      <span className="nutrition-item">
+                        <BarChart3 size={14} />
+                        C: {analysis.carbs}g
+                      </span>
+                      <span className="nutrition-item">
+                        <TrendingUp size={14} />
+                        F: {analysis.fats}g
+                      </span>
+                    </div>
+                    
+                    <div className="food-tags">
+                      {analysis.foods.slice(0, 3).map((food, index) => (
+                        <span key={index} className="food-tag">{food}</span>
+                      ))}
+                      {analysis.foods.length > 3 && (
+                        <span className="food-tag more">+{analysis.foods.length - 3} more</span>
+                      )}
                     </div>
                   </div>
-                  <div className="item-foods">
-                    {entry.analysis_result.detected_foods?.slice(0, 3).map((food, index) => (
-                      <span key={index} className="food-tag">
-                        {food}
-                      </span>
-                    ))}
-                    {entry.analysis_result.detected_foods && entry.analysis_result.detected_foods.length > 3 && (
-                      <span className="food-tag more">
-                        +{entry.analysis_result.detected_foods.length - 3} more
-                      </span>
-                    )}
+                  
+                  <div className="item-footer">
+                    <span className="session-id">ID: {analysis.sessionId}</span>
+                    <span className="model-used">Model: {analysis.model}</span>
                   </div>
                 </div>
+                
                 <div className="item-actions">
-                  <button className="action-btn" title="View Details">
+                  <button className="action-btn view" title="View Details">
                     <Eye size={16} />
                   </button>
-                  <button className="action-btn" title="Download Report">
+                  <button className="action-btn export" title="Export Analysis">
                     <Download size={16} />
                   </button>
-                  <button 
-                    className="action-btn delete" 
-                    title="Delete"
-                    onClick={() => deleteEntry(entry.id)}
-                  >
+                  <button className="action-btn delete" title="Delete Analysis">
                     <Trash2 size={16} />
                   </button>
                 </div>
               </div>
             ))
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">
+                <Camera size={48} />
+              </div>
+              <h2>No analyses found</h2>
+              <p>
+                {searchTerm || selectedFilter !== 'all' 
+                  ? 'Try adjusting your search or filters'
+                  : 'Start by analyzing your first meal'
+                }
+              </p>
+              {!searchTerm && selectedFilter === 'all' && (
+                <Link to="/analysis" className="btn btn-primary">
+                  <Camera size={20} />
+                  Start Analysis
+                </Link>
+              )}
+            </div>
           )}
         </div>
+
+        {/* Results Summary */}
+        {filteredAnalyses.length > 0 && (
+          <div className="results-summary">
+            <div className="summary-item">
+              <span className="summary-label">Showing</span>
+              <span className="summary-value">{filteredAnalyses.length} of {mockHistoryData.analyses.length} analyses</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">Total Calories</span>
+              <span className="summary-value">{totalCalories.toLocaleString()} cal</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">Average Confidence</span>
+              <span className="summary-value">{averageConfidence}%</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
