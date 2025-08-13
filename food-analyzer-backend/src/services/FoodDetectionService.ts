@@ -60,9 +60,9 @@ export class FoodDetectionService {
     const processedBuffer = await sharp(buffer)
       .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 85 })
-      .toBuffer();
+        .toBuffer();
 
-    return {
+      return {
       buffer: processedBuffer,
       width: 800,
       height: 800,
@@ -135,7 +135,7 @@ export class FoodDetectionService {
       if (result.success && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
         const avgConfidence = Object.values(result.confidence_scores).reduce((sum: number, conf: number) => sum + conf, 0) / Object.values(result.confidence_scores).length;
-        return {
+      return {
           foods: result.detected_foods,
           confidence: avgConfidence
         };
@@ -153,7 +153,7 @@ export class FoodDetectionService {
       if (result.success && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
         const avgConfidence = Object.values(result.confidence_scores).reduce((sum: number, conf: number) => sum + conf, 0) / Object.values(result.confidence_scores).length;
-        return {
+      return {
           foods: result.detected_foods,
           confidence: avgConfidence
         };
@@ -171,7 +171,7 @@ export class FoodDetectionService {
       if (result.success && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
         const avgConfidence = Object.values(result.confidence_scores).reduce((sum: number, conf: number) => sum + conf, 0) / Object.values(result.confidence_scores).length;
-        return {
+      return {
           foods: result.detected_foods,
           confidence: avgConfidence
         };
@@ -189,7 +189,7 @@ export class FoodDetectionService {
       if (result.success && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
         const avgConfidence = Object.values(result.confidence_scores).reduce((sum: number, conf: number) => sum + conf, 0) / Object.values(result.confidence_scores).length;
-        return {
+      return {
           foods: result.detected_foods,
           confidence: avgConfidence
         };
@@ -207,7 +207,7 @@ export class FoodDetectionService {
       if (result.success && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
         const avgConfidence = Object.values(result.confidence_scores).reduce((sum: number, conf: number) => sum + conf, 0) / Object.values(result.confidence_scores).length;
-        return {
+      return {
           foods: result.detected_foods,
           confidence: avgConfidence
         };
