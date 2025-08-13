@@ -5,239 +5,215 @@ import { asyncHandler } from '../middleware/asyncHandler';
 const router = Router();
 const modelManager = ModelManager.getInstance();
 
-// Get model status
-router.get('/status', asyncHandler(async (req: Request, res: Response) => {
-  const status = modelManager.getModelStatus();
-  const models = modelManager.getAllModels();
-
-  const detailedStatus = Array.from(models.entries()).map(([name, model]) => ({
-    name,
-    type: model.type,
-    loaded: model.loaded,
-    config: model.config
-  }));
-
-  res.json({
-    summary: status,
-    models: detailedStatus,
-    available_models: modelManager.getAvailableModels(),
-    total_models: models.size,
-    loaded_models: Object.values(status).filter(Boolean).length
-  });
+// Get all models status
+router.get('/status', asyncHandler(async (_req: Request, res: Response) => {
+  try {
+    const status = modelManager.getModelStatus();
+    
+    return res.json({
+      success: true,
+      models: status,
+      total_models: Object.keys(status).length,
+      loaded_models: Object.values(status).filter(Boolean).length
+    });
+  } catch (error) {
+    console.error('Failed to get model status:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve model status'
+    });
+  }
 }));
 
-// Get specific model info
+// Get specific model details
 router.get('/:modelName', asyncHandler(async (req: Request, res: Response) => {
-  const { modelName } = req.params;
+  try {
+    const { modelName } = req.params;
+    
+    if (!modelName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Model name is required'
+      });
+    }
 
-  if (!modelName) {
-    return res.status(400).json({
+    const model = modelManager.getModel(modelName);
+    
+    if (!model) {
+      return res.status(404).json({
+        success: false,
+        error: `Model "${modelName}" not found`
+      });
+    }
+
+    return res.json({
+      success: true,
+      model: {
+        name: model.name,
+        type: model.type,
+        loaded: model.loaded,
+        config: model.config
+      }
+    });
+  } catch (error) {
+    console.error('Failed to get model details:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Model name is required'
+      error: 'Failed to retrieve model details'
     });
   }
-
-  const model = modelManager.getModel(modelName);
-
-  if (!model) {
-    return res.status(404).json({
-      success: false,
-      error: `Model '${modelName}' not found`
-    });
-  }
-
-  res.json({
-    name: model.name,
-    type: model.type,
-    loaded: model.loaded,
-    config: model.config,
-    capabilities: getModelCapabilities(model.name)
-  });
 }));
 
 // Reload specific model
 router.post('/:modelName/reload', asyncHandler(async (req: Request, res: Response) => {
-  const { modelName } = req.params;
-
-  if (!modelName) {
-    return res.status(400).json({
-      success: false,
-      error: 'Model name is required'
-    });
-  }
-
   try {
-    const success = await modelManager.reloadModel(modelName);
-
-    if (success) {
-      res.json({
-        success: true,
-        message: `Model '${modelName}' reloaded successfully`,
-        status: modelManager.isModelLoaded(modelName)
-      });
-    } else {
-      res.status(500).json({
+    const { modelName } = req.params;
+    
+    if (!modelName) {
+      return res.status(400).json({
         success: false,
-        error: `Failed to reload model '${modelName}'`
+        error: 'Model name is required'
       });
     }
+
+    const success = await modelManager.reloadModel(modelName);
+    
+    if (!success) {
+      return res.status(500).json({
+        success: false,
+        error: `Failed to reload model "${modelName}"`
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Model "${modelName}" reloaded successfully`,
+      status: modelManager.isModelLoaded(modelName)
+    });
   } catch (error) {
-    res.status(500).json({
+    console.error('Failed to reload model:', error);
+    return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Reload failed'
+      error: 'Failed to reload model'
     });
   }
 }));
 
 // Get model capabilities
 router.get('/:modelName/capabilities', asyncHandler(async (req: Request, res: Response) => {
-  const { modelName } = req.params;
+  try {
+    const { modelName } = req.params;
+    
+    if (!modelName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Model name is required'
+      });
+    }
 
-  if (!modelName) {
-    return res.status(400).json({
+    const model = modelManager.getModel(modelName);
+    
+    if (!model) {
+      return res.status(404).json({
+        success: false,
+        error: `Model "${modelName}" not found`
+      });
+    }
+
+    const capabilities = {
+      name: model.name,
+      type: model.type,
+      loaded: model.loaded,
+      features: getModelCapabilities(model.type),
+      config: model.config
+    };
+
+    return res.json({
+      success: true,
+      capabilities: capabilities
+    });
+  } catch (error) {
+    console.error('Failed to get model capabilities:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Model name is required'
+      error: 'Failed to retrieve model capabilities'
     });
   }
-
-  const model = modelManager.getModel(modelName);
-
-  if (!model) {
-    return res.status(404).json({
-      success: false,
-      error: `Model '${modelName}' not found`
-    });
-  }
-
-  const capabilities = getModelCapabilities(modelName);
-
-  res.json({
-    model: modelName,
-    capabilities,
-    loaded: model.loaded,
-    type: model.type
-  });
 }));
 
 // Initialize all models
-router.post('/initialize', asyncHandler(async (req: Request, res: Response) => {
+router.post('/initialize', asyncHandler(async (_req: Request, res: Response) => {
   try {
     await modelManager.initialize();
-
-    res.json({
+    
+    return res.json({
       success: true,
-      message: 'All models initialized',
+      message: 'All models initialized successfully',
       status: modelManager.getModelStatus()
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Failed to initialize models:', error);
+    return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Initialization failed'
+      error: 'Failed to initialize models'
     });
   }
 }));
 
 // Get available model types
-router.get('/types/available', asyncHandler(async (req: Request, res: Response) => {
-  const models = modelManager.getAllModels();
-  const types = new Set<string>();
+router.get('/types/available', asyncHandler(async (_req: Request, res: Response) => {
+  try {
+    const models = modelManager.getLoadedModels();
+    const modelTypes = {
+      vision: ['vit', 'swin', 'clip', 'blip', 'cnn'],
+      detection: ['yolo'],
+      language: ['llm']
+    };
 
-  for (const model of models.values()) {
-    types.add(model.type);
+    return res.json({
+      success: true,
+      model_types: modelTypes,
+      loaded_models: models
+    });
+  } catch (error) {
+    console.error('Failed to get model types:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve model types'
+    });
   }
-
-  res.json({
-    types: Array.from(types),
-    models_by_type: {
-      vision: Array.from(models.values()).filter(m => m.type === 'vision').map(m => m.name),
-      detection: Array.from(models.values()).filter(m => m.type === 'detection').map(m => m.name),
-      language: Array.from(models.values()).filter(m => m.type === 'language').map(m => m.name)
-    }
-  });
 }));
 
 // Health check for models
-router.get('/health/check', asyncHandler(async (req: Request, res: Response) => {
-  const models = modelManager.getAllModels();
-  const health = {
-    overall: 'healthy',
-    models: {} as Record<string, string>,
-    issues: [] as string[]
-  };
-
-  for (const [name, model] of models) {
-    if (model.loaded) {
-      health.models[name] = 'healthy';
-    } else {
-      health.models[name] = 'unhealthy';
-      health.issues.push(`Model '${name}' is not loaded`);
-    }
+router.get('/health/check', asyncHandler(async (_req: Request, res: Response) => {
+  try {
+    const health = await modelManager.healthCheck();
+    
+    return res.json({
+      success: true,
+      health: health
+    });
+  } catch (error) {
+    console.error('Model health check failed:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Model health check failed'
+    });
   }
-
-  if (health.issues.length > 0) {
-    health.overall = 'degraded';
-  }
-
-  const statusCode = health.overall === 'healthy' ? 200 : 503;
-  res.status(statusCode).json(health);
 }));
 
-function getModelCapabilities(modelName: string): Record<string, any> {
-  const capabilities: Record<string, Record<string, any>> = {
-    vit: {
-      type: 'Vision Transformer',
-      tasks: ['image_classification', 'food_detection'],
-      input_formats: ['jpeg', 'png', 'webp'],
-      max_resolution: '1024x1024',
-      confidence_threshold: 0.05,
-      batch_processing: true
-    },
-    swin: {
-      type: 'Swin Transformer',
-      tasks: ['image_classification', 'food_detection'],
-      input_formats: ['jpeg', 'png', 'webp'],
-      max_resolution: '1024x1024',
-      confidence_threshold: 0.05,
-      batch_processing: true
-    },
-    blip: {
-      type: 'BLIP Image Captioning',
-      tasks: ['image_captioning', 'food_description'],
-      input_formats: ['jpeg', 'png', 'webp'],
-      max_resolution: '1024x1024',
-      max_tokens: 50,
-      batch_processing: false
-    },
-    clip: {
-      type: 'CLIP Vision-Language',
-      tasks: ['image_text_matching', 'food_similarity'],
-      input_formats: ['jpeg', 'png', 'webp'],
-      max_resolution: '1024x1024',
-      similarity_threshold: 0.28,
-      batch_processing: true
-    },
-    yolo: {
-      type: 'YOLO Object Detection',
-      tasks: ['object_detection', 'food_localization'],
-      input_formats: ['jpeg', 'png', 'webp'],
-      max_resolution: '1024x1024',
-      confidence_levels: [0.15, 0.25, 0.35, 0.45],
-      batch_processing: true
-    },
-    llm: {
-      type: 'Language Model',
-      tasks: ['text_generation', 'nutrition_analysis'],
-      max_tokens: 1000,
-      temperature: 0.7,
-      batch_processing: false
-    }
-  };
-
-  return capabilities[modelName] || {
-    type: 'Unknown',
-    tasks: [],
-    batch_processing: false
-  };
+// Helper function to get model capabilities
+function getModelCapabilities(modelType: string): string[] {
+  switch (modelType) {
+    case 'vision':
+      return ['image_classification', 'feature_extraction', 'visual_analysis'];
+    case 'detection':
+      return ['object_detection', 'bounding_box_prediction', 'confidence_scoring'];
+    case 'language':
+      return ['text_generation', 'analysis', 'insights'];
+    default:
+      return ['basic_processing'];
+  }
 }
 
 export default router;

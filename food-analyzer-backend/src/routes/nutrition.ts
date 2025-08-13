@@ -5,359 +5,292 @@ import { asyncHandler } from '../middleware/asyncHandler';
 const router = Router();
 const nutritionService = NutritionService.getInstance();
 
-// Calculate nutrition for a list of foods
+// Calculate nutrition for food items
 router.post('/calculate', asyncHandler(async (req: Request, res: Response) => {
-  const { foods } = req.body;
-
-  if (!foods || !Array.isArray(foods) || foods.length === 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'Foods array is required and must not be empty'
-    });
-  }
-
   try {
-    const nutritionalData = await nutritionService.calculateNutrition(foods);
+    const { foods } = req.body;
 
-    res.json({
+    if (!foods || !Array.isArray(foods)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Foods array is required'
+      });
+    }
+
+    const nutrition = await nutritionService.calculateNutrition(foods);
+
+    return res.json({
       success: true,
-      foods,
-      nutritional_data: nutritionalData,
-      calculated_at: new Date().toISOString()
+      nutrition: nutrition,
+      total_foods: foods.length
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Nutrition calculation failed:', error);
+    return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Nutrition calculation failed'
+      error: 'Nutrition calculation failed'
     });
   }
 }));
 
-// Get nutrition info for a specific food
+// Get nutrition for specific food
 router.get('/:foodName', asyncHandler(async (req: Request, res: Response) => {
-  const { foodName } = req.params;
-  const { serving_size = 100 } = req.query;
-
-  if (!foodName) {
-    return res.status(400).json({
-      success: false,
-      error: 'Food name is required'
-    });
-  }
-
   try {
-    const servingSize = parseInt(serving_size as string, 10);
-    if (isNaN(servingSize) || servingSize <= 0) {
+    const { foodName } = req.params;
+
+    if (!foodName) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid serving size'
-      });
-    }
-
-    const nutritionalData = await nutritionService.calculateNutrition([foodName]);
-
-    if (nutritionalData.items.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: `Nutrition data not found for '${foodName}'`
-      });
-    }
-
-    const foodItem = nutritionalData.items[0];
-    if (!foodItem) {
-      return res.status(404).json({
-        success: false,
-        error: `Nutrition data not found for '${foodName}'`
+        error: 'Food name is required'
       });
     }
 
     const details = await nutritionService.getFoodDetails(foodName);
 
-    // Adjust for serving size (default calculation is for 100g)
-    const adjustmentFactor = servingSize / 100;
+    if (!details) {
+      return res.status(404).json({
+        success: false,
+        error: `Food "${foodName}" not found`
+      });
+    }
 
-    res.json({
-      food: foodName,
-      serving_size: `${servingSize}g`,
-      nutrition: {
-        calories: Math.round(foodItem.calories * adjustmentFactor),
-        protein: Math.round(foodItem.protein * adjustmentFactor),
-        carbs: Math.round(foodItem.carbs * adjustmentFactor),
-        fats: Math.round(foodItem.fats * adjustmentFactor)
-      },
-      details,
-      per_100g: {
-        calories: foodItem.calories,
-        protein: foodItem.protein,
-        carbs: foodItem.carbs,
-        fats: foodItem.fats
-      }
+    return res.json({
+      success: true,
+      food: details
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Failed to get food nutrition:', error);
+    return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get nutrition info'
+      error: 'Failed to retrieve food nutrition'
     });
   }
 }));
 
 // Compare nutrition between foods
 router.post('/compare', asyncHandler(async (req: Request, res: Response) => {
-  const { foods } = req.body;
-
-  if (!foods || !Array.isArray(foods) || foods.length < 2) {
-    return res.status(400).json({
-      success: false,
-      error: 'At least 2 foods are required for comparison'
-    });
-  }
-
-  if (foods.length > 10) {
-    return res.status(400).json({
-      success: false,
-      error: 'Maximum 10 foods can be compared at once'
-    });
-  }
-
   try {
-    const comparisons = await Promise.all(
-      foods.map(async (food: string) => {
-        const nutritionalData = await nutritionService.calculateNutrition([food]);
-        const details = await nutritionService.getFoodDetails(food);
+    const { foods } = req.body;
 
+    if (!foods || !Array.isArray(foods) || foods.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least 2 foods are required for comparison'
+      });
+    }
+
+    const nutritionResults = await Promise.all(
+      foods.map(async (food: string) => {
+        const nutrition = await nutritionService.calculateNutrition([food]);
         return {
           food,
-          nutrition: nutritionalData.items[0] || null,
-          details
+          nutrition: nutrition
         };
       })
     );
 
-    // Calculate averages for comparison
-    const validComparisons = comparisons.filter(c => c.nutrition);
-    const averages = {
-      calories: Math.round(validComparisons.reduce((sum, c) => sum + c.nutrition!.calories, 0) / validComparisons.length),
-      protein: Math.round(validComparisons.reduce((sum, c) => sum + c.nutrition!.protein, 0) / validComparisons.length),
-      carbs: Math.round(validComparisons.reduce((sum, c) => sum + c.nutrition!.carbs, 0) / validComparisons.length),
-      fats: Math.round(validComparisons.reduce((sum, c) => sum + c.nutrition!.fats, 0) / validComparisons.length)
-    };
+    // Calculate totals for comparison
+    const totalNutrition = nutritionResults.reduce(
+      (acc, result) => ({
+        total_calories: acc.total_calories + result.nutrition.total_calories,
+        total_protein: acc.total_protein + result.nutrition.total_protein,
+        total_carbs: acc.total_carbs + result.nutrition.total_carbs,
+        total_fats: acc.total_fats + result.nutrition.total_fats
+      }),
+      { total_calories: 0, total_protein: 0, total_carbs: 0, total_fats: 0 }
+    );
 
-    res.json({
+    return res.json({
       success: true,
-      foods,
-      comparisons,
-      averages,
-      highest: {
-        calories: validComparisons.reduce((max, c) => c.nutrition!.calories > max.nutrition!.calories ? c : max),
-        protein: validComparisons.reduce((max, c) => c.nutrition!.protein > max.nutrition!.protein ? c : max),
-        carbs: validComparisons.reduce((max, c) => c.nutrition!.carbs > max.nutrition!.carbs ? c : max),
-        fats: validComparisons.reduce((max, c) => c.nutrition!.fats > max.nutrition!.fats ? c : max)
-      },
-      lowest: {
-        calories: validComparisons.reduce((min, c) => c.nutrition!.calories < min.nutrition!.calories ? c : min),
-        protein: validComparisons.reduce((min, c) => c.nutrition!.protein < min.nutrition!.protein ? c : min),
-        carbs: validComparisons.reduce((min, c) => c.nutrition!.carbs < min.nutrition!.carbs ? c : min),
-        fats: validComparisons.reduce((min, c) => c.nutrition!.fats < min.nutrition!.fats ? c : min)
+      comparison: {
+        foods: nutritionResults,
+        totals: totalNutrition,
+        analysis: generateComparisonAnalysis(nutritionResults)
       }
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Nutrition comparison failed:', error);
+    return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Nutrition comparison failed'
+      error: 'Nutrition comparison failed'
     });
   }
 }));
 
 // Get daily nutrition recommendations
-router.get('/recommendations/daily', asyncHandler(async (req: Request, res: Response) => {
-  const {
-    age = 30,
-    gender = 'male',
-    weight = 70,
-    height = 175,
-    activity_level = 'moderate'
-  } = req.query;
-
+router.get('/recommendations/daily', asyncHandler(async (_req: Request, res: Response) => {
   try {
-    const ageNum = parseInt(age as string, 10);
-    const weightNum = parseFloat(weight as string);
-    const heightNum = parseFloat(height as string);
-
-    if (isNaN(ageNum) || isNaN(weightNum) || isNaN(heightNum)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid age, weight, or height values'
-      });
-    }
-
-    // Calculate BMR using Mifflin-St Jeor Equation
-    let bmr: number;
-    if (gender === 'male') {
-      bmr = 10 * weightNum + 6.25 * heightNum - 5 * ageNum + 5;
-    } else {
-      bmr = 10 * weightNum + 6.25 * heightNum - 5 * ageNum - 161;
-    }
-
-    // Apply activity multiplier
-    const activityMultipliers: Record<string, number> = {
-      sedentary: 1.2,
-      light: 1.375,
-      moderate: 1.55,
-      active: 1.725,
-      very_active: 1.9
-    };
-
-    const multiplier = activityMultipliers[activity_level as string] || 1.55;
-    const dailyCalories = Math.round(bmr * multiplier);
-
-    // Calculate macronutrient recommendations
-    const proteinCalories = dailyCalories * 0.15; // 15% protein
-    const carbCalories = dailyCalories * 0.55; // 55% carbs
-    const fatCalories = dailyCalories * 0.30; // 30% fats
-
     const recommendations = {
-      calories: dailyCalories,
-      protein: Math.round(proteinCalories / 4), // 4 calories per gram
-      carbs: Math.round(carbCalories / 4), // 4 calories per gram
-      fats: Math.round(fatCalories / 9), // 9 calories per gram
-      fiber: Math.round(ageNum < 50 ? (gender === 'male' ? 38 : 25) : (gender === 'male' ? 30 : 21)),
-      water: Math.round(weightNum * 35) // 35ml per kg body weight
+      calories: {
+        male: { sedentary: 2000, moderate: 2400, active: 2800 },
+        female: { sedentary: 1600, moderate: 2000, active: 2400 }
+      },
+      protein: {
+        grams: { minimum: 50, recommended: 80, maximum: 120 },
+        percentage: 15
+      },
+      carbs: {
+        grams: { minimum: 130, recommended: 250, maximum: 325 },
+        percentage: 45
+      },
+      fats: {
+        grams: { minimum: 44, recommended: 65, maximum: 78 },
+        percentage: 25
+      },
+      fiber: {
+        grams: { minimum: 25, recommended: 30, maximum: 35 }
+      },
+      vitamins: {
+        vitamin_c: { mg: 90, source: 'Citrus fruits, vegetables' },
+        vitamin_d: { mcg: 15, source: 'Sunlight, fatty fish' },
+        vitamin_b12: { mcg: 2.4, source: 'Animal products' }
+      },
+      minerals: {
+        calcium: { mg: 1000, source: 'Dairy, leafy greens' },
+        iron: { mg: 18, source: 'Red meat, beans' },
+        potassium: { mg: 3500, source: 'Bananas, potatoes' }
+      }
     };
 
-    res.json({
-      profile: {
-        age: ageNum,
-        gender,
-        weight: weightNum,
-        height: heightNum,
-        activity_level,
-        bmr: Math.round(bmr)
-      },
-      daily_recommendations: recommendations,
-      macronutrient_percentages: {
-        protein: 15,
-        carbs: 55,
-        fats: 30
-      },
+    return res.json({
+      success: true,
+      recommendations: recommendations,
       notes: [
-        'These are general recommendations and may vary based on individual needs',
+        'Recommendations vary based on age, weight, activity level, and health goals',
         'Consult with a healthcare provider for personalized nutrition advice',
-        'Recommendations based on Dietary Guidelines for Americans'
+        'These are general guidelines and may need adjustment for specific dietary needs'
       ]
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Failed to get nutrition recommendations:', error);
+    return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to calculate recommendations'
+      error: 'Failed to retrieve nutrition recommendations'
     });
   }
 }));
 
-// Analyze meal balance
+// Analyze nutritional balance
 router.post('/analyze/balance', asyncHandler(async (req: Request, res: Response) => {
-  const { foods } = req.body;
-
-  if (!foods || !Array.isArray(foods) || foods.length === 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'Foods array is required and must not be empty'
-    });
-  }
-
   try {
-    const nutritionalData = await nutritionService.calculateNutrition(foods);
-    const totalCalories = nutritionalData.total_calories;
+    const { foods } = req.body;
 
-    if (totalCalories === 0) {
+    if (!foods || !Array.isArray(foods)) {
       return res.status(400).json({
         success: false,
-        error: 'No nutritional data found for provided foods'
+        error: 'Foods array is required'
       });
     }
 
-    // Calculate percentages
-    const proteinPercent = Math.round((nutritionalData.total_protein * 4 / totalCalories) * 100);
-    const carbsPercent = Math.round((nutritionalData.total_carbs * 4 / totalCalories) * 100);
-    const fatsPercent = Math.round((nutritionalData.total_fats * 9 / totalCalories) * 100);
+    const nutrition = await nutritionService.calculateNutrition(foods);
+    const balance = analyzeNutritionalBalance(nutrition);
 
-    // Analyze balance
-    const analysis = {
-      overall_score: 0,
-      recommendations: [] as string[],
-      warnings: [] as string[]
-    };
-
-    // Protein analysis
-    if (proteinPercent >= 10 && proteinPercent <= 20) {
-      analysis.overall_score += 25;
-      analysis.recommendations.push('Good protein balance');
-    } else if (proteinPercent < 10) {
-      analysis.warnings.push('Low protein content - consider adding protein sources');
-    } else {
-      analysis.warnings.push('High protein content - ensure adequate hydration');
-    }
-
-    // Carbs analysis
-    if (carbsPercent >= 45 && carbsPercent <= 65) {
-      analysis.overall_score += 25;
-      analysis.recommendations.push('Good carbohydrate balance');
-    } else if (carbsPercent < 45) {
-      analysis.warnings.push('Low carbohydrate content - may lack energy sources');
-    } else {
-      analysis.warnings.push('High carbohydrate content - consider balancing with protein and fats');
-    }
-
-    // Fats analysis
-    if (fatsPercent >= 20 && fatsPercent <= 35) {
-      analysis.overall_score += 25;
-      analysis.recommendations.push('Good fat balance');
-    } else if (fatsPercent < 20) {
-      analysis.warnings.push('Low fat content - may lack essential fatty acids');
-    } else {
-      analysis.warnings.push('High fat content - consider reducing portion sizes');
-    }
-
-    // Variety analysis
-    const categories = new Set();
-    for (const item of nutritionalData.items) {
-      const details = await nutritionService.getFoodDetails(item.name);
-      categories.add(details.category);
-    }
-
-    if (categories.size >= 3) {
-      analysis.overall_score += 25;
-      analysis.recommendations.push('Good variety of food categories');
-    } else {
-      analysis.warnings.push('Limited food variety - try to include more food groups');
-    }
-
-    res.json({
+    return res.json({
       success: true,
-      foods,
-      nutritional_data: nutritionalData,
-      macronutrient_breakdown: {
-        protein: { grams: nutritionalData.total_protein, percentage: proteinPercent },
-        carbs: { grams: nutritionalData.total_carbs, percentage: carbsPercent },
-        fats: { grams: nutritionalData.total_fats, percentage: fatsPercent }
-      },
-      balance_analysis: analysis,
-      food_categories: Array.from(categories),
-      meal_type_suggestion: getMealTypeSuggestion(totalCalories)
+      nutrition: nutrition,
+      balance: balance,
+      recommendations: generateBalanceRecommendations(balance)
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('Nutritional balance analysis failed:', error);
+    return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Balance analysis failed'
+      error: 'Nutritional balance analysis failed'
     });
   }
 }));
 
-function getMealTypeSuggestion(calories: number): string {
-  if (calories < 200) return 'snack';
-  if (calories < 400) return 'light meal';
-  if (calories < 700) return 'regular meal';
-  if (calories < 1000) return 'large meal';
-  return 'very large meal';
+// Helper functions
+function generateComparisonAnalysis(results: any[]): string[] {
+  const analysis: string[] = [];
+  
+  if (results.length === 0) return analysis;
+
+  const totalCalories = results.reduce((sum, result) => sum + result.nutrition.total_calories, 0);
+  const totalProtein = results.reduce((sum, result) => sum + result.nutrition.total_protein, 0);
+  const totalCarbs = results.reduce((sum, result) => sum + result.nutrition.total_carbs, 0);
+  const totalFats = results.reduce((sum, result) => sum + result.nutrition.total_fats, 0);
+
+  analysis.push(`Total calories: ${totalCalories} kcal`);
+  analysis.push(`Total protein: ${totalProtein}g (${Math.round((totalProtein * 4 / totalCalories) * 100)}% of calories)`);
+  analysis.push(`Total carbs: ${totalCarbs}g (${Math.round((totalCarbs * 4 / totalCalories) * 100)}% of calories)`);
+  analysis.push(`Total fats: ${totalFats}g (${Math.round((totalFats * 9 / totalCalories) * 100)}% of calories)`);
+
+  return analysis;
+}
+
+function analyzeNutritionalBalance(nutrition: any): any {
+  const totalCalories = nutrition.total_calories;
+  const proteinPercentage = (nutrition.total_protein * 4 / totalCalories) * 100;
+  const carbsPercentage = (nutrition.total_carbs * 4 / totalCalories) * 100;
+  const fatsPercentage = (nutrition.total_fats * 9 / totalCalories) * 100;
+
+  const balance = {
+    score: 0,
+    protein_balance: 'balanced',
+    carbs_balance: 'balanced',
+    fats_balance: 'balanced',
+    overall_balance: 'balanced'
+  };
+
+  // Analyze protein balance
+  if (proteinPercentage < 10) balance.protein_balance = 'low';
+  else if (proteinPercentage > 35) balance.protein_balance = 'high';
+  else balance.protein_balance = 'balanced';
+
+  // Analyze carbs balance
+  if (carbsPercentage < 45) balance.carbs_balance = 'low';
+  else if (carbsPercentage > 65) balance.carbs_balance = 'high';
+  else balance.carbs_balance = 'balanced';
+
+  // Analyze fats balance
+  if (fatsPercentage < 20) balance.fats_balance = 'low';
+  else if (fatsPercentage > 35) balance.fats_balance = 'high';
+  else balance.fats_balance = 'balanced';
+
+  // Calculate overall balance score
+  const balancedCount = [balance.protein_balance, balance.carbs_balance, balance.fats_balance]
+    .filter(b => b === 'balanced').length;
+  balance.score = (balancedCount / 3) * 100;
+
+  if (balance.score >= 80) balance.overall_balance = 'excellent';
+  else if (balance.score >= 60) balance.overall_balance = 'good';
+  else if (balance.score >= 40) balance.overall_balance = 'fair';
+  else balance.overall_balance = 'poor';
+
+  return balance;
+}
+
+function generateBalanceRecommendations(balance: any): string[] {
+  const recommendations: string[] = [];
+
+  if (balance.protein_balance === 'low') {
+    recommendations.push('Consider adding more protein-rich foods like lean meats, fish, eggs, or legumes');
+  } else if (balance.protein_balance === 'high') {
+    recommendations.push('Consider reducing protein intake and increasing carbohydrates or healthy fats');
+  }
+
+  if (balance.carbs_balance === 'low') {
+    recommendations.push('Consider adding more complex carbohydrates like whole grains, fruits, and vegetables');
+  } else if (balance.carbs_balance === 'high') {
+    recommendations.push('Consider reducing carbohydrate intake and increasing protein or healthy fats');
+  }
+
+  if (balance.fats_balance === 'low') {
+    recommendations.push('Consider adding healthy fats like nuts, avocados, or olive oil');
+  } else if (balance.fats_balance === 'high') {
+    recommendations.push('Consider reducing fat intake and increasing protein or complex carbohydrates');
+  }
+
+  if (balance.overall_balance === 'excellent') {
+    recommendations.push('Excellent nutritional balance! Maintain this variety in your diet.');
+  } else if (balance.overall_balance === 'good') {
+    recommendations.push('Good nutritional balance. Minor adjustments could optimize your diet further.');
+  } else {
+    recommendations.push('Consider consulting with a nutritionist for personalized dietary recommendations.');
+  }
+
+  return recommendations;
 }
 
 export default router;

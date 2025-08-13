@@ -1,42 +1,48 @@
 import { Request, Response, NextFunction } from 'express';
 
-export interface AppError extends Error {
-  statusCode?: number;
-  isOperational?: boolean;
-}
-
 export const errorHandler = (
-  error: AppError,
-  req: Request,
+  error: Error,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
-  const statusCode = error.statusCode || 500;
-  const message = error.message || 'Internal Server Error';
+  console.error('Error:', error);
 
-  // Log error details
-  console.error(`Error ${statusCode}: ${message}`);
-  console.error('Stack:', error.stack);
-  console.error('Request:', {
-    method: req.method,
-    url: req.url,
-    headers: req.headers,
-    body: req.body
-  });
-
-  // Send error response
-  res.status(statusCode).json({
+  // Default error response
+  const errorResponse = {
     success: false,
-    error: message,
-    ...(process.env['NODE_ENV'] === 'development' && {
-      stack: error.stack,
-      details: {
-        method: req.method,
-        url: req.url,
-        timestamp: new Date().toISOString()
-      }
-    })
-  });
+    error: error.message || 'Internal server error',
+    timestamp: new Date().toISOString()
+  };
+
+  // Handle specific error types
+  if (error.name === 'ValidationError') {
+    res.status(400).json({
+      ...errorResponse,
+      error: 'Validation error',
+      details: error.message
+    });
+    return;
+  }
+
+  if (error.name === 'UnauthorizedError') {
+    res.status(401).json({
+      ...errorResponse,
+      error: 'Unauthorized'
+    });
+    return;
+  }
+
+  if (error.name === 'NotFoundError') {
+    res.status(404).json({
+      ...errorResponse,
+      error: 'Resource not found'
+    });
+    return;
+  }
+
+  // Generic server error
+  res.status(500).json(errorResponse);
 };
 
 export const notFoundHandler = (
@@ -44,15 +50,13 @@ export const notFoundHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  const error: AppError = new Error(`Route ${req.method} ${req.originalUrl} not found`);
-  error.statusCode = 404;
-  error.isOperational = true;
+  const error: Error = new Error(`Route ${req.method} ${req.originalUrl} not found`);
+  error.name = 'NotFoundError';
   next(error);
 };
 
-export const createError = (message: string, statusCode: number = 500): AppError => {
-  const error: AppError = new Error(message);
-  error.statusCode = statusCode;
-  error.isOperational = true;
+export const createError = (message: string, statusCode: number = 500): Error => {
+  const error: Error = new Error(message);
+  error.name = 'ValidationError'; // Assuming a common error name for validation
   return error;
 };

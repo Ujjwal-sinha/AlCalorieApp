@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, AlertCircle, Zap, Target, TrendingUp } from 'lucide-react';
+import { CheckCircle, AlertCircle, Zap, Target, TrendingUp, Clock, Brain, Lightbulb } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 
 interface AnalysisResultsProps {
@@ -40,7 +40,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
     <div className="analysis-results">
       <div className="results-header">
         <CheckCircle size={32} className="success-icon" />
-        <h2>Analysis Complete</h2>
+        <h2>Expert Analysis Complete</h2>
         <p>{result.description}</p>
       </div>
 
@@ -106,6 +106,80 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
         </div>
       </div>
 
+      {/* Expert Analysis Details */}
+      <div className="expert-details">
+        {/* Processing Information */}
+        {(result.processing_time || result.model_used) && (
+          <div className="result-card processing-info">
+            <h3>
+              <Clock size={20} />
+              Processing Information
+            </h3>
+            <div className="processing-details">
+              {result.processing_time && (
+                <div className="detail-item">
+                  <span className="detail-label">Processing Time:</span>
+                  <span className="detail-value">{result.processing_time}ms</span>
+                </div>
+              )}
+              {result.model_used && (
+                <div className="detail-item">
+                  <span className="detail-label">AI Model Used:</span>
+                  <span className="detail-value">{result.model_used}</span>
+                </div>
+              )}
+              {result.confidence && (
+                <div className="detail-item">
+                  <span className="detail-label">Overall Confidence:</span>
+                  <span className="detail-value">{Math.round(result.confidence * 100)}%</span>
+                </div>
+              )}
+              {result.sessionId && (
+                <div className="detail-item">
+                  <span className="detail-label">Session ID:</span>
+                  <span className="detail-value session-id">{result.sessionId}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* AI Insights */}
+        {result.insights && result.insights.length > 0 && (
+          <div className="result-card insights">
+            <h3>
+              <Lightbulb size={20} />
+              AI Insights
+            </h3>
+            <div className="insights-list">
+              {result.insights.map((insight, index) => (
+                <div key={index} className="insight-item">
+                  <span className="insight-bullet">•</span>
+                  <span className="insight-text">{insight}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Detected Foods List */}
+        {result.detected_foods && result.detected_foods.length > 0 && (
+          <div className="result-card detected-foods">
+            <h3>
+              <Brain size={20} />
+              Raw Detections
+            </h3>
+            <div className="detected-foods-list">
+              {result.detected_foods.map((food, index) => (
+                <span key={index} className="detected-food-tag">
+                  {food}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Analysis Text */}
       <div className="result-card analysis-text">
         <h3>
@@ -116,22 +190,6 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
           <pre>{result.analysis || 'No analysis available'}</pre>
         </div>
       </div>
-
-      {/* Additional Information */}
-      {result.confidence && (
-        <div className="result-card confidence-info">
-          <h3>Confidence Score</h3>
-          <p>Overall confidence: {Math.round(result.confidence * 100)}%</p>
-        </div>
-      )}
-
-      {result.processing_time && (
-        <div className="result-card processing-info">
-          <h3>Processing Information</h3>
-          <p>Processing time: {result.processing_time}ms</p>
-          {result.model_used && <p>Model used: {result.model_used}</p>}
-        </div>
-      )}
     </div>
   );
 };

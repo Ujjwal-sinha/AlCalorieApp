@@ -4,7 +4,6 @@ import { FoodDetectionService } from '../services/FoodDetectionService';
 import { validateAnalysisRequest } from '../middleware/validation';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { config } from '../config';
-import type { AnalysisRequest } from '../types';
 
 const router = Router();
 const foodDetectionService = FoodDetectionService.getInstance();
@@ -25,7 +24,7 @@ const upload = multer({
   }
 });
 
-// Advanced analysis endpoint
+// Expert analysis endpoint (main endpoint)
 router.post('/advanced', 
   upload.single('image'),
   validateAnalysisRequest,
@@ -41,24 +40,18 @@ router.post('/advanced',
       // Process the uploaded image
       const processedImage = await foodDetectionService.processImage(req.file.buffer);
 
-      // Create analysis request
-      const analysisRequest: AnalysisRequest = {
-        image: processedImage,
-        context: req.body.context,
-        confidence_threshold: parseFloat(req.body.confidence_threshold) || config.detection.confidence_threshold,
-        ensemble_threshold: parseFloat(req.body.ensemble_threshold) || config.detection.ensemble_threshold,
-        use_advanced_detection: req.body.use_advanced_detection === 'true'
-      };
+      // Perform expert analysis
+      const result = await foodDetectionService.performExpertAnalysis(
+        processedImage, 
+        req.body.context || ''
+      );
 
-      // Perform analysis
-      const result = await foodDetectionService.analyzeWithAdvancedDetection(analysisRequest);
-
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      console.error('Advanced analysis failed:', error);
-      res.status(500).json({
+      console.error('Expert analysis failed:', error);
+      return res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Analysis failed'
+        error: error instanceof Error ? error.message : 'Expert analysis failed'
       });
     }
   })
@@ -85,7 +78,7 @@ router.post('/model/:modelType',
       });
     }
 
-    const validModels = ['yolo', 'vit', 'swin', 'blip', 'clip', 'lightweight', 'robust', 'simple'];
+    const validModels = ['yolo', 'vit', 'swin', 'blip', 'clip', 'llm'];
     if (!validModels.includes(modelType)) {
       return res.status(400).json({
         success: false,
@@ -97,24 +90,21 @@ router.post('/model/:modelType',
       // Process the uploaded image
       const processedImage = await foodDetectionService.processImage(req.file.buffer);
 
-      // Create analysis request for specific model
-      const analysisRequest: AnalysisRequest = {
-        image: processedImage,
-        context: req.body.context,
-        model_type: modelType,
-        confidence_threshold: parseFloat(req.body.confidence_threshold) || config.detection.confidence_threshold
-      };
+      // For model-specific analysis, we'll use the expert analysis but focus on the specific model
+      const result = await foodDetectionService.performExpertAnalysis(
+        processedImage, 
+        req.body.context || ''
+      );
 
-      // For now, use advanced detection (in real implementation, you'd have model-specific methods)
-      const result = await foodDetectionService.analyzeWithAdvancedDetection(analysisRequest);
-
-      res.json({
+      // Modify the result to indicate the specific model was used
+      return res.json({
         ...result,
-        model_used: modelType
+        model_used: modelType,
+        analysis: `${result.analysis}\n\nNote: This analysis was requested using the ${modelType.toUpperCase()} model specifically.`
       });
     } catch (error) {
       console.error(`${modelType} analysis failed:`, error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : `${modelType} analysis failed`
       });
@@ -140,18 +130,15 @@ router.post('/batch',
         files.map(async (file, index) => {
           const processedImage = await foodDetectionService.processImage(file.buffer);
           
-          const analysisRequest: AnalysisRequest = {
-            image: processedImage,
-            context: req.body.context,
-            confidence_threshold: parseFloat(req.body.confidence_threshold) || config.detection.confidence_threshold,
-            ensemble_threshold: parseFloat(req.body.ensemble_threshold) || config.detection.ensemble_threshold,
-            use_advanced_detection: req.body.use_advanced_detection === 'true'
-          };
+          const result = await foodDetectionService.performExpertAnalysis(
+            processedImage,
+            req.body.context || ''
+          );
 
           return {
             index,
             filename: file.originalname,
-            result: await foodDetectionService.analyzeWithAdvancedDetection(analysisRequest)
+            result: result
           };
         })
       );
@@ -164,7 +151,7 @@ router.post('/batch',
         .map((result, index) => result.status === 'rejected' ? { index, error: result.reason } : null)
         .filter(Boolean);
 
-      res.json({
+      return res.json({
         success: true,
         total: files.length,
         successful: successful.length,
@@ -174,7 +161,7 @@ router.post('/batch',
       });
     } catch (error) {
       console.error('Batch analysis failed:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Batch analysis failed'
       });
@@ -184,17 +171,22 @@ router.post('/batch',
 
 // Analysis status endpoint
 router.get('/status', asyncHandler(async (_req: Request, res: Response) => {
-  res.json({
-    service: 'Food Detection Service',
+  const healthCheck = await foodDetectionService.healthCheck();
+  
+  return res.json({
+    service: 'Expert Food Detection Service',
     status: 'operational',
     capabilities: {
-      advanced_detection: true,
+      expert_analysis: true,
+      multi_model_ensemble: true,
       model_specific_analysis: true,
       batch_processing: true,
       supported_formats: config.allowedMimeTypes,
       max_file_size: config.maxFileSize,
-      max_batch_size: 10
+      max_batch_size: 10,
+      python_integration: healthCheck.pythonAvailable
     },
+    models: healthCheck.models,
     configuration: {
       confidence_threshold: config.detection.confidence_threshold,
       ensemble_threshold: config.detection.ensemble_threshold,

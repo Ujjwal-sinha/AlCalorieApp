@@ -1,33 +1,30 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import analysisRoutes from './analysis';
-import modelsRoutes from './models';
 import foodRoutes from './food';
 import nutritionRoutes from './nutrition';
+import modelsRoutes from './models';
 
-export function setupRoutes(): Router {
-  const router = Router();
+const router = Router();
 
-  // API version info
-  router.get('/', (req, res) => {
-    res.json({
-      name: 'Food Analyzer API',
-      version: '1.0.0',
-      description: 'AI-powered food analysis and nutrition tracking',
-      endpoints: {
-        analysis: '/analyze',
-        models: '/models',
-        food: '/food',
-        nutrition: '/nutrition'
-      },
-      documentation: '/docs'
-    });
+// Main API endpoint
+router.get('/', (_req: Request, res: Response) => {
+  return res.json({
+    message: 'Food Analyzer API',
+    version: '1.0.0',
+    endpoints: {
+      analysis: '/api/analysis',
+      food: '/api/food',
+      nutrition: '/api/nutrition',
+      models: '/api/models'
+    },
+    documentation: '/api/docs'
   });
+});
 
-  // Mount route modules
-  router.use('/analyze', analysisRoutes);
-  router.use('/models', modelsRoutes);
-  router.use('/food', foodRoutes);
-  router.use('/nutrition', nutritionRoutes);
+// Mount route modules
+router.use('/analysis', analysisRoutes);
+router.use('/food', foodRoutes);
+router.use('/nutrition', nutritionRoutes);
+router.use('/models', modelsRoutes);
 
-  return router;
-}
+export default router;
