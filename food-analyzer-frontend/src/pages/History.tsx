@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  History, 
+  History as HistoryIcon, 
   Search, 
-  Filter, 
   Calendar,
   BarChart3,
   Trash2,
@@ -82,9 +81,10 @@ const History: React.FC = () => {
   };
 
   const deleteEntry = (id: string) => {
-    const historyService = HistoryService.getInstance();
-    historyService.removeFromHistory(id);
-    setHistory(prev => prev.filter(entry => entry.id !== id));
+    // Remove from localStorage and update state
+    const updatedHistory = history.filter(entry => entry.id !== id);
+    localStorage.setItem('analysisHistory', JSON.stringify(updatedHistory));
+    setHistory(updatedHistory);
   };
 
   const formatDate = (date: Date) => {
@@ -110,7 +110,7 @@ const History: React.FC = () => {
       <div className="history-page">
         <Navigation />
         <div className="loading-state">
-          <History size={48} />
+          <HistoryIcon size={48} />
           <h2>Loading History...</h2>
         </div>
       </div>
@@ -137,7 +137,7 @@ const History: React.FC = () => {
         {/* Stats */}
         <div className="history-stats">
           <div className="stat-card">
-            <History size={24} />
+            <HistoryIcon size={24} />
             <div className="stat-content">
               <h3>{history.length}</h3>
               <p>Total Analyses</p>
@@ -202,7 +202,7 @@ const History: React.FC = () => {
         <div className="history-list">
           {filteredHistory.length === 0 ? (
             <div className="empty-state">
-              <History size={64} />
+              <HistoryIcon size={64} />
               <h2>No analyses found</h2>
               <p>Start analyzing your food to see your history here</p>
               <Link to="/analysis" className="btn btn-primary">

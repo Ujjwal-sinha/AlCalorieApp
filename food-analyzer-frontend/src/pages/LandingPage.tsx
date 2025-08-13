@@ -5,24 +5,17 @@ import {
   Brain, 
   BarChart3, 
   Zap, 
-  Shield, 
-  Users, 
   ArrowRight, 
   Play,
-  Star,
   CheckCircle,
-  TrendingUp,
-  Smartphone
+  TrendingUp
 } from 'lucide-react';
 import './LandingPage.css';
 
 const LandingPage: React.FC = () => {
   const [currentFeature, setCurrentFeature] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    setIsVisible(true);
-    
     const interval = setInterval(() => {
       setCurrentFeature((prev) => (prev + 1) % 3);
     }, 3000);

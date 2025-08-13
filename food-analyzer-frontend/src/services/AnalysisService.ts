@@ -132,54 +132,28 @@ export class AnalysisService {
     }
   }
 
-  async analyzeBatch(files: File[], context?: string): Promise<AnalysisResult[]> {
+  async analyzeBatch(files: File[]): Promise<AnalysisResult[]> {
     try {
-      const formData = new FormData();
-
-      files.forEach((file, index) => {
-        formData.append('images', file);
-      });
-
-      if (context) {
-        formData.append('context', context);
-      }
-
-      formData.append('use_advanced_detection', 'true');
-      formData.append('confidence_threshold', APP_CONFIG.analysis.confidenceThreshold.toString());
-      formData.append('ensemble_threshold', APP_CONFIG.analysis.ensembleThreshold.toString());
-
-      const response = await this.makeRequest(`${this.apiBaseUrl}/analysis/batch`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const results: AnalysisResult[] = [];
       
-      if (result.success && result.results) {
-        return result.results.map((item: any) => this.normalizeAnalysisResult(item.result));
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('use_advanced_detection', 'true');
+
+        const response = await this.makeRequest(`${this.apiBaseUrl}/analysis/advanced`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = this.normalizeAnalysisResult(response);
+        results.push(result);
       }
-      
-      return [];
+
+      return results;
     } catch (error) {
       console.error('Batch analysis failed:', error);
-      return files.map(() => ({
-        success: false,
-        error: error instanceof Error ? error.message : 'Batch analysis failed',
-        description: 'Unable to analyze images',
-        analysis: 'Please check your connection and try again',
-        nutritional_data: {
-          total_calories: 0,
-          total_protein: 0,
-          total_carbs: 0,
-          total_fats: 0,
-          items: []
-        }
-      }));
+      throw new Error('Batch analysis failed');
     }
   }
 

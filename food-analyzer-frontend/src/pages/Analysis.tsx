@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
   Camera, 
-  Upload, 
   Brain, 
   BarChart3, 
   Clock,
@@ -25,11 +24,6 @@ const Analysis: React.FC = () => {
     setAnalysisResult(result);
     setActiveStep('results');
     setIsAnalyzing(false);
-  };
-
-  const handleStartAnalysis = () => {
-    setIsAnalyzing(true);
-    setActiveStep('analyzing');
   };
 
   const resetAnalysis = () => {
@@ -100,7 +94,6 @@ const Analysis: React.FC = () => {
                 onAnalysisComplete={handleAnalysisComplete}
                 isAnalyzing={isAnalyzing}
                 setIsAnalyzing={setIsAnalyzing}
-                onStartAnalysis={handleStartAnalysis}
               />
             </div>
           )}
