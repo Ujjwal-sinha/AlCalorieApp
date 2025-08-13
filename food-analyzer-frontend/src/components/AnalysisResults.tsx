@@ -20,11 +20,21 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
     );
   }
 
-  const { nutritional_data } = result;
-  const totalCalories = nutritional_data.total_calories;
-  const proteinPercentage = Math.round((nutritional_data.total_protein * 4 / totalCalories) * 100);
-  const carbsPercentage = Math.round((nutritional_data.total_carbs * 4 / totalCalories) * 100);
-  const fatsPercentage = Math.round((nutritional_data.total_fats * 9 / totalCalories) * 100);
+  // Ensure nutritional_data exists with default values
+  const nutritional_data = result.nutritional_data || {
+    total_calories: 0,
+    total_protein: 0,
+    total_carbs: 0,
+    total_fats: 0,
+    items: []
+  };
+
+  const totalCalories = nutritional_data.total_calories || 0;
+  
+  // Calculate percentages safely
+  const proteinPercentage = totalCalories > 0 ? Math.round((nutritional_data.total_protein * 4 / totalCalories) * 100) : 0;
+  const carbsPercentage = totalCalories > 0 ? Math.round((nutritional_data.total_carbs * 4 / totalCalories) * 100) : 0;
+  const fatsPercentage = totalCalories > 0 ? Math.round((nutritional_data.total_fats * 9 / totalCalories) * 100) : 0;
 
   return (
     <div className="analysis-results">
@@ -47,15 +57,15 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
               <span className="stat-label">Calories</span>
             </div>
             <div className="stat-item protein">
-              <span className="stat-value">{nutritional_data.total_protein}g</span>
+              <span className="stat-value">{nutritional_data.total_protein || 0}g</span>
               <span className="stat-label">Protein ({proteinPercentage}%)</span>
             </div>
             <div className="stat-item carbs">
-              <span className="stat-value">{nutritional_data.total_carbs}g</span>
+              <span className="stat-value">{nutritional_data.total_carbs || 0}g</span>
               <span className="stat-label">Carbs ({carbsPercentage}%)</span>
             </div>
             <div className="stat-item fats">
-              <span className="stat-value">{nutritional_data.total_fats}g</span>
+              <span className="stat-value">{nutritional_data.total_fats || 0}g</span>
               <span className="stat-label">Fats ({fatsPercentage}%)</span>
             </div>
           </div>
@@ -68,24 +78,30 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
             Detected Food Items
           </h3>
           <div className="food-list">
-            {nutritional_data.items.map((item, index) => (
-              <div key={index} className="food-item">
-                <div className="food-info">
-                  <span className="food-name">{item.name}</span>
-                  {item.confidence && (
-                    <span className="confidence">
-                      {Math.round(item.confidence * 100)}% confidence
-                    </span>
-                  )}
+            {nutritional_data.items && nutritional_data.items.length > 0 ? (
+              nutritional_data.items.map((item, index) => (
+                <div key={index} className="food-item">
+                  <div className="food-info">
+                    <span className="food-name">{item.name}</span>
+                    {item.confidence && (
+                      <span className="confidence">
+                        {Math.round(item.confidence * 100)}% confidence
+                      </span>
+                    )}
+                  </div>
+                  <div className="food-nutrition">
+                    <span>{item.calories || 0} cal</span>
+                    <span>{item.protein || 0}g protein</span>
+                    <span>{item.carbs || 0}g carbs</span>
+                    <span>{item.fats || 0}g fats</span>
+                  </div>
                 </div>
-                <div className="food-nutrition">
-                  <span>{item.calories} cal</span>
-                  <span>{item.protein}g protein</span>
-                  <span>{item.carbs}g carbs</span>
-                  <span>{item.fats}g fats</span>
-                </div>
+              ))
+            ) : (
+              <div className="no-items">
+                <p>No food items detected</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -97,9 +113,25 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
           Detailed Analysis
         </h3>
         <div className="analysis-content">
-          <pre>{result.analysis}</pre>
+          <pre>{result.analysis || 'No analysis available'}</pre>
         </div>
       </div>
+
+      {/* Additional Information */}
+      {result.confidence && (
+        <div className="result-card confidence-info">
+          <h3>Confidence Score</h3>
+          <p>Overall confidence: {Math.round(result.confidence * 100)}%</p>
+        </div>
+      )}
+
+      {result.processing_time && (
+        <div className="result-card processing-info">
+          <h3>Processing Information</h3>
+          <p>Processing time: {result.processing_time}ms</p>
+          {result.model_used && <p>Model used: {result.model_used}</p>}
+        </div>
+      )}
     </div>
   );
 };
