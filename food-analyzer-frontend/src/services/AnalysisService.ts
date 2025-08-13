@@ -411,8 +411,7 @@ export class AnalysisService {
         model_used: result.model_used || 'ensemble',
         sessionId: result.sessionId,
         insights: result.insights || [],
-        detectionMethods: result.detectionMethods || [],
-        model_info: result.model_info,
+        detection_methods: result.detectionMethods || [],
         error: result.error
       };
     }
