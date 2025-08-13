@@ -1,0 +1,22 @@
+# AI/ML Libraries
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.30.0
+ultralytics>=8.0.0
+
+# Image Processing
+Pillow>=9.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Utilities
+requests>=2.31.0
+tqdm>=4.65.0
+
+# Optional: GPU acceleration
+# torch-cuda>=2.0.0  # Uncomment if using CUDA
+
+# Development dependencies
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0

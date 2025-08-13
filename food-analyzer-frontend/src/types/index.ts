@@ -1,0 +1,125 @@
+// Core types for food analysis application
+
+export interface FoodItem {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  quantity?: string;
+  confidence?: number;
+}
+
+export interface NutritionalData {
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fats: number;
+  items: FoodItem[];
+}
+
+export interface AnalysisResult {
+  success: boolean;
+  error?: string;
+  description: string;
+  analysis: string;
+  nutritional_data: NutritionalData;
+  confidence_scores?: Record<string, number>;
+  food_details?: Record<string, FoodDetails>;
+  detection_methods?: Record<string, string>;
+  image_analysis?: ImageAnalysis;
+}
+
+export interface FoodDetails {
+  category: string;
+  common_name: string;
+  nutritional_category: string;
+}
+
+export interface ImageAnalysis {
+  total_foods: number;
+  complexity: 'simple' | 'medium' | 'high';
+  detection_quality: string;
+}
+
+export interface ColorProfile {
+  red: [number, number];
+  green: [number, number];
+  blue: [number, number];
+}
+
+export interface VisualFeatures {
+  color_profiles: Record<string, ColorProfile>;
+  texture_patterns: Record<string, string>;
+  shape_characteristics: Record<string, string>;
+}
+
+export interface FoodCategories {
+  proteins: string[];
+  vegetables: string[];
+  fruits: string[];
+  grains: string[];
+  dairy: string[];
+  prepared: string[];
+  snacks: string[];
+  desserts: string[];
+  beverages: string[];
+}
+
+export interface DetectionResult {
+  method: string;
+  foods: Set<string>;
+  weight: number;
+}
+
+export interface ModelStatus {
+  'BLIP (Image Analysis)': boolean;
+  'ViT-B/16 (Vision Transformer)': boolean;
+  'Swin Transformer': boolean;
+  'CLIP (Similarity Scoring)': boolean;
+  'LLM (Nutrition Analysis)': boolean;
+  'YOLO (Object Detection)': boolean;
+  'CNN (Visualizations)': boolean;
+}
+
+export interface CulturalInfo {
+  origin: string;
+  history: string;
+  cultural_significance: string;
+  traditional_uses: string[];
+}
+
+export interface Recipe {
+  title: string;
+  description: string;
+  source: string;
+}
+
+export interface NutritionalBalance {
+  balance_score: number;
+  categories: Record<string, string[]>;
+  recommendations: string[];
+  total_foods: number;
+}
+
+export interface HistoryEntry {
+  id: string;
+  timestamp: Date;
+  image_url?: string;
+  analysis_result: AnalysisResult;
+  context?: string;
+}
+
+export interface TrendData {
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
+
+export interface ChartData {
+  name: string;
+  value: number;
+  color?: string;
+}
