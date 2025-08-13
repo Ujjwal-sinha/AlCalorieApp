@@ -25,92 +25,110 @@ const upload = multer({
 });
 
 // Expert analysis endpoint (main endpoint)
-router.post('/advanced', 
-  upload.single('image'),
-  validateAnalysisRequest,
-  asyncHandler(async (req: Request, res: Response) => {
+router.post('/advanced', upload.single('image'), async (req, res) => {
+  try {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        error: 'No image file provided'
+        error: 'Image file is required'
       });
     }
 
-    try {
-      // Process the uploaded image
-      const processedImage = await foodDetectionService.processImage(req.file.buffer);
+    console.log('Starting expert analysis...');
+    
+    // Perform expert analysis with the uploaded file
+    const result = await foodDetectionService.performExpertAnalysis({ image: req.file });
+    
+    console.log('Expert analysis completed:', {
+      success: result.success,
+      detection_count: result.model_info?.detection_count || 0,
+      models_used: result.detectionMethods?.length || 0
+    });
 
-      // Perform expert analysis
-      const result = await foodDetectionService.performExpertAnalysis(
-        processedImage, 
-        req.body.context || ''
-      );
-
-      return res.json(result);
-    } catch (error) {
-      console.error('Expert analysis failed:', error);
-      return res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Expert analysis failed'
-      });
-    }
-  })
-);
+    return res.json(result);
+  } catch (error) {
+    console.error('Expert analysis error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Expert analysis failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 // Model-specific analysis endpoints
-router.post('/model/:modelType',
-  upload.single('image'),
-  validateAnalysisRequest,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { modelType } = req.params;
+router.post('/model/:modelType', upload.single('image'), async (req, res) => {
+  try {
+    const modelType = req.params['modelType'];
     
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'No image file provided'
-      });
-    }
-
     if (!modelType) {
       return res.status(400).json({
         success: false,
         error: 'Model type is required'
       });
     }
+    
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'Image file is required'
+      });
+    }
 
-    const validModels = ['yolo', 'vit', 'swin', 'blip', 'clip', 'llm'];
+    const validModels = ['yolo', 'vit', 'swin', 'blip', 'clip'];
     if (!validModels.includes(modelType)) {
       return res.status(400).json({
         success: false,
-        error: `Invalid model type. Valid types: ${validModels.join(', ')}`
+        error: `Invalid model type. Must be one of: ${validModels.join(', ')}`
       });
     }
 
-    try {
-      // Process the uploaded image
-      const processedImage = await foodDetectionService.processImage(req.file.buffer);
-
-      // For model-specific analysis, we'll use the expert analysis but focus on the specific model
-      const result = await foodDetectionService.performExpertAnalysis(
-        processedImage, 
-        req.body.context || ''
-      );
-
-      // Modify the result to indicate the specific model was used
-      return res.json({
-        ...result,
-        model_used: modelType,
-        analysis: `${result.analysis}\n\nNote: This analysis was requested using the ${modelType.toUpperCase()} model specifically.`
-      });
-    } catch (error) {
-      console.error(`${modelType} analysis failed:`, error);
-      return res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : `${modelType} analysis failed`
-      });
+    console.log(`Starting ${modelType} analysis...`);
+    
+    // Process the image
+    const processedImage = await foodDetectionService.processImage(req.file.buffer);
+    
+    // Perform model-specific detection
+    let result;
+    switch (modelType) {
+      case 'yolo':
+        result = await foodDetectionService.detectWithYOLO(processedImage);
+        break;
+      case 'vit':
+        result = await foodDetectionService.detectWithViT(processedImage);
+        break;
+      case 'swin':
+        result = await foodDetectionService.detectWithSwin(processedImage);
+        break;
+      case 'blip':
+        result = await foodDetectionService.detectWithBLIP(processedImage);
+        break;
+      case 'clip':
+        result = await foodDetectionService.detectWithCLIP(processedImage);
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid model type'
+        });
     }
-  })
-);
+
+    return res.json({
+      success: true,
+      model_type: modelType,
+      detected_foods: result.foods,
+      confidence: result.confidence,
+      processing_time: Date.now()
+    });
+  } catch (error) {
+    console.error(`${req.params['modelType']} analysis error:`, error);
+    return res.status(500).json({
+      success: false,
+      error: `${req.params['modelType']} analysis failed`,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 // Batch analysis endpoint
 router.post('/batch',
@@ -130,10 +148,9 @@ router.post('/batch',
         files.map(async (file, index) => {
           const processedImage = await foodDetectionService.processImage(file.buffer);
           
-          const result = await foodDetectionService.performExpertAnalysis(
-            processedImage,
-            req.body.context || ''
-          );
+          const result = await foodDetectionService.performExpertAnalysis({
+            image: file
+          });
 
           return {
             index,

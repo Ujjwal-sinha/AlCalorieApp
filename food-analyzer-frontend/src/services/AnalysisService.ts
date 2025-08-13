@@ -393,7 +393,28 @@ export class AnalysisService {
   private normalizeAnalysisResult(result: any): AnalysisResult {
     // Handle different response formats from the backend
     if (result.success !== undefined) {
-      return result;
+      // Handle the new backend response format
+      return {
+        success: result.success,
+        description: result.description || 'Analysis completed',
+        analysis: result.analysis || result.text || 'Analysis results available',
+        nutritional_data: result.nutritionalData || result.nutritional_data || result.nutrition || {
+          total_calories: 0,
+          total_protein: 0,
+          total_carbs: 0,
+          total_fats: 0,
+          items: []
+        },
+        detected_foods: result.detectedFoods?.map((food: any) => food.name) || result.detected_foods || result.foods || [],
+        confidence: result.confidence || 0,
+        processing_time: result.processingTime || result.processing_time || 0,
+        model_used: result.model_used || 'ensemble',
+        sessionId: result.sessionId,
+        insights: result.insights || [],
+        detectionMethods: result.detectionMethods || [],
+        model_info: result.model_info,
+        error: result.error
+      };
     }
 
     // If the backend returns a different format, normalize it

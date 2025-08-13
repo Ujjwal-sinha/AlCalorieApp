@@ -28,20 +28,32 @@ export interface NutritionData {
 
 export interface AnalysisResult {
   success: boolean;
+  sessionId: string;
+  detectedFoods: Array<{
+    name: string;
+    confidence: number;
+    detectionMethods: string[];
+  }>;
+  nutritionalData: any[] | null;
+  totalNutrition: any | null;
+  insights: string[];
+  detectionMethods: string[];
+  processingTime: number;
+  confidence: number;
+  model_used: string;
   error?: string;
-  description: string;
-  analysis: string;
-  nutritional_data: NutritionalData;
-  confidence_scores?: Record<string, number>;
-  food_details?: Record<string, FoodDetails>;
-  detection_methods?: Record<string, string>;
-  image_analysis?: ImageAnalysis;
-  detected_foods?: string[];
-  confidence?: number;
-  processing_time?: number;
-  model_used?: string;
-  sessionId?: string;
-  insights?: string[];
+  model_info?: {
+    detection_count: number;
+    total_confidence: number;
+    model_performance: { [key: string]: { success: boolean, detection_count: number, error?: string } };
+    detailed_detections: Array<{
+      food: string;
+      count: number;
+      methods: string[];
+      avg_confidence: number;
+      model_details: any[];
+    }>;
+  };
 }
 
 export interface ExpertAnalysisResult {

@@ -141,14 +141,14 @@ export class NutritionService {
         try {
           const response = await fetch(`${this.nutritionixConfig.baseUrl}/search/instant`, {
             method: 'GET',
-            headers: {
+          headers: {
               'x-app-id': this.nutritionixConfig.appId,
               'x-app-key': this.nutritionixConfig.appKey,
               'x-remote-user-id': '0'
-            }
-          });
+          }
+        });
 
-          if (response.ok) {
+        if (response.ok) {
             const data = await response.json() as any;
             return data.common?.map((item: any) => item.food_name) || [];
           }
@@ -201,11 +201,11 @@ export class NutritionService {
 
   async calculateNutrition(foods: string[]): Promise<NutritionalData> {
     try {
-      const items: FoodItem[] = [];
-      let totalCalories = 0;
-      let totalProtein = 0;
-      let totalCarbs = 0;
-      let totalFats = 0;
+    const items: FoodItem[] = [];
+    let totalCalories = 0;
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFats = 0;
 
       for (const foodName of foods) {
         const foodData = this.nutritionDatabase.get(foodName.toLowerCase());
@@ -227,7 +227,7 @@ export class NutritionService {
           totalProtein += item.protein;
           totalCarbs += item.carbs;
           totalFats += item.fats;
-        } else {
+      } else {
           // Fallback for unknown foods
           const fallbackItem: FoodItem = {
             name: foodName,
@@ -243,13 +243,13 @@ export class NutritionService {
           totalCarbs += fallbackItem.carbs;
           totalFats += fallbackItem.fats;
         }
-      }
+    }
 
-      return {
-        total_calories: totalCalories,
-        total_protein: totalProtein,
-        total_carbs: totalCarbs,
-        total_fats: totalFats,
+    return {
+      total_calories: totalCalories,
+      total_protein: totalProtein,
+      total_carbs: totalCarbs,
+      total_fats: totalFats,
         items: items
       };
     } catch (error) {
