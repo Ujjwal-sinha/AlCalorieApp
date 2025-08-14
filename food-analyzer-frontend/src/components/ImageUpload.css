@@ -1,4 +1,4 @@
-/* ImageUpload Component Styles - Modern AI Application Design */
+/* ImageUpload Component Styles - Modern AI Healthcare Design */
 .image-upload-container {
   max-width: 700px;
   margin: 0 auto;
@@ -18,18 +18,18 @@
 }
 
 .upload-frame {
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px dashed rgba(76, 175, 80, 0.2);
-  border-radius: 28px;
-  padding: 40px;
-  margin-bottom: 32px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 2px dashed rgba(76, 175, 80, 0.15);
+  border-radius: 24px;
+  padding: 36px;
+  margin-bottom: 28px;
   transition: all 0.4s ease;
   backdrop-filter: blur(30px);
   position: relative;
   overflow: hidden;
   box-shadow: 
-    0 16px 48px rgba(0, 0, 0, 0.05),
-    0 8px 24px rgba(76, 175, 80, 0.05);
+    0 16px 48px rgba(0, 0, 0, 0.03),
+    0 8px 24px rgba(76, 175, 80, 0.03);
 }
 
 .upload-frame::before {
@@ -40,39 +40,39 @@
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(circle at 20% 80%, rgba(76, 175, 80, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(76, 175, 80, 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 20% 80%, rgba(76, 175, 80, 0.015) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(76, 175, 80, 0.015) 0%, transparent 50%);
   pointer-events: none;
 }
 
 .upload-frame:hover {
-  border-color: rgba(76, 175, 80, 0.4);
+  border-color: rgba(76, 175, 80, 0.3);
   box-shadow: 
-    0 24px 64px rgba(0, 0, 0, 0.08),
-    0 12px 32px rgba(76, 175, 80, 0.1);
-  transform: translateY(-4px);
+    0 20px 56px rgba(0, 0, 0, 0.05),
+    0 10px 28px rgba(76, 175, 80, 0.05);
+  transform: translateY(-3px);
 }
 
 .upload-header-section {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
   position: relative;
   z-index: 1;
 }
 
 .upload-icon-wrapper {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   background: linear-gradient(135deg, #4caf50, #66bb6a);
-  border-radius: 20px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
+  margin: 0 auto 18px;
   color: white;
   box-shadow: 
-    0 16px 32px rgba(76, 175, 80, 0.3),
-    0 8px 16px rgba(0, 0, 0, 0.1);
+    0 12px 24px rgba(76, 175, 80, 0.25),
+    0 6px 12px rgba(0, 0, 0, 0.08);
   animation: float 4s ease-in-out infinite;
   position: relative;
 }
@@ -85,19 +85,19 @@
   right: -2px;
   bottom: -2px;
   background: linear-gradient(135deg, #4caf50, #66bb6a, #81c784);
-  border-radius: 22px;
+  border-radius: 20px;
   z-index: -1;
-  opacity: 0.3;
+  opacity: 0.2;
   animation: float 4s ease-in-out infinite reverse;
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(1deg); }
+  50% { transform: translateY(-6px) rotate(0.5deg); }
 }
 
 .upload-header-section h3 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: #1a1a1a;
   margin-bottom: 8px;
@@ -106,21 +106,21 @@
 
 .upload-header-section p {
   color: #666666;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 400;
 }
 
 .upload-area {
-  border: 2px dashed rgba(76, 175, 80, 0.3);
-  border-radius: 20px;
-  padding: 48px 24px;
+  border: 2px dashed rgba(76, 175, 80, 0.2);
+  border-radius: 18px;
+  padding: 44px 24px;
   text-align: center;
   cursor: pointer;
   transition: all 0.4s ease;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
   position: relative;
   overflow: hidden;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 .upload-area::before {
@@ -130,7 +130,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(45deg, transparent, rgba(76, 175, 80, 0.03), transparent);
+  background: linear-gradient(45deg, transparent, rgba(76, 175, 80, 0.02), transparent);
   transform: translateX(-100%);
   transition: transform 0.8s ease;
 }
@@ -140,57 +140,57 @@
 }
 
 .upload-area:hover {
-  border-color: rgba(76, 175, 80, 0.5);
+  border-color: rgba(76, 175, 80, 0.4);
   background: rgba(255, 255, 255, 0.9);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 
-    inset 0 2px 8px rgba(0, 0, 0, 0.05),
-    0 8px 32px rgba(76, 175, 80, 0.1);
+    inset 0 2px 6px rgba(0, 0, 0, 0.03),
+    0 6px 24px rgba(76, 175, 80, 0.08);
 }
 
 .upload-area.drag-active {
   border-color: #4caf50;
-  background: rgba(76, 175, 80, 0.05);
-  transform: scale(1.02);
+  background: rgba(76, 175, 80, 0.03);
+  transform: scale(1.01);
   animation: pulse 0.6s ease-in-out;
   box-shadow: 
-    inset 0 2px 8px rgba(0, 0, 0, 0.05),
-    0 12px 40px rgba(76, 175, 80, 0.15);
+    inset 0 2px 6px rgba(0, 0, 0, 0.03),
+    0 8px 32px rgba(76, 175, 80, 0.12);
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1.02); }
-  50% { transform: scale(1.05); }
+  0%, 100% { transform: scale(1.01); }
+  50% { transform: scale(1.03); }
 }
 
 .upload-area.has-file {
   border-style: solid;
   border-color: #4caf50;
-  background: rgba(76, 175, 80, 0.03);
+  background: rgba(76, 175, 80, 0.02);
   box-shadow: 
-    inset 0 2px 8px rgba(0, 0, 0, 0.05),
-    0 8px 32px rgba(76, 175, 80, 0.1);
+    inset 0 2px 6px rgba(0, 0, 0, 0.03),
+    0 6px 24px rgba(76, 175, 80, 0.08);
 }
 
 .upload-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
 }
 
 .upload-icon-large {
-  width: 100px;
-  height: 100px;
+  width: 90px;
+  height: 90px;
   background: linear-gradient(135deg, #4caf50, #66bb6a);
-  border-radius: 24px;
+  border-radius: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   box-shadow: 
-    0 20px 40px rgba(76, 175, 80, 0.3),
-    0 8px 16px rgba(0, 0, 0, 0.1);
+    0 16px 32px rgba(76, 175, 80, 0.25),
+    0 6px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.4s ease;
   animation: bounce 3s ease-in-out infinite;
   position: relative;
@@ -204,27 +204,27 @@
   right: -3px;
   bottom: -3px;
   background: linear-gradient(135deg, #4caf50, #66bb6a, #81c784);
-  border-radius: 27px;
+  border-radius: 25px;
   z-index: -1;
-  opacity: 0.2;
+  opacity: 0.15;
   animation: bounce 3s ease-in-out infinite reverse;
 }
 
 @keyframes bounce {
   0%, 20%, 50%, 80%, 100% { transform: scale(1); }
-  40% { transform: scale(1.1); }
-  60% { transform: scale(1.05); }
+  40% { transform: scale(1.05); }
+  60% { transform: scale(1.02); }
 }
 
 .upload-area:hover .upload-icon-large {
-  transform: scale(1.1) rotate(5deg);
+  transform: scale(1.08) rotate(3deg);
   box-shadow: 
-    0 24px 48px rgba(76, 175, 80, 0.4),
-    0 12px 24px rgba(0, 0, 0, 0.15);
+    0 20px 40px rgba(76, 175, 80, 0.35),
+    0 8px 16px rgba(0, 0, 0, 0.12);
 }
 
 .upload-placeholder h4 {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: #1a1a1a;
   margin: 0;
@@ -238,85 +238,85 @@
 
 .upload-placeholder p {
   color: #666666;
-  font-size: 1.1rem;
+  font-size: 1rem;
   margin: 0;
   font-weight: 400;
 }
 
 .file-types {
-  background: rgba(76, 175, 80, 0.08);
+  background: rgba(76, 175, 80, 0.06);
   color: #4caf50;
-  padding: 10px 20px;
-  border-radius: 24px;
-  font-size: 0.9rem;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
   font-weight: 500;
   transition: all 0.3s ease;
-  border: 1px solid rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.08);
 }
 
 .upload-area:hover .file-types {
-  background: rgba(76, 175, 80, 0.12);
-  transform: scale(1.05);
-  border-color: rgba(76, 175, 80, 0.2);
+  background: rgba(76, 175, 80, 0.1);
+  transform: scale(1.03);
+  border-color: rgba(76, 175, 80, 0.15);
 }
 
 .upload-tips {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 18px;
 }
 
 .tip {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #666666;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.5);
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .upload-area:hover .tip {
   color: #4caf50;
-  transform: translateX(6px);
-  background: rgba(76, 175, 80, 0.05);
+  transform: translateX(4px);
+  background: rgba(76, 175, 80, 0.03);
 }
 
 .tip svg {
   color: #4caf50;
   transition: all 0.3s ease;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .upload-area:hover .tip svg {
-  transform: scale(1.2);
+  transform: scale(1.1);
 }
 
 .preview-container {
   position: relative;
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   box-shadow: 
-    0 12px 32px rgba(0, 0, 0, 0.1),
-    0 4px 16px rgba(76, 175, 80, 0.1);
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(76, 175, 80, 0.06);
   transition: all 0.4s ease;
 }
 
 .preview-container:hover {
-  transform: scale(1.03);
+  transform: scale(1.02);
   box-shadow: 
-    0 20px 48px rgba(0, 0, 0, 0.15),
-    0 8px 24px rgba(76, 175, 80, 0.15);
+    0 12px 32px rgba(0, 0, 0, 0.1),
+    0 6px 16px rgba(76, 175, 80, 0.1);
 }
 
 .preview-image {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 16px;
+  border-radius: 14px;
 }
 
 .preview-overlay {
@@ -325,7 +325,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -339,10 +339,10 @@
 
 .clear-button {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 44px;
-  height: 44px;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
   background: rgba(255, 255, 255, 0.95);
   border: none;
   border-radius: 50%;
@@ -352,39 +352,39 @@
   cursor: pointer;
   transition: all 0.3s ease;
   color: #666666;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(10px);
 }
 
 .clear-button:hover {
   background: white;
   color: #f5576c;
-  transform: scale(1.1) rotate(90deg);
-  box-shadow: 0 12px 32px rgba(245, 87, 108, 0.3);
+  transform: scale(1.08) rotate(90deg);
+  box-shadow: 0 8px 24px rgba(245, 87, 108, 0.25);
 }
 
 .preview-badge {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
+  bottom: 12px;
+  left: 12px;
   background: rgba(76, 175, 80, 0.95);
   color: white;
-  padding: 10px 16px;
-  border-radius: 24px;
+  padding: 8px 12px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
+  gap: 6px;
+  font-size: 0.8rem;
   font-weight: 600;
   backdrop-filter: blur(20px);
-  animation: slideInLeft 0.6s ease-out;
-  box-shadow: 0 8px 24px rgba(76, 175, 80, 0.3);
+  animation: slideInLeft 0.5s ease-out;
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.25);
 }
 
 @keyframes slideInLeft {
   from {
     opacity: 0;
-    transform: translateX(-30px);
+    transform: translateX(-20px);
   }
   to {
     opacity: 1;
@@ -393,17 +393,17 @@
 }
 
 .context-section {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 32px;
-  border: 1px solid rgba(76, 175, 80, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 18px;
+  padding: 28px;
+  margin-bottom: 28px;
+  border: 1px solid rgba(76, 175, 80, 0.08);
   transition: all 0.4s ease;
   position: relative;
   overflow: hidden;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.05),
-    0 4px 16px rgba(76, 175, 80, 0.05);
+    0 8px 32px rgba(0, 0, 0, 0.03),
+    0 4px 16px rgba(76, 175, 80, 0.03);
 }
 
 .context-section::before {
@@ -414,23 +414,23 @@
   right: 0;
   height: 3px;
   background: linear-gradient(90deg, #4caf50, #66bb6a);
-  border-radius: 20px 20px 0 0;
+  border-radius: 18px 18px 0 0;
 }
 
 .context-section:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 
-    0 16px 48px rgba(0, 0, 0, 0.08),
-    0 8px 24px rgba(76, 175, 80, 0.1);
-  border-color: rgba(76, 175, 80, 0.2);
+    0 12px 40px rgba(0, 0, 0, 0.05),
+    0 6px 20px rgba(76, 175, 80, 0.05);
+  border-color: rgba(76, 175, 80, 0.15);
 }
 
 .context-header {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .context-header h4 {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #1a1a1a;
   margin-bottom: 6px;
@@ -439,32 +439,32 @@
 
 .context-header p {
   color: #666666;
-  font-size: 1rem;
+  font-size: 0.95rem;
   margin: 0;
   font-weight: 400;
 }
 
 .context-input {
   width: 100%;
-  padding: 20px;
-  border: 2px solid rgba(76, 175, 80, 0.15);
-  border-radius: 16px;
-  font-size: 1.1rem;
+  padding: 18px;
+  border: 2px solid rgba(76, 175, 80, 0.12);
+  border-radius: 14px;
+  font-size: 1rem;
   font-family: inherit;
   resize: vertical;
   transition: all 0.3s ease;
   background: rgba(255, 255, 255, 0.8);
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 .context-input:focus {
   outline: none;
   border-color: #4caf50;
   box-shadow: 
-    0 0 0 4px rgba(76, 175, 80, 0.1),
-    inset 0 2px 8px rgba(0, 0, 0, 0.05);
+    0 0 0 3px rgba(76, 175, 80, 0.08),
+    inset 0 2px 6px rgba(0, 0, 0, 0.03);
   background: white;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .context-input::placeholder {
@@ -479,23 +479,23 @@
 .analyze-button {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 36px;
+  gap: 12px;
+  padding: 16px 32px;
   background: linear-gradient(135deg, #4caf50, #66bb6a);
   color: white;
   border: none;
-  border-radius: 16px;
-  font-size: 1.2rem;
+  border-radius: 14px;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.4s ease;
   box-shadow: 
-    0 12px 32px rgba(76, 175, 80, 0.3),
-    0 4px 16px rgba(0, 0, 0, 0.1);
-  min-width: 220px;
+    0 8px 24px rgba(76, 175, 80, 0.25),
+    0 3px 12px rgba(0, 0, 0, 0.08);
+  min-width: 200px;
   position: relative;
   overflow: hidden;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .analyze-button::before {
@@ -505,8 +505,8 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.6s ease;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: left 0.5s ease;
 }
 
 .analyze-button:hover::before {
@@ -514,10 +514,10 @@
 }
 
 .analyze-button:hover:not(.disabled) {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 
-    0 20px 40px rgba(76, 175, 80, 0.4),
-    0 8px 24px rgba(0, 0, 0, 0.15);
+    0 12px 32px rgba(76, 175, 80, 0.35),
+    0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .analyze-button.disabled {
@@ -545,27 +545,27 @@
 }
 
 .file-info {
-  margin-top: 20px;
-  padding: 16px 20px;
-  background: rgba(76, 175, 80, 0.08);
-  border-radius: 12px;
-  border: 1px solid rgba(76, 175, 80, 0.15);
+  margin-top: 18px;
+  padding: 14px 18px;
+  background: rgba(76, 175, 80, 0.06);
+  border-radius: 10px;
+  border: 1px solid rgba(76, 175, 80, 0.12);
   transition: all 0.3s ease;
-  animation: slideInUp 0.6s ease-out;
-  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.1);
+  animation: slideInUp 0.5s ease-out;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.08);
 }
 
 .file-info:hover {
-  background: rgba(76, 175, 80, 0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(76, 175, 80, 0.15);
+  background: rgba(76, 175, 80, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.12);
 }
 
 .file-details {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .file-name {
@@ -574,32 +574,32 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 250px;
+  max-width: 220px;
 }
 
 .file-size {
   color: #666666;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 400;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .upload-frame {
-    padding: 32px 20px;
+    padding: 28px 20px;
   }
   
   .upload-area {
-    padding: 40px 20px;
+    padding: 36px 20px;
   }
   
   .upload-icon-large {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
   }
   
   .upload-placeholder h4 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
   }
   
   .analyze-button {
@@ -610,7 +610,7 @@
   
   .file-details {
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     text-align: center;
   }
   
