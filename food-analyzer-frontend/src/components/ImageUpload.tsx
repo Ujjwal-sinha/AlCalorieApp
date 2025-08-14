@@ -5,7 +5,7 @@ import type { AnalysisResult } from '../types';
 import './ImageUpload.css';
 
 interface ImageUploadProps {
-  onAnalysisComplete: (result: AnalysisResult, imageFile?: File) => void;
+  onAnalysisComplete: (result: AnalysisResult, imageFile?: File, context?: string) => void;
   isAnalyzing: boolean;
   setIsAnalyzing: (analyzing: boolean) => void;
 }
@@ -56,7 +56,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     try {
       const analysisService = AnalysisService.getInstance();
       const result = await analysisService.analyzeImage(selectedFile, context);
-      onAnalysisComplete(result, selectedFile);
+      onAnalysisComplete(result, selectedFile, context);
     } catch (error) {
       console.error('Analysis failed:', error);
     } finally {

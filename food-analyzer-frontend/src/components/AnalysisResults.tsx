@@ -10,7 +10,9 @@ import {
   BarChart3,
   TrendingUp,
   Target,
-  RefreshCw
+  RefreshCw,
+  Globe,
+  Activity
 } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 import './AnalysisResults.css';
@@ -20,6 +22,102 @@ interface AnalysisResultsProps {
   onReAnalyze?: () => void;
   isReAnalyzing?: boolean;
 }
+
+// Model Detection Breakdown Component
+const ModelDetectionBreakdown: React.FC<{ modelInfo: AnalysisResult['model_info'] }> = ({ modelInfo }) => {
+  if (!modelInfo) return null;
+
+  const { model_performance, detailed_detections } = modelInfo;
+  
+  // Calculate total detections and success rate
+  const totalDetections = Object.values(model_performance).reduce((sum, model) => 
+    sum + (model.success ? model.detection_count : 0), 0
+  );
+  
+  const successfulModels = Object.values(model_performance).filter(model => model.success).length;
+  const totalModels = Object.keys(model_performance).length;
+  const successRate = totalModels > 0 ? (successfulModels / totalModels) * 100 : 0;
+
+  return (
+    <div className="model-detection-breakdown">
+      <h3>Expert Multi-Model Detection Results</h3>
+      
+      {/* Model Performance Summary */}
+      <div className="model-performance-summary">
+        <h4>
+          <Globe size={16} />
+          Model Performance Summary
+        </h4>
+        <div className="performance-grid">
+          <div className="performance-item">
+            <span className="performance-label">Detection Method</span>
+            <span className="performance-value">Comprehensive Ensemble</span>
+          </div>
+          <div className="performance-item">
+            <span className="performance-label">Total Detections</span>
+            <span className="performance-value">{totalDetections}</span>
+          </div>
+          <div className="performance-item">
+            <span className="performance-label">Success Rate</span>
+            <span className="performance-value success-rate">
+              <CheckCircle size={16} />
+              {successRate.toFixed(0)}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Model Breakdown */}
+      <div className="model-breakdown">
+        <h4>
+          <BarChart3 size={16} />
+          Model Breakdown
+        </h4>
+        <div className="model-list">
+          {Object.entries(model_performance).map(([modelName, performance]) => (
+            <div key={modelName} className={`model-item ${performance.success ? 'success' : 'failed'}`}>
+              <div className="model-name">
+                {modelName.toUpperCase()}
+              </div>
+              <div className="model-stats">
+                <span className="detection-count">{performance.detection_count}</span>
+                {performance.success ? (
+                  <CheckCircle size={14} className="status-icon success" />
+                ) : (
+                  <AlertCircle size={14} className="status-icon failed" />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Detailed Food Analysis */}
+      {detailed_detections && detailed_detections.length > 0 && (
+        <div className="detailed-food-analysis">
+          <h4>
+            <Activity size={16} />
+            Detailed Food Analysis
+          </h4>
+          <div className="food-detection-list">
+            {detailed_detections.map((detection, index) => (
+              <div key={index} className="food-detection-item">
+                <div className="food-number">{index + 1}.</div>
+                <div className="food-name">{detection.food}</div>
+                <div className="food-methods">
+                  {detection.methods.join(', ')}
+                </div>
+                <div className="food-confidence">
+                  {(detection.avg_confidence * 100).toFixed(0)}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const AnalysisResults: React.FC<AnalysisResultsProps> = ({ 
   result, 
@@ -114,6 +212,11 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
       </div>
 
       <div className="results-content">
+        {/* Model Detection Breakdown */}
+        {result.model_info && (
+          <ModelDetectionBreakdown modelInfo={result.model_info} />
+        )}
+
         {/* Nutrition Summary */}
         <div className="nutrition-summary">
           <h3>Nutrition Summary</h3>
@@ -121,29 +224,29 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
             <div className="nutrition-item">
               <Zap size={20} />
               <div className="nutrition-content">
-                <span className="nutrition-value">{nutritionalData.total_calories}</span>
-                <span className="nutrition-label">Calories</span>
+                <span className="value">{nutritionalData.total_calories}</span>
+                <span className="label">Calories</span>
               </div>
             </div>
             <div className="nutrition-item">
               <Apple size={20} />
               <div className="nutrition-content">
-                <span className="nutrition-value">{nutritionalData.total_protein}g</span>
-                <span className="nutrition-label">Protein</span>
+                <span className="value">{nutritionalData.total_protein}g</span>
+                <span className="label">Protein</span>
               </div>
             </div>
             <div className="nutrition-item">
               <BarChart3 size={20} />
               <div className="nutrition-content">
-                <span className="nutrition-value">{nutritionalData.total_carbs}g</span>
-                <span className="nutrition-label">Carbs</span>
+                <span className="value">{nutritionalData.total_carbs}g</span>
+                <span className="label">Carbs</span>
               </div>
             </div>
             <div className="nutrition-item">
               <TrendingUp size={20} />
               <div className="nutrition-content">
-                <span className="nutrition-value">{nutritionalData.total_fats}g</span>
-                <span className="nutrition-label">Fats</span>
+                <span className="value">{nutritionalData.total_fats}g</span>
+                <span className="label">Fats</span>
               </div>
             </div>
           </div>
@@ -153,7 +256,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
         {detectedFoods.length > 0 && (
           <div className="detected-foods">
             <h3>Detected Food Items</h3>
-            <div className="detected-foods-list">
+            <div className="food-tags">
               {detectedFoods.map((food, index) => (
                 <span key={index} className="detected-food-tag">
                   {food}
@@ -199,7 +302,10 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
               {insights.map((insight, index) => (
                 <li key={index} className="insight-item">
                   <Lightbulb size={16} />
-                  <span className="insight-text">{insight}</span>
+                  <div className="content">
+                    <div className="title">AI Insight</div>
+                    <div className="description">{insight}</div>
+                  </div>
                 </li>
               ))}
             </ul>

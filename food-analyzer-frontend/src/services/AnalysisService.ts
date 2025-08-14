@@ -412,6 +412,7 @@ export class AnalysisService {
         sessionId: result.sessionId,
         insights: result.insights || [],
         detection_methods: result.detectionMethods || [],
+        model_info: result.model_info || null,
         error: result.error
       };
     }
@@ -431,7 +432,8 @@ export class AnalysisService {
       detected_foods: result.detected_foods || result.foods || [],
       confidence: result.confidence || 0,
       processing_time: result.processing_time || 0,
-      model_used: result.model_used || 'ensemble'
+      model_used: result.model_used || 'ensemble',
+      model_info: result.model_info || null
     };
   }
 

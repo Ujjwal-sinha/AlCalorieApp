@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import ImageUpload from '../components/ImageUpload';
 import AnalysisResults from '../components/AnalysisResults';
+import { AnalysisService } from '../services/AnalysisService';
 import type { AnalysisResult } from '../types';
 import './Analysis.css';
 
@@ -25,8 +26,9 @@ const Analysis: React.FC = () => {
   const [activeStep, setActiveStep] = useState<'upload' | 'analyzing' | 'results'>('upload');
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [currentImageFile, setCurrentImageFile] = useState<File | null>(null);
+  const [currentContext, setCurrentContext] = useState<string>('');
 
-  const handleAnalysisComplete = (result: AnalysisResult, imageFile?: File) => {
+  const handleAnalysisComplete = (result: AnalysisResult, imageFile?: File, context?: string) => {
     setAnalysisResult(result);
     setActiveStep('results');
     setIsAnalyzing(false);
@@ -35,6 +37,9 @@ const Analysis: React.FC = () => {
       const url = URL.createObjectURL(imageFile);
       setUploadedImageUrl(url);
       setCurrentImageFile(imageFile);
+    }
+    if (context !== undefined) {
+      setCurrentContext(context);
     }
   };
 
@@ -48,6 +53,7 @@ const Analysis: React.FC = () => {
       setUploadedImageUrl(null);
     }
     setCurrentImageFile(null);
+    setCurrentContext('');
   };
 
   const handleReAnalyze = async () => {
@@ -57,34 +63,9 @@ const Analysis: React.FC = () => {
     setActiveStep('analyzing');
     
     try {
-      // Simulate re-analysis delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Create a mock re-analysis result with slightly different values
-      const mockReAnalysisResult: AnalysisResult = {
-        success: true,
-        detected_foods: ['Re-analyzed Food Item 1', 'Re-analyzed Food Item 2'],
-        nutritional_data: {
-          total_calories: Math.floor(Math.random() * 200) + 300,
-          total_protein: Math.floor(Math.random() * 20) + 15,
-          total_carbs: Math.floor(Math.random() * 30) + 25,
-          total_fats: Math.floor(Math.random() * 15) + 10,
-          items: []
-        },
-        processing_time: Math.floor(Math.random() * 1000) + 500,
-        model_used: 'expert_ensemble_v2',
-        confidence: 0.95 + Math.random() * 0.05,
-        sessionId: `session_${Date.now()}`,
-        description: 'Re-analysis completed with enhanced AI models',
-        insights: [
-          'Re-analysis completed with enhanced AI models',
-          'Improved accuracy achieved through ensemble learning',
-          'Nutritional values have been recalculated for better precision'
-        ],
-        analysis: 'The re-analysis has been completed using our latest AI models. The nutritional breakdown has been updated with improved accuracy and confidence levels.'
-      };
-      
-      handleAnalysisComplete(mockReAnalysisResult, currentImageFile);
+      const analysisService = AnalysisService.getInstance();
+      const result = await analysisService.analyzeImage(currentImageFile, currentContext);
+      handleAnalysisComplete(result, currentImageFile, currentContext);
     } catch (error) {
       console.error('Re-analysis failed:', error);
       setIsReAnalyzing(false);

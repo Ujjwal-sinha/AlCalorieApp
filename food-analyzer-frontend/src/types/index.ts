@@ -20,20 +20,48 @@ export interface NutritionalData {
 
 export interface AnalysisResult {
   success: boolean;
-  error?: string;
-  description: string;
-  analysis: string;
-  nutritional_data: NutritionalData;
-  confidence_scores?: Record<string, number>;
-  food_details?: Record<string, FoodDetails>;
-  detection_methods?: Record<string, string>;
-  image_analysis?: ImageAnalysis;
+  description?: string;
+  analysis?: string;
+  nutritional_data?: {
+    total_calories: number;
+    total_protein: number;
+    total_carbs: number;
+    total_fats: number;
+    items: Array<{
+      name: string;
+      calories: number;
+      protein: number;
+      carbs: number;
+      fats: number;
+      confidence?: number;
+    }>;
+  };
   detected_foods?: string[];
   confidence?: number;
   processing_time?: number;
   model_used?: string;
   sessionId?: string;
   insights?: string[];
+  detection_methods?: string[];
+  error?: string;
+  model_info?: {
+    detection_count: number;
+    total_confidence: number;
+    model_performance: { 
+      [key: string]: { 
+        success: boolean; 
+        detection_count: number; 
+        error?: string 
+      } 
+    };
+    detailed_detections: Array<{
+      food: string;
+      count: number;
+      methods: string[];
+      avg_confidence: number;
+      model_details: any[];
+    }>;
+  };
 }
 
 export interface FoodDetails {
