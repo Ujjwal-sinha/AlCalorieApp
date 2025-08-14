@@ -57,7 +57,7 @@ export const config = {
     // YOLO Model
     yolo: {
       enabled: process.env['YOLO_ENABLED'] !== 'false',
-      model_path: process.env['YOLO_MODEL_PATH'] || 'yolov8n.pt',
+      model_path: process.env['YOLO_MODEL_PATH'] || 'yolo11n.pt',
       confidence_levels: [0.15, 0.25, 0.35, 0.45],
       iou_threshold: 0.4
     },

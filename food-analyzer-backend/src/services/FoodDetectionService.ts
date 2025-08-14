@@ -418,7 +418,7 @@ export class FoodDetectionService {
   }
 
   private applyExpertFiltering(allDetections: Map<string, { count: number, totalConfidence: number, methods: string[] }>): Array<{ name: string, confidence: number, methods: string[] }> {
-    const minConfidence = 0.15; // Higher threshold for accurate detection (increased from 0.05)
+    const minConfidence = 0.08; // Much lower threshold for better detection
     const filteredFoods: Array<{ name: string, confidence: number, methods: string[] }> = [];
 
     for (const [foodName, detection] of allDetections) {
@@ -426,13 +426,13 @@ export class FoodDetectionService {
 
       // Boost confidence for multi-model agreement
       if (detection.methods.length >= 3) {
-        finalConfidence = Math.min(0.95, finalConfidence * 1.3); // Reduced boost for accuracy
+        finalConfidence = Math.min(0.95, finalConfidence * 1.4);
       } else if (detection.methods.length >= 2) {
-        finalConfidence = Math.min(0.95, finalConfidence * 1.2); // Reduced boost for accuracy
+        finalConfidence = Math.min(0.95, finalConfidence * 1.3);
       }
 
       // Ensure minimum confidence for single detections
-      finalConfidence = Math.max(finalConfidence, 0.2); // Increased from 0.1 to 0.2
+      finalConfidence = Math.max(finalConfidence, 0.15);
 
       if (finalConfidence >= minConfidence) {
         filteredFoods.push({
@@ -446,7 +446,7 @@ export class FoodDetectionService {
     // Sort by confidence and return top results
     return filteredFoods
       .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 15); // Reduced from 25 to 15 for more focused results
+      .slice(0, 20); // Increased from 15 to 20 for more comprehensive results
   }
 
   private async generateExpertAnalysis(foods: Array<{ name: string, confidence: number, methods: string[] }>, context: string): Promise<string> {

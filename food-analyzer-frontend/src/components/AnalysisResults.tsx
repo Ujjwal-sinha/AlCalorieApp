@@ -323,31 +323,31 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
         <div className="nutrition-summary">
           <h3>Nutrition Summary</h3>
           {hasNutritionData ? (
-            <div className="nutrition-grid">
-              <div className="nutrition-item">
-                <Zap size={20} />
-                <div className="nutrition-content">
+          <div className="nutrition-grid">
+            <div className="nutrition-item">
+              <Zap size={20} />
+              <div className="nutrition-content">
                   <span className="value">{safeNutritionData.total_calories}</span>
                   <span className="label">Calories</span>
                 </div>
-              </div>
-              <div className="nutrition-item">
-                <Apple size={20} />
-                <div className="nutrition-content">
+            </div>
+            <div className="nutrition-item">
+              <Apple size={20} />
+              <div className="nutrition-content">
                   <span className="value">{safeNutritionData.total_protein}g</span>
                   <span className="label">Protein</span>
                 </div>
-              </div>
-              <div className="nutrition-item">
-                <BarChart3 size={20} />
-                <div className="nutrition-content">
+            </div>
+            <div className="nutrition-item">
+              <BarChart3 size={20} />
+              <div className="nutrition-content">
                   <span className="value">{safeNutritionData.total_carbs}g</span>
                   <span className="label">Carbs</span>
                 </div>
-              </div>
-              <div className="nutrition-item">
-                <TrendingUp size={20} />
-                <div className="nutrition-content">
+            </div>
+            <div className="nutrition-item">
+              <TrendingUp size={20} />
+              <div className="nutrition-content">
                   <span className="value">{safeNutritionData.total_fats}g</span>
                   <span className="label">Fats</span>
                 </div>
@@ -657,8 +657,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
                   </div>
                 </div>
               ))}
-            </div>
           </div>
+        </div>
         )}
 
         {/* Detected Foods */}
