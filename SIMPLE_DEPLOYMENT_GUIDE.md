@@ -57,21 +57,66 @@ git push origin main
 After deployment, go to **Project Settings → Environment Variables** and add:
 
 ```env
-# Backend Configuration
+# Server Configuration
+PORT=8000
+HOST=0.0.0.0
 NODE_ENV=production
+
+# CORS Configuration
 CORS_ORIGIN=https://your-vercel-domain.vercel.app
-API_TIMEOUT=45000
+
+# File Upload Configuration
 MAX_FILE_SIZE=10485760
-YOLO_MODEL_PATH=yolo11m.pt
+ALLOWED_MIME_TYPES=image/jpeg,image/jpg,image/png,image/webp
+
+# AI Models Configuration
+VIT_ENABLED=true
+SWIN_ENABLED=true
+BLIP_ENABLED=true
+CLIP_ENABLED=true
 YOLO_ENABLED=true
-PYTHON_PATH=python3
-PYTHON_SCRIPT_PATH=python_models/detect_food.py
-JWT_SECRET=your-secure-jwt-secret-here
-RATE_LIMIT_WINDOW=900000
-RATE_LIMIT_MAX=100
+LLM_ENABLED=true
+
+# Model Paths
+YOLO_MODEL_PATH=yolo11m.pt
+
+# LLM Configuration (GROQ API)
+GROQ_API_KEY=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
+LLM_MODEL=mixtral-8x7b-32768
+
+# Detection Configuration
+CONFIDENCE_THRESHOLD=0.3
+ENSEMBLE_THRESHOLD=0.6
+MAX_DETECTION_TIME=30000
+FALLBACK_ENABLED=true
+
+# Cache Configuration
+CACHE_ENABLED=true
+CACHE_TTL=3600
+CACHE_MAX_SIZE=100
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_FORMAT=combined
+
+# Database Configuration (optional)
+DATABASE_URL=
+DB_MAX_CONNECTIONS=10
+
+# External APIs (optional)
+NUTRITION_API_ENABLED=false
+NUTRITION_API_URL=
+NUTRITION_API_KEY=
+
+FOOD_DB_ENABLED=false
+FOOD_DB_URL=
+FOOD_DB_API_KEY=
 
 # Frontend Configuration
 VITE_API_BASE_URL=/api
+
+# Python Service (if using external service)
+PYTHON_SERVICE_URL=https://your-python-service.railway.app
 ```
 
 ### **Step 4: Handle Python Models**
