@@ -2,6 +2,18 @@
 .image-upload-container {
   max-width: 600px;
   margin: 0 auto;
+  animation: slideInUp 0.8s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .upload-frame {
@@ -35,6 +47,12 @@
   margin: 0 auto 16px;
   color: white;
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
 }
 
 .upload-header-section h3 {
@@ -97,6 +115,13 @@
   color: white;
   box-shadow: 0 12px 32px rgba(102, 126, 234, 0.3);
   transition: all 0.3s ease;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: scale(1); }
+  40% { transform: scale(1.1); }
+  60% { transform: scale(1.05); }
 }
 
 .upload-area:hover .upload-icon-large {

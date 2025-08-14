@@ -87,22 +87,7 @@ const Analysis: React.FC = () => {
           </div>
         </div>
 
-        {/* Features */}
-        <div className="features-section">
-          <div className="features-grid">
-            {features.map((feature, index) => (
-              <div key={index} className="feature-card">
-                <div className="feature-icon" style={{ background: feature.color }}>
-                  {feature.icon}
-                </div>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Main Analysis Area */}
+        {/* Main Upload Area - Now at the top */}
         <div className="analysis-main">
           {activeStep === 'upload' && (
             <div className="upload-section">
@@ -192,6 +177,25 @@ const Analysis: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Features Section - Now below upload */}
+        <div className="features-section">
+          <div className="features-header">
+            <h2>How It Works</h2>
+            <p>Our advanced AI technology provides comprehensive food analysis</p>
+          </div>
+          <div className="features-grid">
+            {features.map((feature, index) => (
+              <div key={index} className="feature-card">
+                <div className="feature-icon" style={{ background: feature.color }}>
+                  {feature.icon}
+                </div>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Tips Section */}
