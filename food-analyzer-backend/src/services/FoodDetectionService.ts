@@ -98,49 +98,78 @@ export class FoodDetectionService {
         height: 1024
       };
 
-      const pythonProcess = spawn('python3', ['python_models/detect_food.py'], {
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-
-      return new Promise((resolve, reject) => {
-        let stdout = '';
-        let stderr = '';
-
-        pythonProcess.stdout.on('data', (data) => {
-          stdout += data.toString();
+      // Check if external Python service is configured
+      const pythonServiceUrl = process.env['PYTHON_SERVICE_URL'];
+      
+      if (pythonServiceUrl) {
+        // Use external Python service
+        console.log(`Using external Python service for ${modelType} detection`);
+        const response = await fetch(`${pythonServiceUrl}/detect`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(inputData),
         });
 
-        pythonProcess.stderr.on('data', (data) => {
-          stderr += data.toString();
-          console.log(`Python ${modelType} stderr:`, data.toString());
+        if (!response.ok) {
+          throw new Error(`External Python service failed: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json() as PythonModelResponse;
+        console.log(`${modelType.toUpperCase()} detection result (external):`, {
+          success: result.success,
+          detection_count: result.model_info?.detection_count || 0,
+          detected_foods: result.detected_foods?.length || 0
+        });
+        return result;
+      } else {
+        // Use local Python process
+        console.log(`Using local Python process for ${modelType} detection`);
+        const pythonProcess = spawn('python3', ['python_models/detect_food.py'], {
+          stdio: ['pipe', 'pipe', 'pipe']
         });
 
-        pythonProcess.on('close', (code) => {
-          if (code !== 0) {
-            console.error(`Python ${modelType} process exited with code ${code}`);
-            console.error('Python stderr:', stderr);
-            reject(new Error(`Python process failed with code ${code}`));
-            return;
-          }
+        return new Promise((resolve, reject) => {
+          let stdout = '';
+          let stderr = '';
 
-          try {
-            const result = JSON.parse(stdout);
-            console.log(`${modelType.toUpperCase()} detection result:`, {
-              success: result.success,
-              detection_count: result.model_info?.detection_count || 0,
-              detected_foods: result.detected_foods?.length || 0
-            });
-            resolve(result);
-          } catch (error) {
-            console.error(`Failed to parse Python ${modelType} response:`, error);
-            console.error('Raw stdout:', stdout);
-            reject(new Error(`Failed to parse Python response: ${error}`));
-          }
+          pythonProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+          });
+
+          pythonProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+            console.log(`Python ${modelType} stderr:`, data.toString());
+          });
+
+          pythonProcess.on('close', (code) => {
+            if (code !== 0) {
+              console.error(`Python ${modelType} process exited with code ${code}`);
+              console.error('Python stderr:', stderr);
+              reject(new Error(`Python process failed with code ${code}`));
+              return;
+            }
+
+            try {
+              const result = JSON.parse(stdout);
+              console.log(`${modelType.toUpperCase()} detection result (local):`, {
+                success: result.success,
+                detection_count: result.model_info?.detection_count || 0,
+                detected_foods: result.detected_foods?.length || 0
+              });
+              resolve(result);
+            } catch (error) {
+              console.error(`Failed to parse Python ${modelType} response:`, error);
+              console.error('Raw stdout:', stdout);
+              reject(new Error(`Failed to parse Python response: ${error}`));
+            }
+          });
+
+          pythonProcess.stdin.write(JSON.stringify(inputData));
+          pythonProcess.stdin.end();
         });
-
-        pythonProcess.stdin.write(JSON.stringify(inputData));
-        pythonProcess.stdin.end();
-      });
+      }
     } catch (error) {
       console.error(`Error calling Python ${modelType} detection:`, error);
       throw error;
