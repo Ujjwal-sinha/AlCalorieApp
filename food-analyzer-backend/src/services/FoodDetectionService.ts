@@ -463,7 +463,7 @@ export class FoodDetectionService {
 
   private generateInsights(filteredFoods: Array<{ name: string, confidence: number, methods: string[] }>, 
                           modelPerformance: { [key: string]: { success: boolean, detection_count: number, error?: string } },
-                          allDetections: Map<string, any>): string[] {
+                          _allDetections: Map<string, any>): string[] {
     const insights: string[] = [];
     
     // Model performance insights

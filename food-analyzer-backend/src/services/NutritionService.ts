@@ -1187,24 +1187,6 @@ export class NutritionService {
     }
   }
 
-  private convertServingToGrams(quantity: number, unit: string): number {
-    const unitMap: Record<string, number> = {
-      'g': 1,
-      'gram': 1,
-      'grams': 1,
-      'kg': 1000,
-      'oz': 28.35,
-      'lb': 453.59,
-      'cup': 240,
-      'tbsp': 15,
-      'tsp': 5,
-      'medium': 150,
-      'large': 200,
-      'small': 100
-    };
-
-    return quantity * (unitMap[unit.toLowerCase()] || 100);
-  }
 
   private categorizeFood(foodName: string): string {
     const name = foodName.toLowerCase();
