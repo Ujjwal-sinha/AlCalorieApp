@@ -1,19 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Camera, 
   BarChart3, 
-  TrendingUp, 
   Calendar,
   Target,
   Activity,
   Apple,
   Zap,
-  Clock,
-  Users,
-  Award,
   ArrowUp,
-  ArrowDown,
-  Plus,
   Eye,
   Download
 } from 'lucide-react';
@@ -79,7 +73,6 @@ const mockAnalyticsData = {
 };
 
 const Dashboard: React.FC = () => {
-  const [currentWeek, setCurrentWeek] = useState(0);
   const [selectedPeriod, setSelectedPeriod] = useState('week');
 
   // Calculate total calories from recent analyses

@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   ArrowLeft, 
   Search, 
-  Filter, 
   Calendar,
   Clock,
   Camera,
@@ -13,11 +12,7 @@ import {
   TrendingUp,
   Target,
   Apple,
-  Zap,
-  CalendarDays,
-  Clock3,
-  Users,
-  Award
+  Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
@@ -126,8 +121,6 @@ const History: React.FC = () => {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedAnalyses, setSelectedAnalyses] = useState<number[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Filter and sort analyses
   const filteredAnalyses = mockHistoryData.analyses

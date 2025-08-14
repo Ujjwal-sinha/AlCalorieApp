@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Sparkles,
   Zap,
-  Upload,
   Image as ImageIcon,
   CheckCircle,
   Target
