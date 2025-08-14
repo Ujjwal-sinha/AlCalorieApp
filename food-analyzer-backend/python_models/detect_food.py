@@ -52,7 +52,7 @@ try:
         BlipForConditionalGeneration, BlipProcessor,
         CLIPProcessor, CLIPModel,
         ViTImageProcessor, ViTForImageClassification,
-        SwinImageProcessor, SwinForImageClassification
+        AutoProcessor, AutoModel, AutoImageProcessor, AutoModelForImageClassification
     )
     TRANSFORMERS_AVAILABLE = True
     print("Transformers available", file=sys.stderr)
@@ -110,44 +110,61 @@ def load_model(model_type: str) -> Optional[Any]:
             
         elif model_type == 'vit' and TRANSFORMERS_AVAILABLE:
             print(f"Loading ViT model...", file=sys.stderr)
-            processor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
-            model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
-            MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
-            print(f"ViT model loaded successfully", file=sys.stderr)
-            return MODEL_CACHE[model_type]
+            try:
+                processor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
+                model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
+                MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
+                print(f"ViT model loaded successfully", file=sys.stderr)
+                return MODEL_CACHE[model_type]
+            except Exception as e:
+                print(f"ViT model failed to load: {e}", file=sys.stderr)
+                return None
             
         elif model_type == 'swin' and TRANSFORMERS_AVAILABLE:
             print(f"Loading Swin model...", file=sys.stderr)
             try:
-                processor = SwinImageProcessor.from_pretrained('microsoft/swin-base-patch4-window7-224')
-                model = SwinForImageClassification.from_pretrained('microsoft/swin-base-patch4-window7-224')
+                # Use AutoProcessor and AutoModel for Swin
+                processor = AutoImageProcessor.from_pretrained('microsoft/swin-base-patch4-window7-224')
+                model = AutoModelForImageClassification.from_pretrained('microsoft/swin-base-patch4-window7-224')
                 MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
                 print(f"Swin model loaded successfully", file=sys.stderr)
                 return MODEL_CACHE[model_type]
             except Exception as e:
                 print(f"Swin model failed to load, using ViT as fallback: {e}", file=sys.stderr)
                 # Fallback to ViT for Swin
-                processor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
-                model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
-                MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
-                print(f"Swin fallback to ViT loaded successfully", file=sys.stderr)
-                return MODEL_CACHE[model_type]
+                try:
+                    processor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
+                    model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
+                    MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
+                    print(f"Swin fallback to ViT loaded successfully", file=sys.stderr)
+                    return MODEL_CACHE[model_type]
+                except Exception as fallback_error:
+                    print(f"Swin fallback also failed: {fallback_error}", file=sys.stderr)
+                    return None
             
         elif model_type == 'blip' and TRANSFORMERS_AVAILABLE:
             print(f"Loading BLIP model...", file=sys.stderr)
-            processor = BlipProcessor.from_pretrained('Salesforce/blip-image-captioning-base')
-            model = BlipForConditionalGeneration.from_pretrained('Salesforce/blip-image-captioning-base')
-            MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
-            print(f"BLIP model loaded successfully", file=sys.stderr)
-            return MODEL_CACHE[model_type]
+            try:
+                processor = BlipProcessor.from_pretrained('Salesforce/blip-image-captioning-base')
+                model = BlipForConditionalGeneration.from_pretrained('Salesforce/blip-image-captioning-base')
+                MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
+                print(f"BLIP model loaded successfully", file=sys.stderr)
+                return MODEL_CACHE[model_type]
+            except Exception as e:
+                print(f"BLIP model failed to load: {e}", file=sys.stderr)
+                return None
             
         elif model_type == 'clip' and TRANSFORMERS_AVAILABLE:
             print(f"Loading CLIP model...", file=sys.stderr)
-            processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')
-            model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32')
-            MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
-            print(f"CLIP model loaded successfully", file=sys.stderr)
-            return MODEL_CACHE[model_type]
+            try:
+                processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')
+                model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32')
+                MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
+                print(f"CLIP model loaded successfully", file=sys.stderr)
+                return MODEL_CACHE[model_type]
+            except Exception as e:
+                print(f"CLIP model failed to load: {e}", file=sys.stderr)
+                return None
             
     except Exception as e:
         print(f"Error loading model {model_type}: {str(e)}", file=sys.stderr)
