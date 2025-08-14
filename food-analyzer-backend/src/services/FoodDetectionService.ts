@@ -365,6 +365,7 @@ export class FoodDetectionService {
           detectionMethods: food.methods
         })),
         nutritionalData: nutritionData,
+        nutritional_data: totalNutrition, // Add this for frontend compatibility
         totalNutrition,
         insights,
         detectionMethods: Object.keys(modelPerformance).filter(m => modelPerformance[m]?.success),
@@ -524,63 +525,6 @@ ${context ? `\n### CONTEXT NOTES:\n${context}` : ''}`;
     }
     
     return insights.join('\n');
-  }
-
-  private async calculateNutritionData(foods: Array<{ name: string, confidence: number, methods: string[] }>): Promise<{
-    total_calories: number;
-    total_protein: number;
-    total_carbs: number;
-    total_fats: number;
-    items: Array<{
-      name: string;
-      calories: number;
-      protein: number;
-      carbs: number;
-      fats: number;
-      confidence?: number;
-    }>;
-  }> {
-    const items = [];
-    let totalCalories = 0;
-    let totalProtein = 0;
-    let totalCarbs = 0;
-    let totalFats = 0;
-
-    for (const food of foods) {
-      const nutrition = await this.nutritionService.calculateNutrition([food.name]);
-      
-      const item = {
-        name: food.name,
-        calories: nutrition.total_calories,
-        protein: nutrition.total_protein,
-        carbs: nutrition.total_carbs,
-        fats: nutrition.total_fats,
-        confidence: food.confidence
-      };
-
-      items.push(item);
-      totalCalories += nutrition.total_calories;
-      totalProtein += nutrition.total_protein;
-      totalCarbs += nutrition.total_carbs;
-      totalFats += nutrition.total_fats;
-    }
-
-    return {
-      total_calories: totalCalories,
-      total_protein: totalProtein,
-      total_carbs: totalCarbs,
-      total_fats: totalFats,
-      items: items
-    };
-  }
-
-  private calculateOverallConfidence(foods: Array<{ name: string, confidence: number, methods: string[] }>): number {
-    if (foods.length === 0) return 0;
-    
-    const avgConfidence = foods.reduce((sum, f) => sum + f.confidence, 0) / foods.length;
-    const modelAgreementBonus = foods.filter(f => f.methods.length > 1).length / foods.length * 0.1;
-    
-    return Math.min(1.0, avgConfidence + modelAgreementBonus);
   }
 
   private generateInsights(filteredFoods: Array<{ name: string, confidence: number, methods: string[] }>, 

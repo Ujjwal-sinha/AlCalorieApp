@@ -189,6 +189,28 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
     items: []
   };
 
+  console.log('AnalysisResults - Full result:', result); // Debug log
+  console.log('AnalysisResults - Nutritional data:', nutritionalData); // Debug log
+
+  // Ensure we have valid numbers for display
+  const safeNutritionData = {
+    total_calories: Number(nutritionalData.total_calories) || 0,
+    total_protein: Number(nutritionalData.total_protein) || 0,
+    total_carbs: Number(nutritionalData.total_carbs) || 0,
+    total_fats: Number(nutritionalData.total_fats) || 0,
+    items: Array.isArray(nutritionalData.items) ? nutritionalData.items : []
+  };
+
+  console.log('AnalysisResults - Safe nutrition data:', safeNutritionData); // Debug log
+
+  // Check if we have any nutrition data at all
+  const hasNutritionData = safeNutritionData.total_calories > 0 || 
+                          safeNutritionData.total_protein > 0 || 
+                          safeNutritionData.total_carbs > 0 || 
+                          safeNutritionData.total_fats > 0;
+
+  console.log('AnalysisResults - Has nutrition data:', hasNutritionData); // Debug log
+
   const detectedFoods = result.detected_foods || [];
   const insights = result.insights || [];
 
@@ -217,40 +239,144 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
           <ModelDetectionBreakdown modelInfo={result.model_info} />
         )}
 
+        {/* Debug Nutrition Data (temporary) */}
+        <div className="debug-nutrition" style={{ background: '#f0f0f0', padding: '10px', margin: '10px 0', borderRadius: '8px', fontSize: '12px' }}>
+          <h4>Debug: Raw Nutrition Data</h4>
+          <pre>{JSON.stringify(safeNutritionData, null, 2)}</pre>
+        </div>
+
         {/* Nutrition Summary */}
         <div className="nutrition-summary">
           <h3>Nutrition Summary</h3>
-          <div className="nutrition-grid">
-            <div className="nutrition-item">
-              <Zap size={20} />
-              <div className="nutrition-content">
-                <span className="value">{nutritionalData.total_calories}</span>
-                <span className="label">Calories</span>
+          {hasNutritionData ? (
+            <div className="nutrition-grid">
+              <div className="nutrition-item">
+                <Zap size={20} />
+                <div className="nutrition-content">
+                  <span className="value">{safeNutritionData.total_calories}</span>
+                  <span className="label">Calories</span>
+                </div>
+              </div>
+              <div className="nutrition-item">
+                <Apple size={20} />
+                <div className="nutrition-content">
+                  <span className="value">{safeNutritionData.total_protein}g</span>
+                  <span className="label">Protein</span>
+                </div>
+              </div>
+              <div className="nutrition-item">
+                <BarChart3 size={20} />
+                <div className="nutrition-content">
+                  <span className="value">{safeNutritionData.total_carbs}g</span>
+                  <span className="label">Carbs</span>
+                </div>
+              </div>
+              <div className="nutrition-item">
+                <TrendingUp size={20} />
+                <div className="nutrition-content">
+                  <span className="value">{safeNutritionData.total_fats}g</span>
+                  <span className="label">Fats</span>
+                </div>
               </div>
             </div>
-            <div className="nutrition-item">
-              <Apple size={20} />
-              <div className="nutrition-content">
-                <span className="value">{nutritionalData.total_protein}g</span>
-                <span className="label">Protein</span>
+          ) : (
+            <div className="no-nutrition-data">
+              <p>No nutrition data available for the detected foods.</p>
+              <p>This may be because the detected items are not in our nutrition database.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Nutrition Breakdown */}
+        {hasNutritionData && (
+          <div className="nutrition-breakdown">
+            <h3>Macronutrient Breakdown</h3>
+            <div className="macro-distribution">
+              <div className="macro-item protein">
+                <div className="macro-label">Protein</div>
+                <div className="macro-bar">
+                  <div 
+                    className="macro-fill" 
+                    style={{ 
+                      width: `${(safeNutritionData.total_protein * 4 / safeNutritionData.total_calories) * 100}%`,
+                      backgroundColor: '#22c55e'
+                    }}
+                  ></div>
+                </div>
+                <div className="macro-percentage">
+                  {((safeNutritionData.total_protein * 4 / safeNutritionData.total_calories) * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="macro-item carbs">
+                <div className="macro-label">Carbs</div>
+                <div className="macro-bar">
+                  <div 
+                    className="macro-fill" 
+                    style={{ 
+                      width: `${(safeNutritionData.total_carbs * 4 / safeNutritionData.total_calories) * 100}%`,
+                      backgroundColor: '#3b82f6'
+                    }}
+                  ></div>
+                </div>
+                <div className="macro-percentage">
+                  {((safeNutritionData.total_carbs * 4 / safeNutritionData.total_calories) * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="macro-item fats">
+                <div className="macro-label">Fats</div>
+                <div className="macro-bar">
+                  <div 
+                    className="macro-fill" 
+                    style={{ 
+                      width: `${(safeNutritionData.total_fats * 9 / safeNutritionData.total_calories) * 100}%`,
+                      backgroundColor: '#f59e0b'
+                    }}
+                  ></div>
+                </div>
+                <div className="macro-percentage">
+                  {((safeNutritionData.total_fats * 9 / safeNutritionData.total_calories) * 100).toFixed(1)}%
+                </div>
               </div>
             </div>
-            <div className="nutrition-item">
-              <BarChart3 size={20} />
-              <div className="nutrition-content">
-                <span className="value">{nutritionalData.total_carbs}g</span>
-                <span className="label">Carbs</span>
-              </div>
-            </div>
-            <div className="nutrition-item">
-              <TrendingUp size={20} />
-              <div className="nutrition-content">
-                <span className="value">{nutritionalData.total_fats}g</span>
-                <span className="label">Fats</span>
-              </div>
+            <div className="nutrition-notes">
+              <p>• Protein: {safeNutritionData.total_protein * 4} calories ({((safeNutritionData.total_protein * 4 / safeNutritionData.total_calories) * 100).toFixed(1)}%)</p>
+              <p>• Carbs: {safeNutritionData.total_carbs * 4} calories ({((safeNutritionData.total_carbs * 4 / safeNutritionData.total_calories) * 100).toFixed(1)}%)</p>
+              <p>• Fats: {safeNutritionData.total_fats * 9} calories ({((safeNutritionData.total_fats * 9 / safeNutritionData.total_calories) * 100).toFixed(1)}%)</p>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Individual Food Items with Nutrition */}
+        {safeNutritionData.items && safeNutritionData.items.length > 0 && (
+          <div className="food-nutrition-details">
+            <h3>Food Items with Nutrition</h3>
+            <div className="food-nutrition-list">
+              {safeNutritionData.items.map((item, index) => (
+                <div key={index} className="food-nutrition-item">
+                  <div className="food-name">{item.name}</div>
+                  <div className="food-nutrition-values">
+                    <span className="nutrition-value">
+                      <Zap size={14} />
+                      {item.calories} cal
+                    </span>
+                    <span className="nutrition-value">
+                      <Apple size={14} />
+                      {item.protein}g protein
+                    </span>
+                    <span className="nutrition-value">
+                      <BarChart3 size={14} />
+                      {item.carbs}g carbs
+                    </span>
+                    <span className="nutrition-value">
+                      <TrendingUp size={14} />
+                      {item.fats}g fats
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Detected Foods */}
         {detectedFoods.length > 0 && (

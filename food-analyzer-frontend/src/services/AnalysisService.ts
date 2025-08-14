@@ -391,20 +391,50 @@ export class AnalysisService {
   }
 
   private normalizeAnalysisResult(result: any): AnalysisResult {
+    console.log('Raw backend result:', result); // Debug log
+    
     // Handle different response formats from the backend
     if (result.success !== undefined) {
-      // Handle the new backend response format
-      return {
-        success: result.success,
-        description: result.description || 'Analysis completed',
-        analysis: result.analysis || result.text || 'Analysis results available',
-        nutritional_data: result.nutritionalData || result.nutritional_data || result.nutrition || {
+      // Extract nutrition data from various possible locations
+      let nutritionData = null;
+      
+      if (result.nutritional_data) {
+        nutritionData = result.nutritional_data;
+      } else if (result.totalNutrition) {
+        nutritionData = result.totalNutrition;
+      } else if (result.nutritionalData) {
+        nutritionData = result.nutritionalData;
+      } else if (result.nutrition) {
+        nutritionData = result.nutrition;
+      }
+      
+      // Ensure nutrition data has the correct structure
+      if (nutritionData) {
+        nutritionData = {
+          total_calories: nutritionData.total_calories || 0,
+          total_protein: nutritionData.total_protein || 0,
+          total_carbs: nutritionData.total_carbs || 0,
+          total_fats: nutritionData.total_fats || 0,
+          items: nutritionData.items || []
+        };
+      } else {
+        nutritionData = {
           total_calories: 0,
           total_protein: 0,
           total_carbs: 0,
           total_fats: 0,
           items: []
-        },
+        };
+      }
+      
+      console.log('Normalized nutrition data:', nutritionData); // Debug log
+      
+      // Handle the new backend response format
+      return {
+        success: result.success,
+        description: result.description || 'Analysis completed',
+        analysis: result.analysis || result.text || 'Analysis results available',
+        nutritional_data: nutritionData,
         detected_foods: result.detectedFoods?.map((food: any) => food.name) || result.detected_foods || result.foods || [],
         confidence: result.confidence || 0,
         processing_time: result.processingTime || result.processing_time || 0,

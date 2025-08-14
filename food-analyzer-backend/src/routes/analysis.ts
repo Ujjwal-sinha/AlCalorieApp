@@ -45,6 +45,15 @@ router.post('/advanced', upload.single('image'), async (req, res) => {
       models_used: result.detectionMethods?.length || 0
     });
 
+    console.log('Sending response with nutrition data:', {
+      has_nutritional_data: !!result.nutritional_data,
+      has_totalNutrition: !!result.totalNutrition,
+      nutrition_calories: result.nutritional_data?.total_calories || result.totalNutrition?.total_calories,
+      nutrition_protein: result.nutritional_data?.total_protein || result.totalNutrition?.total_protein,
+      nutrition_carbs: result.nutritional_data?.total_carbs || result.totalNutrition?.total_carbs,
+      nutrition_fats: result.nutritional_data?.total_fats || result.totalNutrition?.total_fats
+    });
+
     return res.json(result);
   } catch (error) {
     console.error('Expert analysis error:', error);

@@ -35,6 +35,7 @@ export interface AnalysisResult {
     detectionMethods: string[];
   }>;
   nutritionalData: any[] | null;
+  nutritional_data?: NutritionalData | null; // Add this for frontend compatibility
   totalNutrition: any | null;
   insights: string[];
   detectionMethods: string[];
