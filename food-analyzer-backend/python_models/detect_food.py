@@ -33,6 +33,7 @@ import json
 import base64
 import time
 import traceback
+import os
 from typing import Dict, List, Optional, Any
 import numpy as np
 from PIL import Image, ImageEnhance
@@ -103,10 +104,21 @@ def load_model(model_type: str) -> Optional[Any]:
     try:
         if model_type == 'yolo' and YOLO_AVAILABLE:
             print(f"Loading YOLO11m model...", file=sys.stderr)
-            model = YOLO('yolo11m.pt')
-            MODEL_CACHE[model_type] = model
-            print(f"YOLO11m model loaded successfully", file=sys.stderr)
-            return model
+            # Look for model in parent directory first, then current directory
+            model_path = '../yolo11m.pt'
+            if not os.path.exists(model_path):
+                model_path = 'yolo11m.pt'
+            if not os.path.exists(model_path):
+                model_path = '../../yolo11m.pt'
+            
+            if os.path.exists(model_path):
+                model = YOLO(model_path)
+                MODEL_CACHE[model_type] = model
+                print(f"YOLO11m model loaded successfully from {model_path}", file=sys.stderr)
+                return model
+            else:
+                print(f"YOLO11m model file not found. Tried paths: ../yolo11m.pt, yolo11m.pt, ../../yolo11m.pt", file=sys.stderr)
+                return None
             
         elif model_type == 'vit' and TRANSFORMERS_AVAILABLE:
             print(f"Loading ViT model...", file=sys.stderr)
