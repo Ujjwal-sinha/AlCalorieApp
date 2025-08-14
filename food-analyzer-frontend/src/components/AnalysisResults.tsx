@@ -12,7 +12,10 @@ import {
   Target,
   RefreshCw,
   Globe,
-  Activity
+  Activity,
+  PieChart,
+  BarChart,
+  TrendingDown
 } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 import './AnalysisResults.css';
@@ -413,6 +416,215 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
               <p>• Protein: {safeNutritionData.total_protein * 4} calories ({((safeNutritionData.total_protein * 4 / safeNutritionData.total_calories) * 100).toFixed(1)}%)</p>
               <p>• Carbs: {safeNutritionData.total_carbs * 4} calories ({((safeNutritionData.total_carbs * 4 / safeNutritionData.total_calories) * 100).toFixed(1)}%)</p>
               <p>• Fats: {safeNutritionData.total_fats * 9} calories ({((safeNutritionData.total_fats * 9 / safeNutritionData.total_calories) * 100).toFixed(1)}%)</p>
+            </div>
+          </div>
+        )}
+
+        {/* Nutrition Visualizations */}
+        {hasNutritionData && (
+          <div className="nutrition-visualizations">
+            <h3>Nutrition Analytics & Visualizations</h3>
+            
+            {/* Bar Chart - Macronutrient Comparison */}
+            <div className="chart-section">
+              <h4>
+                <BarChart size={20} />
+                Macronutrient Distribution (Bar Chart)
+              </h4>
+              <div className="bar-chart-container">
+                <div className="bar-chart">
+                  <div className="bar-item">
+                    <div className="bar-label">Protein</div>
+                    <div className="bar-wrapper">
+                      <div 
+                        className="bar-fill protein-bar" 
+                        style={{ 
+                          height: `${(safeNutritionData.total_protein / Math.max(safeNutritionData.total_protein, safeNutritionData.total_carbs, safeNutritionData.total_fats)) * 100}%`
+                        }}
+                      >
+                        <span className="bar-value">{safeNutritionData.total_protein}g</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bar-item">
+                    <div className="bar-label">Carbs</div>
+                    <div className="bar-wrapper">
+                      <div 
+                        className="bar-fill carbs-bar" 
+                        style={{ 
+                          height: `${(safeNutritionData.total_carbs / Math.max(safeNutritionData.total_protein, safeNutritionData.total_carbs, safeNutritionData.total_fats)) * 100}%`
+                        }}
+                      >
+                        <span className="bar-value">{safeNutritionData.total_carbs}g</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bar-item">
+                    <div className="bar-label">Fats</div>
+                    <div className="bar-wrapper">
+                      <div 
+                        className="bar-fill fats-bar" 
+                        style={{ 
+                          height: `${(safeNutritionData.total_fats / Math.max(safeNutritionData.total_protein, safeNutritionData.total_carbs, safeNutritionData.total_fats)) * 100}%`
+                        }}
+                      >
+                        <span className="bar-value">{safeNutritionData.total_fats}g</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Radar Chart - Nutrition Balance */}
+            <div className="chart-section">
+              <h4>
+                <Target size={20} />
+                Nutrition Balance Radar Chart
+              </h4>
+              <div className="radar-chart-container">
+                <div className="radar-chart">
+                  <svg viewBox="0 0 200 200" className="radar-svg">
+                    {/* Radar grid lines */}
+                    <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+                    <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+                    <circle cx="100" cy="100" r="40" fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+                    <circle cx="100" cy="100" r="20" fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+                    
+                    {/* Radar axes */}
+                    <line x1="100" y1="20" x2="100" y2="180" stroke="rgba(0,0,0,0.2)" strokeWidth="1"/>
+                    <line x1="20" y1="100" x2="180" y2="100" stroke="rgba(0,0,0,0.2)" strokeWidth="1"/>
+                    <line x1="35" y1="35" x2="165" y2="165" stroke="rgba(0,0,0,0.2)" strokeWidth="1"/>
+                    <line x1="165" y1="35" x2="35" y2="165" stroke="rgba(0,0,0,0.2)" strokeWidth="1"/>
+                    
+                    {/* Nutrition data points */}
+                    <circle 
+                      cx="100" 
+                      cy={100 - (safeNutritionData.total_protein / Math.max(safeNutritionData.total_protein, safeNutritionData.total_carbs, safeNutritionData.total_fats)) * 80} 
+                      r="4" 
+                      fill="#22c55e"
+                    />
+                    <circle 
+                      cx={100 + (safeNutritionData.total_carbs / Math.max(safeNutritionData.total_protein, safeNutritionData.total_carbs, safeNutritionData.total_fats)) * 80} 
+                      cy="100" 
+                      r="4" 
+                      fill="#3b82f6"
+                    />
+                    <circle 
+                      cx="100" 
+                      cy={100 + (safeNutritionData.total_fats / Math.max(safeNutritionData.total_protein, safeNutritionData.total_carbs, safeNutritionData.total_fats)) * 80} 
+                      r="4" 
+                      fill="#f59e0b"
+                    />
+                    
+                    {/* Labels */}
+                    <text x="100" y="15" textAnchor="middle" fontSize="10" fill="#22c55e" fontWeight="bold">Protein</text>
+                    <text x="185" y="105" textAnchor="middle" fontSize="10" fill="#3b82f6" fontWeight="bold">Carbs</text>
+                    <text x="100" y="195" textAnchor="middle" fontSize="10" fill="#f59e0b" fontWeight="bold">Fats</text>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Stacked Area Chart - Calorie Contribution */}
+            <div className="chart-section">
+              <h4>
+                <TrendingUp size={20} />
+                Calorie Contribution (Stacked Area)
+              </h4>
+              <div className="stacked-area-container">
+                <div className="stacked-area-chart">
+                  <div className="area-item protein-area">
+                    <div className="area-label">Protein Calories</div>
+                    <div className="area-fill" style={{ 
+                      height: `${(safeNutritionData.total_protein * 4 / safeNutritionData.total_calories) * 100}%`,
+                      backgroundColor: '#22c55e'
+                    }}>
+                      <span className="area-value">{safeNutritionData.total_protein * 4} cal</span>
+                    </div>
+                  </div>
+                  <div className="area-item carbs-area">
+                    <div className="area-label">Carb Calories</div>
+                    <div className="area-fill" style={{ 
+                      height: `${(safeNutritionData.total_carbs * 4 / safeNutritionData.total_calories) * 100}%`,
+                      backgroundColor: '#3b82f6'
+                    }}>
+                      <span className="area-value">{safeNutritionData.total_carbs * 4} cal</span>
+                    </div>
+                  </div>
+                  <div className="area-item fats-area">
+                    <div className="area-label">Fat Calories</div>
+                    <div className="area-fill" style={{ 
+                      height: `${(safeNutritionData.total_fats * 9 / safeNutritionData.total_calories) * 100}%`,
+                      backgroundColor: '#f59e0b'
+                    }}>
+                      <span className="area-value">{safeNutritionData.total_fats * 9} cal</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Nutrition Insights */}
+            <div className="nutrition-insights">
+              <h4>
+                <Lightbulb size={20} />
+                AI Nutrition Insights
+              </h4>
+              <div className="insights-grid">
+                <div className="insight-card">
+                  <div className="insight-icon">
+                    <Apple size={16} />
+                  </div>
+                  <div className="insight-content">
+                    <h5>Protein Analysis</h5>
+                    <p>
+                      {safeNutritionData.total_protein < 20 ? 'Low protein content. Consider adding lean meats, fish, or legumes.' :
+                       safeNutritionData.total_protein > 50 ? 'High protein content. Good for muscle building and satiety.' :
+                       'Moderate protein content. Well-balanced for most dietary needs.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="insight-card">
+                  <div className="insight-icon">
+                    <BarChart3 size={16} />
+                  </div>
+                  <div className="insight-content">
+                    <h5>Carbohydrate Balance</h5>
+                    <p>
+                      {safeNutritionData.total_carbs < 30 ? 'Low carb content. May need more energy sources.' :
+                       safeNutritionData.total_carbs > 100 ? 'High carb content. Consider balancing with protein and fats.' :
+                       'Good carbohydrate balance for sustained energy.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="insight-card">
+                  <div className="insight-icon">
+                    <TrendingUp size={16} />
+                  </div>
+                  <div className="insight-content">
+                    <h5>Fat Composition</h5>
+                    <p>
+                      {safeNutritionData.total_fats < 10 ? 'Low fat content. Consider adding healthy fats for essential nutrients.' :
+                       safeNutritionData.total_fats > 40 ? 'High fat content. Monitor for heart health considerations.' :
+                       'Balanced fat content for optimal nutrition.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="insight-card">
+                  <div className="insight-icon">
+                    <Zap size={16} />
+                  </div>
+                  <div className="insight-content">
+                    <h5>Calorie Density</h5>
+                    <p>
+                      {safeNutritionData.total_calories < 300 ? 'Low calorie meal. Good for weight management.' :
+                       safeNutritionData.total_calories > 800 ? 'High calorie meal. Consider portion control.' :
+                       'Moderate calorie content. Well-balanced meal.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
