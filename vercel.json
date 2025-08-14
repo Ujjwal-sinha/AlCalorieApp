@@ -26,11 +26,6 @@
       "dest": "food-analyzer-frontend/dist/$1"
     }
   ],
-  "functions": {
-    "food-analyzer-backend/dist/server.js": {
-      "maxDuration": 60
-    }
-  },
   "env": {
     "NODE_ENV": "production"
   }
