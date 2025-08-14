@@ -298,7 +298,7 @@ def get_food_label_from_index(idx: int) -> str:
     return food_labels.get(idx, f"food_item_{idx}")
 
 def detect_with_yolo(image: Image.Image) -> Dict[str, Any]:
-    """Enhanced YOLO detection with improved food mapping and lower thresholds"""
+    """Accurate YOLO detection with strict food mapping and validation"""
     try:
         if not YOLO_AVAILABLE:
             return {"success": False, "error": "YOLO not available"}
@@ -307,19 +307,19 @@ def detect_with_yolo(image: Image.Image) -> Dict[str, Any]:
         if not model:
             return {"success": False, "error": "Failed to load YOLO model"}
         
-        print("Running enhanced YOLO detection...", file=sys.stderr)
+        print("Running accurate YOLO detection...", file=sys.stderr)
         
         detected_foods = []
         confidence_scores = {}
         
-        # Lower confidence thresholds for better detection
-        confidence_thresholds = [0.05, 0.1, 0.15, 0.2]  # Much lower thresholds
+        # Conservative confidence thresholds for accurate detection
+        confidence_thresholds = [0.3, 0.4, 0.5]  # Higher thresholds for accuracy
         
         for conf_threshold in confidence_thresholds:
             print(f"YOLO detection with confidence threshold: {conf_threshold}", file=sys.stderr)
             
             # Run YOLO detection with current threshold
-            results = model(image, conf=conf_threshold, verbose=False, max_det=50)  # Increased max_det
+            results = model(image, conf=conf_threshold, verbose=False, max_det=20)  # Reduced max_det for accuracy
             
             for result in results:
                 boxes = result.boxes
@@ -329,27 +329,27 @@ def detect_with_yolo(image: Image.Image) -> Dict[str, Any]:
                         class_id = int(box.cls[0])
                         confidence = float(box.conf[0])
                         
-                        # Enhanced COCO class mapping with comprehensive food items
+                        # Strict COCO class mapping - only actual food items
                         food_names = {
                             # Primary food items (COCO classes)
                             46: 'banana', 47: 'apple', 48: 'sandwich', 49: 'orange', 
                             50: 'broccoli', 51: 'carrot', 52: 'hot dog', 53: 'pizza', 
                             54: 'donut', 55: 'cake',
                             
-                            # Kitchen items that indicate food context
+                            # Kitchen items that indicate food context (but not food themselves)
                             39: 'bottle', 40: 'wine glass', 41: 'cup', 42: 'fork', 
                             43: 'knife', 44: 'spoon', 45: 'bowl',
                             
-                            # Furniture that indicates dining context
+                            # Furniture that indicates dining context (but not food themselves)
                             56: 'chair', 57: 'couch', 58: 'potted plant', 59: 'bed', 
                             60: 'dining table', 61: 'toilet',
                             
-                            # Electronics and appliances
+                            # Electronics and appliances (but not food themselves)
                             62: 'tv', 63: 'laptop', 64: 'mouse', 65: 'remote', 
                             66: 'keyboard', 67: 'cell phone', 68: 'microwave', 
                             69: 'oven', 70: 'toaster', 71: 'sink', 72: 'refrigerator',
                             
-                            # Other items that might be in food context
+                            # Other items that might be in food context (but not food themselves)
                             0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle', 
                             4: 'airplane', 5: 'bus', 6: 'train', 7: 'truck', 
                             8: 'boat', 9: 'traffic light', 10: 'fire hydrant', 
@@ -367,23 +367,14 @@ def detect_with_yolo(image: Image.Image) -> Dict[str, Any]:
                         
                         class_name = food_names.get(class_id, f'object_{class_id}')
                         
-                        # Enhanced food filtering with more comprehensive categories
-                        primary_food_items = [
+                        # Only detect actual food items, not context items
+                        actual_food_items = [
                             'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
-                            'hot dog', 'pizza', 'donut', 'cake', 'bottle', 'wine glass',
-                            'cup', 'fork', 'knife', 'spoon', 'bowl'
+                            'hot dog', 'pizza', 'donut', 'cake'
                         ]
                         
-                        secondary_food_items = [
-                            'dining table', 'person', 'chair', 'couch', 'bed',
-                            'microwave', 'oven', 'toaster', 'sink', 'refrigerator'
-                        ]
-                        
-                        # Check if it's a food-related item
-                        is_food_item = (
-                            class_name.lower() in primary_food_items or
-                            class_name.lower() in secondary_food_items
-                        )
+                        # Check if it's an actual food item
+                        is_food_item = class_name.lower() in actual_food_items
                         
                         if is_food_item:
                             # Normalize food names for better consistency
@@ -399,25 +390,8 @@ def detect_with_yolo(image: Image.Image) -> Dict[str, Any]:
                                 confidence_scores[normalized_name] = confidence
                                 print(f"YOLO updated: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
         
-        # Enhanced post-processing for better detection
-        if len(detected_foods) < 10:  # Increased threshold for context detection
-            additional_foods = detect_additional_foods_from_context(detected_foods, image)
-            for food_name, confidence in additional_foods.items():
-                if food_name not in detected_foods:
-                    detected_foods.append(food_name)
-                    confidence_scores[food_name] = confidence
-                    print(f"YOLO context detected: {food_name} (confidence: {confidence:.3f})", file=sys.stderr)
-        
-        # If still no detections, add some generic food items based on image analysis
-        if len(detected_foods) == 0:
-            # Analyze image characteristics to suggest foods
-            suggested_foods = analyze_image_for_food_suggestions(image)
-            for food_name, confidence in suggested_foods.items():
-                detected_foods.append(food_name)
-                confidence_scores[food_name] = confidence
-                print(f"YOLO suggested: {food_name} (confidence: {confidence:.3f})", file=sys.stderr)
-        
-        print(f"Enhanced YOLO total detections: {len(detected_foods)}", file=sys.stderr)
+        # No fallback suggestions - only return what was actually detected
+        print(f"Accurate YOLO total detections: {len(detected_foods)}", file=sys.stderr)
         
         return {
             "success": True,
@@ -426,14 +400,14 @@ def detect_with_yolo(image: Image.Image) -> Dict[str, Any]:
             "model_info": {
                 "model_type": "yolo",
                 "detection_count": len(detected_foods),
-                "confidence_threshold": "multi_threshold",
-                "detection_method": "enhanced_multi_threshold"
+                "confidence_threshold": "conservative_threshold",
+                "detection_method": "accurate_strict_mapping"
             }
         }
         
     except Exception as e:
-        print(f"Enhanced YOLO detection error: {str(e)}", file=sys.stderr)
-        return {"success": False, "error": f"Enhanced YOLO detection error: {str(e)}"}
+        print(f"Accurate YOLO detection error: {str(e)}", file=sys.stderr)
+        return {"success": False, "error": f"Accurate YOLO detection error: {str(e)}"}
 
 def normalize_food_name(food_name: str) -> str:
     """Normalize food names for consistency"""
@@ -459,52 +433,10 @@ def normalize_food_name(food_name: str) -> str:
     
     return normalizations.get(food_name, food_name)
 
-def detect_additional_foods_from_context(detected_foods: List[str], image: Image.Image) -> Dict[str, float]:
-    """Detect additional food items based on context and detected items"""
-    additional_foods = {}
-    
-    # Context-based food detection
-    detected_set = set(detected_foods)
-    
-    # If we see dining table, add common meal items
-    if 'dining_table' in detected_set:
-        common_meal_items = ['rice', 'pasta', 'bread', 'salad', 'soup', 'meat', 'vegetables']
-        for item in common_meal_items:
-            if item not in detected_set:
-                additional_foods[item] = 0.3  # Lower confidence for context-based detection
-    
-    # If we see kitchen appliances, add cooking-related items
-    kitchen_appliances = ['microwave', 'oven', 'toaster', 'sink', 'refrigerator']
-    if any(appliance in detected_set for appliance in kitchen_appliances):
-        cooking_items = ['pan', 'pot', 'plate', 'utensils', 'ingredients']
-        for item in cooking_items:
-            if item not in detected_set:
-                additional_foods[item] = 0.25
-    
-    # If we see person, add common food items
-    if 'person' in detected_set:
-        person_food_items = ['water', 'drink', 'snack', 'meal']
-        for item in person_food_items:
-            if item not in detected_set:
-                additional_foods[item] = 0.2
-    
-    # If we see specific food items, add related items
-    if 'pizza' in detected_set:
-        additional_foods['cheese'] = 0.4
-        additional_foods['tomato'] = 0.4
-    
-    if 'sandwich' in detected_set:
-        additional_foods['bread'] = 0.4
-        additional_foods['lettuce'] = 0.3
-    
-    if 'cake' in detected_set or 'donut' in detected_set:
-        additional_foods['sugar'] = 0.3
-        additional_foods['flour'] = 0.3
-    
-    return additional_foods
+# Removed context-based detection to prevent false positives
 
 def detect_with_vit(image: Image.Image) -> Dict[str, Any]:
-    """Enhanced ViT detection with lower thresholds and better food mapping"""
+    """Accurate ViT detection with strict food mapping and validation"""
     try:
         if not TRANSFORMERS_AVAILABLE:
             return {"success": False, "error": "Transformers not available"}
@@ -513,7 +445,7 @@ def detect_with_vit(image: Image.Image) -> Dict[str, Any]:
         if not model_data:
             return {"success": False, "error": "Failed to load ViT model"}
         
-        print("Running enhanced ViT detection...", file=sys.stderr)
+        print("Running accurate ViT detection...", file=sys.stderr)
         
         processor = model_data['processor']
         model = model_data['model']
@@ -525,7 +457,7 @@ def detect_with_vit(image: Image.Image) -> Dict[str, Any]:
             outputs = model(**inputs)
             logits = outputs.logits
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            top_probs, top_indices = torch.topk(probs, 25)  # Increased from 15 to 25 predictions
+            top_probs, top_indices = torch.topk(probs, 10)  # Reduced to 10 for accuracy
         
         detected_foods = []
         confidence_scores = {}
@@ -534,42 +466,55 @@ def detect_with_vit(image: Image.Image) -> Dict[str, Any]:
             idx = top_indices[0][i].item()
             confidence = top_probs[0][i].item()
             
-            # Much lower threshold for better detection
-            if confidence > 0.005:  # Reduced from 0.01 to 0.005
+            # Higher threshold for accurate detection
+            if confidence > 0.1:  # Increased threshold for accuracy
                 # Get food label from index
                 food_name = get_food_label_from_index(idx)
                 
-                # Normalize food name
-                normalized_name = normalize_food_name(food_name)
+                # Only accept actual food items, not generic objects
+                actual_food_items = [
+                    'apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'raspberry',
+                    'bread', 'cake', 'pizza', 'hamburger', 'hot dog', 'sandwich', 'taco', 'burrito',
+                    'salad', 'soup', 'rice', 'pasta', 'noodles', 'chicken', 'beef', 'fish', 'shrimp',
+                    'egg', 'cheese', 'milk', 'yogurt', 'ice cream', 'cookie', 'donut', 'muffin',
+                    'coffee', 'tea', 'juice', 'water', 'soda', 'beer', 'wine', 'carrot', 'broccoli',
+                    'tomato', 'potato', 'onion', 'garlic', 'pepper', 'cucumber', 'lettuce', 'spinach',
+                    'mushroom', 'corn', 'pea', 'bell pepper', 'zucchini', 'eggplant', 'cauliflower',
+                    'asparagus', 'celery', 'radish', 'turnip', 'beetroot', 'sweet potato', 'yam',
+                    'ginger', 'turmeric', 'cinnamon', 'nutmeg', 'clove', 'cardamom', 'cumin',
+                    'coriander', 'oregano', 'basil', 'thyme', 'rosemary', 'sage', 'parsley',
+                    'cilantro', 'dill', 'mint', 'leek', 'shallot', 'scallion', 'green onion',
+                    'red onion', 'white onion', 'yellow onion', 'sweet onion', 'vidalia onion',
+                    'walla walla onion', 'maui onion', 'bermuda onion', 'spanish onion',
+                    'egyptian onion', 'tree onion', 'multiplier onion', 'potato onion',
+                    'shallot onion', 'garlic onion', 'chive onion', 'peach', 'pear', 'pineapple',
+                    'mango', 'kiwi', 'lemon', 'lime', 'cherry', 'plum', 'apricot', 'fig', 'date',
+                    'prune', 'raisin', 'currant', 'cranberry', 'gooseberry', 'elderberry',
+                    'mulberry', 'blackberry', 'loganberry', 'boysenberry', 'marionberry',
+                    'olallieberry', 'sylvanberry', 'chehalem', 'santiam', 'willamette',
+                    'cascade', 'liberty', 'glacier', 'nugget', 'columbus', 'warrior', 'zeus',
+                    'magnum', 'simcoe', 'amarillo', 'citra', 'mosaic', 'galaxy', 'vic secret',
+                    'idaho 7', 'strata', 'sabro', 'triumph', 'perle', 'hallertau', 'saaz',
+                    'fuggle', 'blueberry', 'raspberry'
+                ]
                 
-                # Only add if not already detected or if confidence is higher
-                if normalized_name not in detected_foods:
-                    detected_foods.append(normalized_name)
-                    confidence_scores[normalized_name] = confidence
-                    print(f"ViT detected: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
-                elif confidence > confidence_scores[normalized_name]:
-                    # Update with higher confidence
-                    confidence_scores[normalized_name] = confidence
-                    print(f"ViT updated: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
+                # Check if it's an actual food item
+                if food_name.lower() in actual_food_items:
+                    # Normalize food name
+                    normalized_name = normalize_food_name(food_name)
+                    
+                    # Only add if not already detected or if confidence is higher
+                    if normalized_name not in detected_foods:
+                        detected_foods.append(normalized_name)
+                        confidence_scores[normalized_name] = confidence
+                        print(f"ViT detected: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
+                    elif confidence > confidence_scores[normalized_name]:
+                        # Update with higher confidence
+                        confidence_scores[normalized_name] = confidence
+                        print(f"ViT updated: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
         
-        # Enhanced post-processing for better detection
-        if len(detected_foods) < 5:  # Increased threshold for context detection
-            additional_foods = detect_additional_foods_from_context(detected_foods, image)
-            for food_name, confidence in additional_foods.items():
-                if food_name not in detected_foods:
-                    detected_foods.append(food_name)
-                    confidence_scores[food_name] = confidence * 0.8
-                    print(f"ViT context detected: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        # If still no detections, add some generic food items
-        if len(detected_foods) == 0:
-            suggested_foods = analyze_image_for_food_suggestions(image)
-            for food_name, confidence in suggested_foods.items():
-                detected_foods.append(food_name)
-                confidence_scores[food_name] = confidence * 0.7
-                print(f"ViT suggested: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        print(f"Enhanced ViT total detections: {len(detected_foods)}", file=sys.stderr)
+        # No fallback suggestions - only return what was actually detected
+        print(f"Accurate ViT total detections: {len(detected_foods)}", file=sys.stderr)
         
         return {
             "success": True,
@@ -578,17 +523,17 @@ def detect_with_vit(image: Image.Image) -> Dict[str, Any]:
             "model_info": {
                 "model_type": "vit",
                 "detection_count": len(detected_foods),
-                "confidence_threshold": 0.005,
-                "detection_method": "enhanced_low_threshold"
+                "confidence_threshold": 0.1,
+                "detection_method": "accurate_strict_mapping"
             }
         }
         
     except Exception as e:
-        print(f"Enhanced ViT detection error: {str(e)}", file=sys.stderr)
-        return {"success": False, "error": f"Enhanced ViT detection error: {str(e)}"}
+        print(f"Accurate ViT detection error: {str(e)}", file=sys.stderr)
+        return {"success": False, "error": f"Accurate ViT detection error: {str(e)}"}
 
 def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
-    """Enhanced Swin detection with lower thresholds and better food mapping"""
+    """Accurate Swin detection with strict food mapping and validation"""
     try:
         if not TRANSFORMERS_AVAILABLE:
             return {"success": False, "error": "Transformers not available"}
@@ -597,7 +542,7 @@ def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
         if not model_data:
             return {"success": False, "error": "Failed to load Swin model"}
         
-        print("Running enhanced Swin detection...", file=sys.stderr)
+        print("Running accurate Swin detection...", file=sys.stderr)
         
         processor = model_data['processor']
         model = model_data['model']
@@ -609,7 +554,7 @@ def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
             outputs = model(**inputs)
             logits = outputs.logits
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            top_probs, top_indices = torch.topk(probs, 25)  # Increased from 15 to 25 predictions
+            top_probs, top_indices = torch.topk(probs, 10)  # Reduced to 10 for accuracy
         
         detected_foods = []
         confidence_scores = {}
@@ -618,42 +563,55 @@ def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
             idx = top_indices[0][i].item()
             confidence = top_probs[0][i].item()
             
-            # Much lower threshold for better detection
-            if confidence > 0.005:  # Reduced from 0.01 to 0.005
+            # Higher threshold for accurate detection
+            if confidence > 0.1:  # Increased threshold for accuracy
                 # Get food label from index
                 food_name = get_food_label_from_index(idx)
                 
-                # Normalize food name
-                normalized_name = normalize_food_name(food_name)
+                # Only accept actual food items, not generic objects
+                actual_food_items = [
+                    'apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'raspberry',
+                    'bread', 'cake', 'pizza', 'hamburger', 'hot dog', 'sandwich', 'taco', 'burrito',
+                    'salad', 'soup', 'rice', 'pasta', 'noodles', 'chicken', 'beef', 'fish', 'shrimp',
+                    'egg', 'cheese', 'milk', 'yogurt', 'ice cream', 'cookie', 'donut', 'muffin',
+                    'coffee', 'tea', 'juice', 'water', 'soda', 'beer', 'wine', 'carrot', 'broccoli',
+                    'tomato', 'potato', 'onion', 'garlic', 'pepper', 'cucumber', 'lettuce', 'spinach',
+                    'mushroom', 'corn', 'pea', 'bell pepper', 'zucchini', 'eggplant', 'cauliflower',
+                    'asparagus', 'celery', 'radish', 'turnip', 'beetroot', 'sweet potato', 'yam',
+                    'ginger', 'turmeric', 'cinnamon', 'nutmeg', 'clove', 'cardamom', 'cumin',
+                    'coriander', 'oregano', 'basil', 'thyme', 'rosemary', 'sage', 'parsley',
+                    'cilantro', 'dill', 'mint', 'leek', 'shallot', 'scallion', 'green onion',
+                    'red onion', 'white onion', 'yellow onion', 'sweet onion', 'vidalia onion',
+                    'walla walla onion', 'maui onion', 'bermuda onion', 'spanish onion',
+                    'egyptian onion', 'tree onion', 'multiplier onion', 'potato onion',
+                    'shallot onion', 'garlic onion', 'chive onion', 'peach', 'pear', 'pineapple',
+                    'mango', 'kiwi', 'lemon', 'lime', 'cherry', 'plum', 'apricot', 'fig', 'date',
+                    'prune', 'raisin', 'currant', 'cranberry', 'gooseberry', 'elderberry',
+                    'mulberry', 'blackberry', 'loganberry', 'boysenberry', 'marionberry',
+                    'olallieberry', 'sylvanberry', 'chehalem', 'santiam', 'willamette',
+                    'cascade', 'liberty', 'glacier', 'nugget', 'columbus', 'warrior', 'zeus',
+                    'magnum', 'simcoe', 'amarillo', 'citra', 'mosaic', 'galaxy', 'vic secret',
+                    'idaho 7', 'strata', 'sabro', 'triumph', 'perle', 'hallertau', 'saaz',
+                    'fuggle', 'blueberry', 'raspberry'
+                ]
                 
-                # Only add if not already detected or if confidence is higher
-                if normalized_name not in detected_foods:
-                    detected_foods.append(normalized_name)
-                    confidence_scores[normalized_name] = confidence
-                    print(f"Swin detected: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
-                elif confidence > confidence_scores[normalized_name]:
-                    # Update with higher confidence
-                    confidence_scores[normalized_name] = confidence
-                    print(f"Swin updated: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
+                # Check if it's an actual food item
+                if food_name.lower() in actual_food_items:
+                    # Normalize food name
+                    normalized_name = normalize_food_name(food_name)
+                    
+                    # Only add if not already detected or if confidence is higher
+                    if normalized_name not in detected_foods:
+                        detected_foods.append(normalized_name)
+                        confidence_scores[normalized_name] = confidence
+                        print(f"Swin detected: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
+                    elif confidence > confidence_scores[normalized_name]:
+                        # Update with higher confidence
+                        confidence_scores[normalized_name] = confidence
+                        print(f"Swin updated: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
         
-        # Enhanced post-processing for better detection
-        if len(detected_foods) < 5:  # Increased threshold for context detection
-            additional_foods = detect_additional_foods_from_context(detected_foods, image)
-            for food_name, confidence in additional_foods.items():
-                if food_name not in detected_foods:
-                    detected_foods.append(food_name)
-                    confidence_scores[food_name] = confidence * 0.8
-                    print(f"Swin context detected: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        # If still no detections, add some generic food items
-        if len(detected_foods) == 0:
-            suggested_foods = analyze_image_for_food_suggestions(image)
-            for food_name, confidence in suggested_foods.items():
-                detected_foods.append(food_name)
-                confidence_scores[food_name] = confidence * 0.7
-                print(f"Swin suggested: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        print(f"Enhanced Swin total detections: {len(detected_foods)}", file=sys.stderr)
+        # No fallback suggestions - only return what was actually detected
+        print(f"Accurate Swin total detections: {len(detected_foods)}", file=sys.stderr)
         
         return {
             "success": True,
@@ -662,17 +620,17 @@ def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
             "model_info": {
                 "model_type": "swin",
                 "detection_count": len(detected_foods),
-                "confidence_threshold": 0.005,
-                "detection_method": "enhanced_low_threshold"
+                "confidence_threshold": 0.1,
+                "detection_method": "accurate_strict_mapping"
             }
         }
         
     except Exception as e:
-        print(f"Enhanced Swin detection error: {str(e)}", file=sys.stderr)
-        return {"success": False, "error": f"Enhanced Swin detection error: {str(e)}"}
+        print(f"Accurate Swin detection error: {str(e)}", file=sys.stderr)
+        return {"success": False, "error": f"Accurate Swin detection error: {str(e)}"}
 
 def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
-    """Enhanced BLIP detection with lower thresholds and better food extraction"""
+    """Accurate BLIP detection with strict food extraction and validation"""
     try:
         if not TRANSFORMERS_AVAILABLE:
             return {"success": False, "error": "Transformers not available"}
@@ -681,7 +639,7 @@ def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
         if not model_data:
             return {"success": False, "error": "Failed to load BLIP model"}
         
-        print("Running enhanced BLIP detection...", file=sys.stderr)
+        print("Running accurate BLIP detection...", file=sys.stderr)
         
         processor = model_data['processor']
         model = model_data['model']
@@ -689,7 +647,7 @@ def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
         detected_foods = []
         confidence_scores = {}
         
-        # Enhanced food-related prompts for better detection
+        # Focused food-related prompts for accurate detection
         prompts = [
             "a photo of food",
             "a meal on a plate",
@@ -711,8 +669,8 @@ def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
                 with torch.no_grad():
                     outputs = model.generate(
                         **inputs,
-                        max_length=40,  # Increased from 30 to 40
-                        num_beams=4,    # Increased from 3 to 4
+                        max_length=30,  # Reduced for accuracy
+                        num_beams=3,    # Reduced for accuracy
                         early_stopping=True,
                         pad_token_id=processor.tokenizer.eos_token_id
                     )
@@ -720,7 +678,7 @@ def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
                 # Decode the generated text
                 generated_text = processor.decode(outputs[0], skip_special_tokens=True)
                 
-                # Extract food items from the generated text
+                # Extract food items from the generated text - only actual food items
                 food_keywords = [
                     'apple', 'banana', 'orange', 'grape', 'strawberry', 'blueberry', 'raspberry',
                     'bread', 'cake', 'pizza', 'hamburger', 'hot dog', 'sandwich', 'taco', 'burrito',
@@ -744,8 +702,7 @@ def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
                     'cascade', 'liberty', 'glacier', 'nugget', 'columbus', 'warrior', 'zeus',
                     'magnum', 'simcoe', 'amarillo', 'citra', 'mosaic', 'galaxy', 'vic secret',
                     'idaho 7', 'strata', 'sabro', 'triumph', 'perle', 'hallertau', 'saaz',
-                    'fuggle', 'blueberry', 'raspberry', 'food', 'meal', 'dish', 'cuisine',
-                    'ingredient', 'vegetable', 'fruit', 'meat', 'protein', 'grain', 'dairy'
+                    'fuggle', 'blueberry', 'raspberry'
                 ]
                 
                 # Check for food keywords in the generated text
@@ -755,31 +712,15 @@ def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
                         normalized_name = normalize_food_name(keyword)
                         if normalized_name not in detected_foods:
                             detected_foods.append(normalized_name)
-                            confidence_scores[normalized_name] = 0.6  # Base confidence for BLIP
+                            confidence_scores[normalized_name] = 0.7  # Higher confidence for BLIP
                             print(f"BLIP detected: {normalized_name} from prompt '{prompt}'", file=sys.stderr)
                 
             except Exception as e:
                 print(f"BLIP prompt '{prompt}' failed: {str(e)}", file=sys.stderr)
                 continue
         
-        # Enhanced post-processing for better detection
-        if len(detected_foods) < 5:  # Increased threshold for context detection
-            additional_foods = detect_additional_foods_from_context(detected_foods, image)
-            for food_name, confidence in additional_foods.items():
-                if food_name not in detected_foods:
-                    detected_foods.append(food_name)
-                    confidence_scores[food_name] = confidence * 0.6
-                    print(f"BLIP context detected: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        # If still no detections, add some generic food items
-        if len(detected_foods) == 0:
-            suggested_foods = analyze_image_for_food_suggestions(image)
-            for food_name, confidence in suggested_foods.items():
-                detected_foods.append(food_name)
-                confidence_scores[food_name] = confidence * 0.5
-                print(f"BLIP suggested: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        print(f"Enhanced BLIP total detections: {len(detected_foods)}", file=sys.stderr)
+        # No fallback suggestions - only return what was actually detected
+        print(f"Accurate BLIP total detections: {len(detected_foods)}", file=sys.stderr)
         
         return {
             "success": True,
@@ -789,16 +730,16 @@ def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
                 "model_type": "blip",
                 "detection_count": len(detected_foods),
                 "confidence_threshold": "multi_prompt",
-                "detection_method": "enhanced_multi_prompt"
+                "detection_method": "accurate_strict_mapping"
             }
         }
         
     except Exception as e:
-        print(f"Enhanced BLIP detection error: {str(e)}", file=sys.stderr)
-        return {"success": False, "error": f"Enhanced BLIP detection error: {str(e)}"}
+        print(f"Accurate BLIP detection error: {str(e)}", file=sys.stderr)
+        return {"success": False, "error": f"Accurate BLIP detection error: {str(e)}"}
 
 def detect_with_clip(image: Image.Image) -> Dict[str, Any]:
-    """Enhanced CLIP detection with lower thresholds and essential food prompts"""
+    """Accurate CLIP detection with strict food prompts and validation"""
     try:
         if not TRANSFORMERS_AVAILABLE:
             return {"success": False, "error": "Transformers not available"}
@@ -807,7 +748,7 @@ def detect_with_clip(image: Image.Image) -> Dict[str, Any]:
         if not model_data:
             return {"success": False, "error": "Failed to load CLIP model"}
         
-        print("Running enhanced CLIP detection...", file=sys.stderr)
+        print("Running accurate CLIP detection...", file=sys.stderr)
         
         processor = model_data['processor']
         model = model_data['model']
@@ -815,7 +756,7 @@ def detect_with_clip(image: Image.Image) -> Dict[str, Any]:
         detected_foods = []
         confidence_scores = {}
         
-        # Enhanced food prompts for better detection
+        # Focused food prompts for accurate detection
         food_prompts = [
             "a photo of an apple", "a photo of a banana", "a photo of an orange", "a photo of grapes",
             "a photo of strawberries", "a photo of bread", "a photo of cake", "a photo of pizza",
@@ -856,17 +797,14 @@ def detect_with_clip(image: Image.Image) -> Dict[str, Any]:
             "a photo of a simcoe", "a photo of an amarillo", "a photo of a citra", "a photo of a mosaic",
             "a photo of a galaxy", "a photo of a vic secret", "a photo of an idaho 7", "a photo of a strata",
             "a photo of a sabro", "a photo of a triumph", "a photo of a perle", "a photo of a hallertau",
-            "a photo of a saaz", "a photo of a fuggle", "a photo of a blueberry", "a photo of a raspberry",
-            "a photo of food", "a photo of a meal", "a photo of a dish", "a photo of cuisine",
-            "a photo of an ingredient", "a photo of a vegetable", "a photo of a fruit", "a photo of meat",
-            "a photo of protein", "a photo of a grain", "a photo of dairy"
+            "a photo of a saaz", "a photo of a fuggle", "a photo of a blueberry", "a photo of a raspberry"
         ]
         
         # Process image
         image_inputs = processor(images=image, return_tensors="pt")
         
         # Process text prompts in batches
-        batch_size = 32  # Increased from 20 to 32
+        batch_size = 32
         for i in range(0, len(food_prompts), batch_size):
             batch_prompts = food_prompts[i:i + batch_size]
             text_inputs = processor(text=batch_prompts, return_tensors="pt", padding=True, truncation=True)
@@ -884,13 +822,13 @@ def detect_with_clip(image: Image.Image) -> Dict[str, Any]:
                 similarity_scores = (100.0 * image_features @ text_features.T).softmax(dim=-1)
                 
                 # Get top predictions
-                top_scores, top_indices = torch.topk(similarity_scores, 3)  # Increased from 3 to 5
+                top_scores, top_indices = torch.topk(similarity_scores, 3)
                 
                 for j, (score, idx) in enumerate(zip(top_scores[0], top_indices[0])):
                     confidence = score.item()
                     
-                    # Lower threshold for better detection
-                    if confidence > 0.1:  # Reduced from 0.15 to 0.1
+                    # Higher threshold for accurate detection
+                    if confidence > 0.2:  # Increased threshold for accuracy
                         prompt = batch_prompts[idx]
                         
                         # Extract food name from prompt
@@ -909,24 +847,8 @@ def detect_with_clip(image: Image.Image) -> Dict[str, Any]:
                             confidence_scores[normalized_name] = confidence
                             print(f"CLIP updated: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
         
-        # Enhanced post-processing for better detection
-        if len(detected_foods) < 5:  # Increased threshold for context detection
-            additional_foods = detect_additional_foods_from_context(detected_foods, image)
-            for food_name, confidence in additional_foods.items():
-                if food_name not in detected_foods:
-                    detected_foods.append(food_name)
-                    confidence_scores[food_name] = confidence * 0.6
-                    print(f"CLIP context detected: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        # If still no detections, add some generic food items
-        if len(detected_foods) == 0:
-            suggested_foods = analyze_image_for_food_suggestions(image)
-            for food_name, confidence in suggested_foods.items():
-                detected_foods.append(food_name)
-                confidence_scores[food_name] = confidence * 0.5
-                print(f"CLIP suggested: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        print(f"Enhanced CLIP total detections: {len(detected_foods)}", file=sys.stderr)
+        # No fallback suggestions - only return what was actually detected
+        print(f"Accurate CLIP total detections: {len(detected_foods)}", file=sys.stderr)
         
         return {
             "success": True,
@@ -935,67 +857,16 @@ def detect_with_clip(image: Image.Image) -> Dict[str, Any]:
             "model_info": {
                 "model_type": "clip",
                 "detection_count": len(detected_foods),
-                "confidence_threshold": 0.1,
-                "detection_method": "enhanced_essential_prompts"
+                "confidence_threshold": 0.2,
+                "detection_method": "accurate_strict_mapping"
             }
         }
         
     except Exception as e:
-        print(f"Enhanced CLIP detection error: {str(e)}", file=sys.stderr)
-        return {"success": False, "error": f"Enhanced CLIP detection error: {str(e)}"}
+        print(f"Accurate CLIP detection error: {str(e)}", file=sys.stderr)
+        return {"success": False, "error": f"Accurate CLIP detection error: {str(e)}"}
 
-def analyze_image_for_food_suggestions(image: Image.Image) -> Dict[str, float]:
-    """Analyze image characteristics to suggest food items"""
-    suggestions = {}
-    
-    try:
-        # Convert to numpy array for analysis
-        img_array = np.array(image)
-        
-        # Analyze color distribution
-        avg_color = np.mean(img_array, axis=(0, 1))
-        r, g, b = avg_color
-        
-        # Analyze brightness
-        brightness = np.mean(img_array)
-        
-        # Analyze color variance (indicates variety of foods)
-        color_variance = np.var(img_array)
-        
-        # Suggest foods based on color analysis
-        if r > 150 and g > 100 and b < 100:  # Reddish/orange
-            suggestions['tomato'] = 0.3
-            suggestions['carrot'] = 0.3
-            suggestions['red_pepper'] = 0.2
-        
-        if g > 120 and r < 100 and b < 100:  # Greenish
-            suggestions['lettuce'] = 0.3
-            suggestions['broccoli'] = 0.3
-            suggestions['spinach'] = 0.2
-        
-        if r > 200 and g > 180 and b > 150:  # Light/cream
-            suggestions['bread'] = 0.3
-            suggestions['rice'] = 0.3
-            suggestions['pasta'] = 0.2
-        
-        if brightness > 150:  # Bright image
-            suggestions['salad'] = 0.2
-            suggestions['vegetables'] = 0.2
-        
-        if color_variance > 5000:  # High color variety
-            suggestions['mixed_food'] = 0.3
-            suggestions['meal'] = 0.2
-        
-        # Always suggest some common items
-        if len(suggestions) == 0:
-            suggestions['food'] = 0.2
-            suggestions['meal'] = 0.2
-        
-    except Exception as e:
-        print(f"Image analysis error: {str(e)}", file=sys.stderr)
-        suggestions['food'] = 0.2
-    
-    return suggestions
+# Removed image analysis suggestions to prevent false positives
 
 def main():
     """Main function to handle detection requests"""
