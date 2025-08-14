@@ -121,6 +121,7 @@ const History: React.FC = () => {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedAnalyses, setSelectedAnalyses] = useState<number[]>([]);
+  const [selectedAnalysisDetail, setSelectedAnalysisDetail] = useState<any>(null);
 
   // Filter and sort analyses
   const filteredAnalyses = mockHistoryData.analyses
@@ -177,6 +178,11 @@ const History: React.FC = () => {
         ? prev.filter(item => item !== id)
         : [...prev, id]
     );
+  };
+
+  // Handle analysis detail view
+  const handleViewAnalysis = (analysis: any) => {
+    setSelectedAnalysisDetail(analysis);
   };
 
   // Handle bulk actions
@@ -421,7 +427,7 @@ const History: React.FC = () => {
                 </div>
                 
                 <div className="item-actions">
-                  <button className="action-btn view" title="View Details">
+                  <button className="action-btn view" title="View Details" onClick={() => handleViewAnalysis(analysis)}>
                     <Eye size={16} />
                   </button>
                   <button className="action-btn export" title="Export Analysis">
@@ -454,6 +460,56 @@ const History: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Selected Analysis Detail Panel */}
+        {selectedAnalysisDetail && (
+          <div className="selected-analysis">
+            <h3>
+              {selectedAnalysisDetail.foods.slice(0, 2).join(', ')}
+              {selectedAnalysisDetail.foods.length > 2 && ` +${selectedAnalysisDetail.foods.length - 2} more`}
+            </h3>
+            
+            <div className="analysis-meta">
+              <div className="meta-item">
+                <Calendar size={16} />
+                {new Date(selectedAnalysisDetail.date).toLocaleDateString()}
+              </div>
+              <div className="meta-item">
+                <Clock size={16} />
+                {selectedAnalysisDetail.time}
+              </div>
+              <div className="meta-item">
+                <Target size={16} />
+                {selectedAnalysisDetail.confidence}% confidence
+              </div>
+            </div>
+            
+            <div className="nutrition-summary">
+              <div className="nutrition-item">
+                <Zap size={16} />
+                {selectedAnalysisDetail.totalCalories} cal
+              </div>
+              <div className="nutrition-item">
+                <Apple size={16} />
+                P: {selectedAnalysisDetail.protein}g
+              </div>
+              <div className="nutrition-item">
+                <BarChart3 size={16} />
+                C: {selectedAnalysisDetail.carbs}g
+              </div>
+              <div className="nutrition-item">
+                <TrendingUp size={16} />
+                F: {selectedAnalysisDetail.fats}g
+              </div>
+            </div>
+            
+            <div className="food-tags">
+              {selectedAnalysisDetail.foods.map((food: string, index: number) => (
+                <span key={index} className="food-tag">{food}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Results Summary */}
         {filteredAnalyses.length > 0 && (
