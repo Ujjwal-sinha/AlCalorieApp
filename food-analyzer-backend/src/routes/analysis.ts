@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { FoodDetectionService } from '../services/FoodDetectionService';
-import { validateAnalysisRequest } from '../middleware/validation';
+// import { validateAnalysisRequest } from '../middleware/validation';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { config } from '../config';
 
@@ -155,7 +155,7 @@ router.post('/batch',
     try {
       const results = await Promise.allSettled(
         files.map(async (file, index) => {
-          const processedImage = await foodDetectionService.processImage(file.buffer);
+          // const processedImage = await foodDetectionService.processImage(file.buffer);
           
           const result = await foodDetectionService.performExpertAnalysis({
             image: file

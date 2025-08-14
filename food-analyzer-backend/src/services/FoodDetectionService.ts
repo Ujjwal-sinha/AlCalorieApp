@@ -17,6 +17,7 @@ interface PythonModelResponse {
   error?: string;
 }
 
+/*
 interface ExpertAnalysisResult {
   success: boolean;
   description: string;
@@ -42,6 +43,7 @@ interface ExpertAnalysisResult {
   insights: string[];
   sessionId: string;
 }
+*/
 
 export class FoodDetectionService {
   private static instance: FoodDetectionService;
@@ -98,39 +100,13 @@ export class FoodDetectionService {
         height: 1024
       };
 
-      // Check if external Python service is configured
-      const pythonServiceUrl = process.env['PYTHON_SERVICE_URL'];
-      
-      if (pythonServiceUrl) {
-        // Use external Python service
-        console.log(`Using external Python service for ${modelType} detection`);
-        const response = await fetch(`${pythonServiceUrl}/detect`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(inputData),
-        });
+      // Always use local Python process for development
+      console.log(`Using local Python process for ${modelType} detection`);
+      const pythonProcess = spawn('python3', ['python_models/detect_food.py'], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
 
-        if (!response.ok) {
-          throw new Error(`External Python service failed: ${response.status} ${response.statusText}`);
-        }
-
-        const result = await response.json() as PythonModelResponse;
-        console.log(`${modelType.toUpperCase()} detection result (external):`, {
-          success: result.success,
-          detection_count: result.model_info?.detection_count || 0,
-          detected_foods: result.detected_foods?.length || 0
-        });
-        return result;
-      } else {
-        // Use local Python process
-        console.log(`Using local Python process for ${modelType} detection`);
-        const pythonProcess = spawn('python3', ['python_models/detect_food.py'], {
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
-
-        return new Promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
           let stdout = '';
           let stderr = '';
 
@@ -169,7 +145,6 @@ export class FoodDetectionService {
           pythonProcess.stdin.write(JSON.stringify(inputData));
           pythonProcess.stdin.end();
         });
-      }
     } catch (error) {
       console.error(`Error calling Python ${modelType} detection:`, error);
       throw error;
@@ -251,6 +226,7 @@ export class FoodDetectionService {
     }
   }
 
+  /*
   private async detectWithLLM(image: ProcessedImage): Promise<{ foods: string[], confidence: number }> {
     try {
       const result = await this.callPythonDetection('llm', image.buffer);
@@ -269,6 +245,7 @@ export class FoodDetectionService {
     // Return empty result instead of simulation
     return { foods: [], confidence: 0 };
   }
+  */
 
   // Expert Analysis Implementation
   async performExpertAnalysis(request: { image: Express.Multer.File }): Promise<AnalysisResult> {
@@ -369,7 +346,7 @@ export class FoodDetectionService {
       
       const nutritionResults = await Promise.allSettled(nutritionPromises);
       const nutritionData = nutritionResults
-        .map((result, index) => result.status === 'fulfilled' ? result.value : null)
+        .map((result) => result.status === 'fulfilled' ? result.value : null)
         .filter(Boolean);
 
       // Calculate total nutrition
@@ -437,6 +414,7 @@ export class FoodDetectionService {
     }
   }
 
+  /*
   private normalizeFoodName(foodName: string): string {
     return foodName.toLowerCase()
       .replace(/[^\w\s]/g, '')
@@ -445,6 +423,7 @@ export class FoodDetectionService {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
+  */
 
   private applyExpertFiltering(allDetections: Map<string, { count: number, totalConfidence: number, methods: string[] }>): Array<{ name: string, confidence: number, methods: string[] }> {
     const minConfidence = 0.08; // Much lower threshold for better detection
@@ -478,83 +457,9 @@ export class FoodDetectionService {
       .slice(0, 20); // Increased from 15 to 20 for more comprehensive results
   }
 
-  private async generateExpertAnalysis(foods: Array<{ name: string, confidence: number, methods: string[] }>, context: string): Promise<string> {
-    if (foods.length === 0) {
-      return "No food items detected with sufficient confidence. Please try with a clearer image or different angle.";
-    }
 
-    const foodList = foods.map(f => `${f.name} (${Math.round(f.confidence * 100)}% confidence via ${f.methods.join(', ')})`).join('\n- ');
 
-    let analysis = `## COMPREHENSIVE FOOD ANALYSIS
 
-### IDENTIFIED FOOD ITEMS:
-- ${foodList}
-
-### DETECTION METHODOLOGY:
-This analysis used an expert ensemble of ${foods.length} AI models:
-${foods.map(f => `- ${f.name}: Detected by ${f.methods.join(', ')} with ${Math.round(f.confidence * 100)}% confidence`).join('\n')}
-
-### MEAL COMPOSITION ANALYSIS:
-- **Detection Quality**: ${this.assessDetectionQuality(foods)}
-- **Confidence Level**: ${this.assessConfidenceLevel(foods)}
-- **Model Agreement**: ${this.assessModelAgreement(foods)}
-
-### EXPERT INSIGHTS:
-${this.generateExpertInsights(foods)}
-
-### RECOMMENDATIONS:
-1. **Verification**: Review detected items for accuracy
-2. **Portion Estimation**: Consider visual cues for serving sizes
-3. **Nutritional Context**: Use this analysis as a starting point for detailed nutrition tracking
-
-${context ? `\n### CONTEXT NOTES:\n${context}` : ''}`;
-
-    return analysis;
-  }
-
-  private assessDetectionQuality(foods: Array<{ name: string, confidence: number, methods: string[] }>): string {
-    const avgConfidence = foods.reduce((sum, f) => sum + f.confidence, 0) / foods.length;
-    if (avgConfidence >= 0.8) return "Excellent - High confidence detections";
-    if (avgConfidence >= 0.6) return "Good - Reliable detections";
-    if (avgConfidence >= 0.4) return "Fair - Moderate confidence";
-    return "Limited - Low confidence detections";
-  }
-
-  private assessConfidenceLevel(foods: Array<{ name: string, confidence: number, methods: string[] }>): string {
-    const highConfidence = foods.filter(f => f.confidence >= 0.7).length;
-    const total = foods.length;
-    const percentage = (highConfidence / total) * 100;
-    return `${percentage.toFixed(0)}% high confidence (${highConfidence}/${total} items)`;
-  }
-
-  private assessModelAgreement(foods: Array<{ name: string, confidence: number, methods: string[] }>): string {
-    const multiModelDetections = foods.filter(f => f.methods.length > 1).length;
-    const total = foods.length;
-    const percentage = (multiModelDetections / total) * 100;
-    return `${percentage.toFixed(0)}% detected by multiple models (${multiModelDetections}/${total} items)`;
-  }
-
-  private generateExpertInsights(foods: Array<{ name: string, confidence: number, methods: string[] }>): string {
-    const insights = [];
-    
-    if (foods.length === 0) {
-      insights.push("No food items were detected with sufficient confidence.");
-    } else {
-      insights.push(`Successfully identified ${foods.length} food items using expert AI ensemble.`);
-      
-      const highConfidenceCount = foods.filter(f => f.confidence >= 0.7).length;
-      if (highConfidenceCount > 0) {
-        insights.push(`${highConfidenceCount} items detected with high confidence (≥70%).`);
-      }
-      
-      const multiModelCount = foods.filter(f => f.methods.length > 1).length;
-      if (multiModelCount > 0) {
-        insights.push(`${multiModelCount} items confirmed by multiple AI models for enhanced accuracy.`);
-      }
-    }
-    
-    return insights.join('\n');
-  }
 
   private generateInsights(filteredFoods: Array<{ name: string, confidence: number, methods: string[] }>, 
                           modelPerformance: { [key: string]: { success: boolean, detection_count: number, error?: string } },
