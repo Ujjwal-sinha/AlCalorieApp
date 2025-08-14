@@ -7,7 +7,7 @@ export const APP_CONFIG = {
   // API Configuration
   api: {
     baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
-    timeout: 30000,
+    timeout: 45000, // Increased from 30000 to 45000 (45 seconds)
     retries: 3,
     retryDelay: 1000,
   },
@@ -29,14 +29,14 @@ export const APP_CONFIG = {
     supportedImageTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
     maxHistoryEntries: 100,
     defaultChartColors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#F9CA24', '#6C5CE7'],
-    uploadTimeout: 30000, // 30 seconds
+    uploadTimeout: 45000, // Increased from 30000 to 45000 (45 seconds)
   },
   
   // Analysis Configuration
   analysis: {
     confidenceThreshold: 0.3,
     ensembleThreshold: 0.6,
-    maxDetectionTime: 15000, // 15 seconds
+    maxDetectionTime: 30000, // Increased from 15000 to 30000 (30 seconds)
     fallbackEnabled: true,
     enableProgressTracking: true,
   },

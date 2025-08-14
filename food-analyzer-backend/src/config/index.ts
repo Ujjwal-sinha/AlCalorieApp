@@ -76,7 +76,7 @@ export const config = {
   detection: {
     confidence_threshold: 0.3,
     ensemble_threshold: 0.6,
-    max_detection_time: 15000, // 15 seconds
+    max_detection_time: 30000, // 30 seconds (increased from 15)
     fallback_enabled: true,
     use_ensemble: true
   },
