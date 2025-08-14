@@ -329,21 +329,21 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
               <div className="nutrition-content">
                   <span className="value">{safeNutritionData.total_calories}</span>
                   <span className="label">Calories</span>
-                </div>
+              </div>
             </div>
             <div className="nutrition-item">
               <Apple size={20} />
               <div className="nutrition-content">
                   <span className="value">{safeNutritionData.total_protein}g</span>
                   <span className="label">Protein</span>
-                </div>
+              </div>
             </div>
             <div className="nutrition-item">
               <BarChart3 size={20} />
               <div className="nutrition-content">
                   <span className="value">{safeNutritionData.total_carbs}g</span>
                   <span className="label">Carbs</span>
-                </div>
+              </div>
             </div>
             <div className="nutrition-item">
               <TrendingUp size={20} />
