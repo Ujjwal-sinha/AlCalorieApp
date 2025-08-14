@@ -102,10 +102,10 @@ def load_model(model_type: str) -> Optional[Any]:
     
     try:
         if model_type == 'yolo' and YOLO_AVAILABLE:
-            print(f"Loading YOLO11n model...", file=sys.stderr)
-            model = YOLO('yolo11n.pt')
+            print(f"Loading YOLO11m model...", file=sys.stderr)
+            model = YOLO('yolo11m.pt')
             MODEL_CACHE[model_type] = model
-            print(f"YOLO11n model loaded successfully", file=sys.stderr)
+            print(f"YOLO11m model loaded successfully", file=sys.stderr)
             return model
             
         elif model_type == 'vit' and TRANSFORMERS_AVAILABLE:

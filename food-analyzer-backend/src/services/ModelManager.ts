@@ -125,7 +125,7 @@ export class ModelManager {
       type: 'detection',
       loaded: true,
       config: {
-        model_path: 'yolo11n.pt',
+        model_path: 'yolo11m.pt',
         confidence_threshold: 0.25
       }
     });
