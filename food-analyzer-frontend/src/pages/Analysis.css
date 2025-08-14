@@ -130,7 +130,30 @@
 
 .features-section {
   margin-bottom: 48px;
-  animation: fadeIn 1s ease-out 0.6s both;
+  animation: fadeIn 1s ease-out 0.9s both;
+}
+
+.features-header {
+  text-align: center;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.features-header h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 12px;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.features-header p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
 
 @keyframes fadeIn {
@@ -228,7 +251,7 @@
 
 .analysis-main {
   margin-bottom: 48px;
-  animation: fadeIn 1s ease-out 0.9s both;
+  animation: fadeIn 1s ease-out 0.3s both;
 }
 
 .upload-section,
