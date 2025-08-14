@@ -6,7 +6,7 @@ export const APP_CONFIG = {
   
   // API Configuration
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+    baseUrl: import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:8000/api'),
     timeout: 45000, // Increased from 30000 to 45000 (45 seconds)
     retries: 3,
     retryDelay: 1000,

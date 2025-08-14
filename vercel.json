@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "food-analyzer-backend/dist/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 60
+      }
+    },
+    {
+      "src": "food-analyzer-frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "food-analyzer-frontend/dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "food-analyzer-backend/dist/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "food-analyzer-frontend/dist/$1"
+    }
+  ],
+  "functions": {
+    "food-analyzer-backend/dist/server.js": {
+      "maxDuration": 60
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

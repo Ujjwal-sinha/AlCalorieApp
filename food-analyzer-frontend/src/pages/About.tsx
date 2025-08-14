@@ -147,15 +147,15 @@ const About: React.FC = () => {
           <h2>Get in Touch</h2>
           <p>Have questions or suggestions? We'd love to hear from you!</p>
           <div className="contact-grid">
-            <a href="mailto:contact@aicalorieanalyzer.com" className="contact-item">
+            <a href="mailto:ujjwalsinha418@gmail.com" className="contact-item">
               <Mail size={24} />
               <span>Email Us</span>
             </a>
-            <a href="https://github.com/aicalorieanalyzer" className="contact-item">
+            <a href="https://github.com/Ujjwal-sinha/AlCalorieApp" className="contact-item">
               <Github size={24} />
               <span>GitHub</span>
             </a>
-            <a href="https://aicalorieanalyzer.com" className="contact-item">
+            <a href="https://caloriealtrackerbyujjwalsinha.streamlit.app" className="contact-item">
               <Globe size={24} />
               <span>Website</span>
             </a>
