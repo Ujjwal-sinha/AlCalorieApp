@@ -6,7 +6,11 @@ import {
   Clock,
   ArrowLeft,
   Sparkles,
-  Zap
+  Zap,
+  Upload,
+  Image as ImageIcon,
+  CheckCircle,
+  Target
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
@@ -19,34 +23,46 @@ const Analysis: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeStep, setActiveStep] = useState<'upload' | 'analyzing' | 'results'>('upload');
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
 
-  const handleAnalysisComplete = (result: AnalysisResult) => {
+  const handleAnalysisComplete = (result: AnalysisResult, imageFile?: File) => {
     setAnalysisResult(result);
     setActiveStep('results');
     setIsAnalyzing(false);
+    if (imageFile) {
+      const url = URL.createObjectURL(imageFile);
+      setUploadedImageUrl(url);
+    }
   };
 
   const resetAnalysis = () => {
     setAnalysisResult(null);
     setActiveStep('upload');
     setIsAnalyzing(false);
+    if (uploadedImageUrl) {
+      URL.revokeObjectURL(uploadedImageUrl);
+      setUploadedImageUrl(null);
+    }
   };
 
   const features = [
     {
       icon: <Brain size={24} />,
       title: "AI-Powered Detection",
-      description: "Advanced computer vision with multiple AI models"
+      description: "Advanced computer vision with multiple AI models",
+      color: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
     },
     {
       icon: <Zap size={24} />,
       title: "Real-time Analysis",
-      description: "Get results in seconds with expert ensemble detection"
+      description: "Get results in seconds with expert ensemble detection",
+      color: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
     },
     {
       icon: <BarChart3 size={24} />,
       title: "Detailed Nutrition",
-      description: "Comprehensive macro and micronutrient breakdown"
+      description: "Comprehensive macro and micronutrient breakdown",
+      color: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
     }
   ];
 
@@ -62,6 +78,10 @@ const Analysis: React.FC = () => {
             Back to Dashboard
           </Link>
           <div className="header-content">
+            <div className="header-badge">
+              <Sparkles size={20} />
+              <span>AI-Powered Analysis</span>
+            </div>
             <h1>Food Analysis</h1>
             <p>Upload a photo of your meal for instant AI-powered nutritional analysis</p>
           </div>
@@ -72,7 +92,7 @@ const Analysis: React.FC = () => {
           <div className="features-grid">
             {features.map((feature, index) => (
               <div key={index} className="feature-card">
-                <div className="feature-icon">
+                <div className="feature-icon" style={{ background: feature.color }}>
                   {feature.icon}
                 </div>
                 <h3>{feature.title}</h3>
@@ -87,8 +107,11 @@ const Analysis: React.FC = () => {
           {activeStep === 'upload' && (
             <div className="upload-section">
               <div className="upload-header">
+                <div className="upload-icon">
+                  <ImageIcon size={32} />
+                </div>
                 <h2>Upload Your Food Image</h2>
-                <p>Take a photo or upload an image to get started</p>
+                <p>Take a photo or upload an image to get started with AI analysis</p>
               </div>
               <ImageUpload
                 onAnalysisComplete={handleAnalysisComplete}
@@ -133,13 +156,40 @@ const Analysis: React.FC = () => {
           {activeStep === 'results' && analysisResult && (
             <div className="results-section">
               <div className="results-header">
-                <h2>Analysis Complete</h2>
+                <div className="results-title">
+                  <CheckCircle size={24} />
+                  <h2>Analysis Complete</h2>
+                </div>
                 <button onClick={resetAnalysis} className="btn btn-secondary">
                   <Camera size={20} />
                   New Analysis
                 </button>
               </div>
-              <AnalysisResults result={analysisResult} />
+              
+              <div className="results-layout">
+                {/* Image Display */}
+                {uploadedImageUrl && (
+                  <div className="image-display-section">
+                    <h3>Analyzed Image</h3>
+                    <div className="image-container">
+                      <img 
+                        src={uploadedImageUrl} 
+                        alt="Analyzed food" 
+                        className="analyzed-image"
+                      />
+                      <div className="image-overlay">
+                        <Target size={24} />
+                        <span>AI Analyzed</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Analysis Results */}
+                <div className="results-content-section">
+                  <AnalysisResults result={analysisResult} />
+                </div>
+              </div>
             </div>
           )}
         </div>

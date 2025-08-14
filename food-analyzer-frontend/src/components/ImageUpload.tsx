@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Camera, Loader2, X } from 'lucide-react';
+import { Upload, Camera, Loader2, X, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { AnalysisService } from '../services/AnalysisService';
 import type { AnalysisResult } from '../types';
+import './ImageUpload.css';
 
 interface ImageUploadProps {
   onAnalysisComplete: (result: AnalysisResult, imageFile?: File) => void;
@@ -62,7 +63,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       setIsAnalyzing(false);
     }
   }; 
- const clearImage = () => {
+
+  const clearImage = () => {
     setSelectedFile(null);
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -74,10 +76,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   return (
-    <div className="image-upload">
-      <div className="upload-section">
-        <h2>Upload Food Image</h2>
-        <p>Upload a clear image of your food for AI-powered nutritional analysis</p>
+    <div className="image-upload-container">
+      <div className="upload-frame">
+        <div className="upload-header-section">
+          <div className="upload-icon-wrapper">
+            <ImageIcon size={32} />
+          </div>
+          <h3>Upload Your Food Image</h3>
+          <p>Drag & drop or click to select an image</p>
+        </div>
 
         <div
           className={`upload-area ${dragActive ? 'drag-active' : ''} ${selectedFile ? 'has-file' : ''}`}
@@ -90,22 +97,42 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           {previewUrl ? (
             <div className="preview-container">
               <img src={previewUrl} alt="Food preview" className="preview-image" />
-              <button
-                className="clear-button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  clearImage();
-                }}
-              >
-                <X size={20} />
-              </button>
+              <div className="preview-overlay">
+                <button
+                  className="clear-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearImage();
+                  }}
+                >
+                  <X size={20} />
+                </button>
+                <div className="preview-badge">
+                  <Sparkles size={16} />
+                  <span>Ready for Analysis</span>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="upload-placeholder">
-              <Upload size={48} />
-              <h3>Drop your food image here</h3>
+              <div className="upload-icon-large">
+                <Upload size={64} />
+              </div>
+              <h4>Drop your food image here</h4>
               <p>or click to browse files</p>
-              <span className="file-types">Supports: PNG, JPG, JPEG</span>
+              <div className="file-types">
+                <span>Supports: PNG, JPG, JPEG</span>
+              </div>
+              <div className="upload-tips">
+                <div className="tip">
+                  <Camera size={16} />
+                  <span>Good lighting recommended</span>
+                </div>
+                <div className="tip">
+                  <ImageIcon size={16} />
+                  <span>Clear, focused images work best</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -120,7 +147,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       </div>
 
       <div className="context-section">
-        <h3>Additional Context (Optional)</h3>
+        <div className="context-header">
+          <h4>Additional Context (Optional)</h4>
+          <p>Help improve analysis accuracy</p>
+        </div>
         <textarea
           value={context}
           onChange={(e) => setContext(e.target.value)}
@@ -132,14 +162,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
       <div className="action-section">
         <button
-          className="analyze-button"
+          className={`analyze-button ${!selectedFile ? 'disabled' : ''} ${isAnalyzing ? 'analyzing' : ''}`}
           onClick={handleAnalyze}
           disabled={!selectedFile || isAnalyzing}
         >
           {isAnalyzing ? (
             <>
               <Loader2 className="spinner" size={20} />
-              Analyzing...
+              Analyzing with AI...
             </>
           ) : (
             <>
@@ -148,6 +178,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             </>
           )}
         </button>
+        
+        {selectedFile && (
+          <div className="file-info">
+            <div className="file-details">
+              <span className="file-name">{selectedFile.name}</span>
+              <span className="file-size">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

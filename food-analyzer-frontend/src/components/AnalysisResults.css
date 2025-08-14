@@ -1,12 +1,12 @@
-/* Analysis Results Styles - Light Theme */
+/* Analysis Results Styles - Modern Design */
 .analysis-results {
-  background: rgba(255, 255, 255, 0.9);
-  border: 2px solid rgba(76, 175, 80, 0.2);
-  border-radius: 18px;
-  padding: 24px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.12);
-  margin-top: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  backdrop-filter: none;
+  box-shadow: none;
+  margin-top: 0;
 }
 
 .results-header {
@@ -28,12 +28,14 @@
   background: rgba(76, 175, 80, 0.1);
   color: #4caf50;
   border: 2px solid rgba(76, 175, 80, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .status-indicator.error {
   background: rgba(244, 67, 54, 0.1);
   color: #f44336;
   border: 2px solid rgba(244, 67, 54, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .results-content {
@@ -101,10 +103,12 @@
 
 /* Nutrition Summary */
 .nutrition-summary {
-  background: rgba(76, 175, 80, 0.05);
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: 12px;
-  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
 }
 
 .nutrition-summary h3 {
@@ -125,20 +129,21 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 16px;
   background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: 8px;
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-radius: 12px;
   transition: all 0.3s ease;
 }
 
 .nutrition-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
 }
 
 .nutrition-item svg {
-  color: #4caf50;
+  color: #667eea;
   flex-shrink: 0;
 }
 
@@ -162,10 +167,12 @@
 
 /* Detected Foods */
 .detected-foods {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: 12px;
-  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
 }
 
 .detected-foods h3 {
@@ -182,27 +189,30 @@
 }
 
 .detected-food-tag {
-  padding: 6px 12px;
-  background: rgba(76, 175, 80, 0.15);
-  border: 1px solid rgba(76, 175, 80, 0.3);
+  padding: 8px 16px;
+  background: rgba(102, 126, 234, 0.15);
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 20px;
-  color: #4caf50;
+  color: #667eea;
   font-size: 0.9rem;
   font-weight: 600;
   transition: all 0.3s ease;
 }
 
 .detected-food-tag:hover {
-  background: rgba(76, 175, 80, 0.25);
-  transform: translateY(-1px);
+  background: rgba(102, 126, 234, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
 /* Expert Details */
 .expert-details {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: 12px;
-  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
 }
 
 .expert-details h3 {
@@ -216,8 +226,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(76, 175, 80, 0.1);
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .detail-item:last-child {
@@ -225,7 +235,7 @@
 }
 
 .detail-item svg {
-  color: #4caf50;
+  color: #667eea;
   flex-shrink: 0;
 }
 
@@ -243,17 +253,20 @@
 .session-id {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.9rem;
-  background: rgba(76, 175, 80, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 /* Insights Section */
 .insights-section {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: 12px;
-  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
 }
 
 .insights-section h3 {
@@ -276,26 +289,27 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px;
-  background: rgba(76, 175, 80, 0.05);
-  border: 1px solid rgba(76, 175, 80, 0.1);
-  border-radius: 8px;
+  padding: 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-radius: 12px;
   transition: all 0.3s ease;
 }
 
 .insight-item:hover {
-  background: rgba(76, 175, 80, 0.1);
+  background: rgba(102, 126, 234, 0.1);
   transform: translateX(4px);
+  border-color: rgba(102, 126, 234, 0.3);
 }
 
 .insight-item svg {
-  color: #4caf50;
+  color: #667eea;
   flex-shrink: 0;
   margin-top: 2px;
 }
 
 .insight-bullet {
-  color: #4caf50;
+  color: #667eea;
   font-weight: bold;
   font-size: 1.2rem;
 }
@@ -308,10 +322,12 @@
 
 /* Detailed Analysis */
 .detailed-analysis {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: 12px;
-  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
 }
 
 .detailed-analysis h3 {
