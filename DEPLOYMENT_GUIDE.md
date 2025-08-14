@@ -18,6 +18,8 @@ AlCalorieApp/
 ├── package.json                # Root package.json for monorepo
 ├── food-analyzer-frontend/     # React frontend
 ├── food-analyzer-backend/      # Node.js backend
+├── AlCalorieApp-Cloud/         # Streamlit cloud app
+├── calarieapp/                 # Additional app components
 └── DEPLOYMENT_GUIDE.md         # This guide
 ```
 
