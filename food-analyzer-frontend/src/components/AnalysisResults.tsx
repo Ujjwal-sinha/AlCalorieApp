@@ -9,16 +9,23 @@ import {
   Apple,
   BarChart3,
   TrendingUp,
-  Target
+  Target,
+  RefreshCw
 } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 import './AnalysisResults.css';
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
+  onReAnalyze?: () => void;
+  isReAnalyzing?: boolean;
 }
 
-const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
+const AnalysisResults: React.FC<AnalysisResultsProps> = ({ 
+  result, 
+  onReAnalyze, 
+  isReAnalyzing = false 
+}) => {
   // Handle case where no food is detected
   if (!result.success) {
     return (
@@ -28,6 +35,16 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
             <AlertCircle size={24} />
             <span>Analysis Complete</span>
           </div>
+          {onReAnalyze && (
+            <button 
+              onClick={onReAnalyze} 
+              disabled={isReAnalyzing}
+              className="re-analyze-btn"
+            >
+              <RefreshCw size={16} className={isReAnalyzing ? 'spinning' : ''} />
+              {isReAnalyzing ? 'Re-analyzing...' : 'Re-analyze'}
+            </button>
+          )}
         </div>
 
         <div className="results-content">
@@ -84,6 +101,16 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
           <CheckCircle size={24} />
           <span>Expert Analysis Complete</span>
         </div>
+        {onReAnalyze && (
+          <button 
+            onClick={onReAnalyze} 
+            disabled={isReAnalyzing}
+            className="re-analyze-btn"
+          >
+            <RefreshCw size={16} className={isReAnalyzing ? 'spinning' : ''} />
+            {isReAnalyzing ? 'Re-analyzing...' : 'Re-analyze'}
+          </button>
+        )}
       </div>
 
       <div className="results-content">
