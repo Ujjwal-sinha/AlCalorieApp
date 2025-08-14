@@ -344,7 +344,7 @@ export class FoodDetectionService {
         .filter(Boolean);
 
       // Calculate total nutrition
-      const totalNutrition = this.nutritionService.calculateNutrition(
+      const totalNutrition = await this.nutritionService.calculateNutrition(
         filteredFoods.map(food => food.name)
       );
 
