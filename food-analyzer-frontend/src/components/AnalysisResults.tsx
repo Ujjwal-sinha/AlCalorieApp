@@ -13,9 +13,8 @@ import {
   RefreshCw,
   Globe,
   Activity,
-  PieChart,
   BarChart,
-  TrendingDown
+  
 } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 import './AnalysisResults.css';

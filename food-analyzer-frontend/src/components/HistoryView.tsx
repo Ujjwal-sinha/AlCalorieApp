@@ -64,7 +64,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ history, onSelectEntry }) => 
                 
                 <h3 className="description">{entry.analysis_result.description}</h3>
                 
-                {entry.analysis_result.success && (
+                {entry.analysis_result.success && entry.analysis_result.nutritional_data && (
                   <div className="nutrition-summary">
                     <div className="nutrition-item">
                       <span className="label">Calories:</span>

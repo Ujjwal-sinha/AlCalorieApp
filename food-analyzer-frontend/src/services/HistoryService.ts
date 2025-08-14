@@ -79,10 +79,12 @@ export class HistoryService {
 
       dayEntries.forEach(entry => {
         const nutrition = entry.analysis_result.nutritional_data;
-        totalCalories += nutrition.total_calories;
-        totalProtein += nutrition.total_protein;
-        totalCarbs += nutrition.total_carbs;
-        totalFats += nutrition.total_fats;
+        if (nutrition) {
+          totalCalories += nutrition.total_calories;
+          totalProtein += nutrition.total_protein;
+          totalCarbs += nutrition.total_carbs;
+          totalFats += nutrition.total_fats;
+        }
       });
 
       trends.push({
@@ -114,11 +116,13 @@ export class HistoryService {
 
     history.forEach(entry => {
       const nutrition = entry.analysis_result.nutritional_data;
-      totalCalories += nutrition.total_calories;
+      if (nutrition) {
+        totalCalories += nutrition.total_calories;
 
-      nutrition.items.forEach(item => {
-        foodCounts[item.name] = (foodCounts[item.name] || 0) + 1;
-      });
+        nutrition.items.forEach(item => {
+          foodCounts[item.name] = (foodCounts[item.name] || 0) + 1;
+        });
+      }
     });
 
     const mostCommonFood = Object.entries(foodCounts)

@@ -7,7 +7,7 @@ import {
   Zap, 
   ArrowRight, 
   Play,
-  CheckCircle,
+
   TrendingUp,
   Heart,
   Users,
@@ -20,19 +20,16 @@ import {
   Award,
   Globe,
   Lock,
-  Eye,
+
   Activity,
   PieChart,
-  Calendar,
+
   ChevronRight,
   ChevronLeft,
   Quote,
-  Download,
-  Upload,
-  Settings,
+
   Database,
   Cpu,
-  Wifi,
   Smartphone as Phone,
   Monitor,
   Tablet

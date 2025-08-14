@@ -132,9 +132,7 @@ export class FoodDetectionService {
             items: []
           },
           confidence_scores: result.confidence_scores,
-          food_details: result.food_details,
-          detection_methods: result.detection_methods,
-          image_analysis: result.image_analysis
+          detection_methods: result.detection_methods
         };
       } else {
         throw new Error(result.error || `${modelType} analysis failed`);

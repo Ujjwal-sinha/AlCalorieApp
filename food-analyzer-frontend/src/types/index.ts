@@ -38,6 +38,9 @@ export interface AnalysisResult {
   };
   detected_foods?: string[];
   confidence?: number;
+  confidence_scores?: { [key: string]: number };
+  food_details?: any;
+  image_analysis?: any;
   processing_time?: number;
   model_used?: string;
   sessionId?: string;

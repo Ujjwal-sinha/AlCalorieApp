@@ -4,8 +4,7 @@ import {
   BarChart3, 
   Calendar,
   Target,
-  Activity,
-  Apple,
+ 
   Zap,
   ArrowUp,
   ArrowDown,
@@ -14,14 +13,12 @@ import {
   TrendingUp,
   TrendingDown,
   Clock,
-  Users,
+
   Award,
   Sparkles,
-  Heart,
+
   Brain,
-  Database,
-  Settings,
-  Plus,
+  
   ChevronRight,
   Star,
   CheckCircle,
@@ -143,11 +140,6 @@ const Dashboard: React.FC = () => {
   const averageAccuracy = Math.round(totalAccuracy / mockAnalyticsData.recentAnalyses.length);
 
   // Calculate nutrition totals
-  const totalNutrition = mockAnalyticsData.recentAnalyses.reduce((acc, analysis) => ({
-    protein: acc.protein + analysis.protein,
-    carbs: acc.carbs + analysis.carbs,
-    fats: acc.fats + analysis.fats
-  }), { protein: 0, carbs: 0, fats: 0 });
 
   const renderEnhancedStats = () => {
     const stats = [
