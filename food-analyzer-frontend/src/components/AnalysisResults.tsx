@@ -39,53 +39,102 @@ const ModelDetectionBreakdown: React.FC<{ modelInfo: AnalysisResult['model_info'
   const successRate = totalModels > 0 ? (successfulModels / totalModels) * 100 : 0;
 
   return (
-    <div className="model-detection-breakdown">
-      <h3>Expert Multi-Model Detection Results</h3>
-      
-      {/* Model Performance Summary */}
-      <div className="model-performance-summary">
-        <h4>
-          <Globe size={16} />
-          Model Performance Summary
-        </h4>
-        <div className="performance-grid">
-          <div className="performance-item">
-            <span className="performance-label">Detection Method</span>
-            <span className="performance-value">Comprehensive Ensemble</span>
+    <div className="model-detection-report">
+      <div className="report-header">
+        <div className="report-title">
+          <Globe size={24} />
+          <h3>AI Model Detection Report</h3>
+        </div>
+        <div className="report-meta">
+          <span className="report-date">{new Date().toLocaleDateString()}</span>
+          <span className="report-time">{new Date().toLocaleTimeString()}</span>
+        </div>
+      </div>
+
+      {/* Executive Summary */}
+      <div className="executive-summary">
+        <h4>Executive Summary</h4>
+        <div className="summary-grid">
+          <div className="summary-card">
+            <div className="summary-icon">
+              <Activity size={20} />
+            </div>
+            <div className="summary-content">
+              <span className="summary-value">{totalDetections}</span>
+              <span className="summary-label">Total Detections</span>
+            </div>
           </div>
-          <div className="performance-item">
-            <span className="performance-label">Total Detections</span>
-            <span className="performance-value">{totalDetections}</span>
+          <div className="summary-card">
+            <div className="summary-icon">
+              <CheckCircle size={20} />
+            </div>
+            <div className="summary-content">
+              <span className="summary-value">{successRate.toFixed(0)}%</span>
+              <span className="summary-label">Success Rate</span>
+            </div>
           </div>
-          <div className="performance-item">
-            <span className="performance-label">Success Rate</span>
-            <span className="performance-value success-rate">
-              <CheckCircle size={16} />
-              {successRate.toFixed(0)}%
-            </span>
+          <div className="summary-card">
+            <div className="summary-icon">
+              <Brain size={20} />
+            </div>
+            <div className="summary-content">
+              <span className="summary-value">{successfulModels}/{totalModels}</span>
+              <span className="summary-label">Active Models</span>
+            </div>
+          </div>
+          <div className="summary-card">
+            <div className="summary-icon">
+              <Target size={20} />
+            </div>
+            <div className="summary-content">
+              <span className="summary-value">{detailed_detections?.length || 0}</span>
+              <span className="summary-label">Unique Foods</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Model Breakdown */}
-      <div className="model-breakdown">
-        <h4>
-          <BarChart3 size={16} />
-          Model Breakdown
-        </h4>
-        <div className="model-list">
+      {/* Model Performance Table */}
+      <div className="model-performance-section">
+        <h4>Model Performance Analysis</h4>
+        <div className="performance-table">
+          <div className="table-header">
+            <div className="header-cell">AI Model</div>
+            <div className="header-cell">Status</div>
+            <div className="header-cell">Detections</div>
+            <div className="header-cell">Performance</div>
+          </div>
           {Object.entries(model_performance).map(([modelName, performance]) => (
-            <div key={modelName} className={`model-item ${performance.success ? 'success' : 'failed'}`}>
-              <div className="model-name">
-                {modelName.toUpperCase()}
+            <div key={modelName} className={`table-row ${performance.success ? 'success' : 'failed'}`}>
+              <div className="table-cell model-name">
+                <span className="model-label">{modelName.toUpperCase()}</span>
               </div>
-              <div className="model-stats">
-                <span className="detection-count">{performance.detection_count}</span>
+              <div className="table-cell status">
                 {performance.success ? (
-                  <CheckCircle size={14} className="status-icon success" />
+                  <span className="status-badge success">
+                    <CheckCircle size={14} />
+                    Active
+                  </span>
                 ) : (
-                  <AlertCircle size={14} className="status-icon failed" />
+                  <span className="status-badge failed">
+                    <AlertCircle size={14} />
+                    Failed
+                  </span>
                 )}
+              </div>
+              <div className="table-cell detections">
+                <span className="detection-count">{performance.detection_count}</span>
+              </div>
+              <div className="table-cell performance-bar">
+                <div className="performance-indicator">
+                  <div 
+                    className="performance-fill" 
+                    style={{ 
+                      width: `${performance.success ? (performance.detection_count / Math.max(...Object.values(model_performance).map(p => p.detection_count))) * 100 : 0}%`,
+                      backgroundColor: performance.success ? '#22c55e' : '#ef4444'
+                    }}
+                  ></div>
+                </div>
               </div>
             </div>
           ))}
@@ -94,27 +143,55 @@ const ModelDetectionBreakdown: React.FC<{ modelInfo: AnalysisResult['model_info'
 
       {/* Detailed Food Analysis */}
       {detailed_detections && detailed_detections.length > 0 && (
-        <div className="detailed-food-analysis">
-          <h4>
-            <Activity size={16} />
-            Detailed Food Analysis
-          </h4>
-          <div className="food-detection-list">
-            {detailed_detections.map((detection, index) => (
-              <div key={index} className="food-detection-item">
-                <div className="food-number">{index + 1}.</div>
-                <div className="food-name">{detection.food}</div>
-                <div className="food-methods">
-                  {detection.methods.join(', ')}
+        <div className="food-analysis-section">
+          <h4>Detailed Food Detection Analysis</h4>
+          <div className="food-detection-table">
+            <div className="table-header">
+              <div className="header-cell">Food Item</div>
+              <div className="header-cell">Detection Count</div>
+              <div className="header-cell">Models Used</div>
+              <div className="header-cell">Confidence</div>
+            </div>
+            {detailed_detections.slice(0, 10).map((detection, index) => (
+              <div key={index} className="table-row">
+                <div className="table-cell food-name">
+                  <span className="food-label">{detection.food}</span>
                 </div>
-                <div className="food-confidence">
-                  {(detection.avg_confidence * 100).toFixed(0)}%
+                <div className="table-cell detection-count">
+                  <span className="count-badge">{detection.count}</span>
+                </div>
+                <div className="table-cell models-used">
+                  <div className="model-tags">
+                    {detection.methods.map((method, idx) => (
+                      <span key={idx} className="model-tag">{method.toUpperCase()}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="table-cell confidence">
+                  <span className="confidence-value">
+                    {(detection.avg_confidence * 100).toFixed(1)}%
+                  </span>
                 </div>
               </div>
             ))}
           </div>
+          {detailed_detections.length > 10 && (
+            <div className="table-footer">
+              <span>Showing top 10 of {detailed_detections.length} detected items</span>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Technical Notes */}
+      <div className="technical-notes">
+        <h4>Technical Notes</h4>
+        <div className="notes-content">
+          <p><strong>Detection Methodology:</strong> This analysis utilized an ensemble of {totalModels} AI models including YOLO (object detection), ViT (vision transformer), Swin (swin transformer), BLIP (image captioning), and CLIP (similarity scoring).</p>
+          <p><strong>Confidence Scoring:</strong> Detection confidence is calculated based on model agreement and individual model confidence scores. Higher confidence indicates more reliable detections.</p>
+          <p><strong>Model Agreement:</strong> Foods detected by multiple models are considered more reliable than single-model detections.</p>
+        </div>
+      </div>
     </div>
   );
 };
@@ -238,12 +315,6 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
         {result.model_info && (
           <ModelDetectionBreakdown modelInfo={result.model_info} />
         )}
-
-        {/* Debug Nutrition Data (temporary) */}
-        <div className="debug-nutrition" style={{ background: '#f0f0f0', padding: '10px', margin: '10px 0', borderRadius: '8px', fontSize: '12px' }}>
-          <h4>Debug: Raw Nutrition Data</h4>
-          <pre>{JSON.stringify(safeNutritionData, null, 2)}</pre>
-        </div>
 
         {/* Nutrition Summary */}
         <div className="nutrition-summary">
