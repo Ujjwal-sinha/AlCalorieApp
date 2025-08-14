@@ -1537,6 +1537,32 @@
   color: #4caf50;
 }
 
+.footer-developer {
+  margin-top: 20px;
+  text-align: center;
+  color: #999999;
+  font-size: 0.9rem;
+  border-top: 1px solid #333333;
+  padding-top: 20px;
+}
+
+.footer-developer p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.footer-developer a {
+  color: #4caf50;
+  text-decoration: none;
+  transition: color 0.3s ease;
+  font-weight: 600;
+}
+
+.footer-developer a:hover {
+  color: #45a049;
+  text-decoration: underline;
+}
+
 /* Floating Health Cards */
 .floating-health-cards {
   position: absolute;

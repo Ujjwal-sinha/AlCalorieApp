@@ -344,6 +344,26 @@
   text-decoration: underline;
 }
 
+.about-footer .footer-info p:last-child {
+  margin-top: 12px;
+  font-size: 0.95rem;
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.about-footer .footer-info a {
+  color: #4caf50;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin: 0 4px;
+}
+
+.about-footer .footer-info a:hover {
+  color: #45a049;
+  text-decoration: underline;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .about-content {

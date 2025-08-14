@@ -703,12 +703,18 @@ const LandingPage: React.FC = () => {
           
           <div className="footer-bottom">
             <div className="footer-bottom-content">
-              <p>&copy; 2024 AI Calorie Analyzer. All rights reserved.</p>
+              <p>&copy; 2025 AI Calorie Analyzer. All rights reserved.</p>
               <div className="footer-bottom-links">
                 <Link to="/about">Privacy</Link>
                 <Link to="/about">Terms</Link>
                 <Link to="/about">Cookies</Link>
               </div>
+            </div>
+            <div className="footer-developer">
+              <p>Built by <a href="https://github.com/Ujjwal-sinha" target="_blank" rel="noopener noreferrer">Ujjwal Sinha</a> • 
+                <a href="https://github.com/Ujjwal-sinha" target="_blank" rel="noopener noreferrer">GitHub</a> • 
+                <a href="https://www.linkedin.com/in/sinhaujjwal01/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+              </p>
             </div>
           </div>
         </div>

@@ -171,8 +171,12 @@ const About: React.FC = () => {
               <p>Powered by advanced artificial intelligence</p>
             </div>
             <div className="footer-info">
-              <p>&copy; 2024 AI Calorie Analyzer. All rights reserved.</p>
+              <p>&copy; 2025 AI Calorie Analyzer. All rights reserved.</p>
               <p>Made with ❤️ for better nutrition tracking</p>
+              <p>Built by <a href="https://github.com/Ujjwal-sinha" target="_blank" rel="noopener noreferrer">Ujjwal Sinha</a> • 
+                <a href="https://github.com/Ujjwal-sinha" target="_blank" rel="noopener noreferrer">GitHub</a> • 
+                <a href="https://www.linkedin.com/in/sinhaujjwal01/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+              </p>
             </div>
           </div>
         </div>
