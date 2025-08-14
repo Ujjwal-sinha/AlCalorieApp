@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Camera, 
   BarChart3, 
@@ -8,17 +8,35 @@ import {
   Apple,
   Zap,
   ArrowUp,
+  ArrowDown,
   Eye,
-  Download
+  Download,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  Users,
+  Award,
+  Sparkles,
+  Heart,
+  Brain,
+  Database,
+  Settings,
+  Plus,
+  ChevronRight,
+  Star,
+  CheckCircle,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import './Dashboard.css';
 
-// Mock data for charts and analytics
+// Enhanced mock data for charts and analytics
 const mockAnalyticsData = {
   totalAnalyses: 156,
   thisWeek: 23,
+  thisMonth: 89,
   averageCalories: 1850,
   goalProgress: 78,
   weeklyCalories: [2100, 1950, 2200, 1800, 2000, 1750, 1900],
@@ -29,11 +47,11 @@ const mockAnalyticsData = {
     fats: 30
   },
   topFoods: [
-    { name: 'Chicken Breast', calories: 165, frequency: 12 },
-    { name: 'Brown Rice', calories: 216, frequency: 10 },
-    { name: 'Broccoli', calories: 55, frequency: 8 },
-    { name: 'Salmon', calories: 208, frequency: 7 },
-    { name: 'Sweet Potato', calories: 103, frequency: 6 }
+    { name: 'Chicken Breast', calories: 165, frequency: 12, trend: 'up' },
+    { name: 'Brown Rice', calories: 216, frequency: 10, trend: 'stable' },
+    { name: 'Broccoli', calories: 55, frequency: 8, trend: 'up' },
+    { name: 'Salmon', calories: 208, frequency: 7, trend: 'down' },
+    { name: 'Sweet Potato', calories: 103, frequency: 6, trend: 'up' }
   ],
   recentAnalyses: [
     {
@@ -45,7 +63,9 @@ const mockAnalyticsData = {
       totalCalories: 485,
       protein: 35,
       carbs: 45,
-      fats: 18
+      fats: 18,
+      accuracy: 98.5,
+      status: 'completed'
     },
     {
       id: 2,
@@ -56,7 +76,9 @@ const mockAnalyticsData = {
       totalCalories: 520,
       protein: 42,
       carbs: 38,
-      fats: 22
+      fats: 22,
+      accuracy: 97.2,
+      status: 'completed'
     },
     {
       id: 3,
@@ -67,17 +89,58 @@ const mockAnalyticsData = {
       totalCalories: 420,
       protein: 28,
       carbs: 52,
-      fats: 15
+      fats: 15,
+      accuracy: 99.1,
+      status: 'completed'
+    }
+  ],
+  achievements: [
+    { id: 1, title: 'First Analysis', description: 'Completed your first food analysis', icon: '🎯', unlocked: true },
+    { id: 2, title: 'Week Warrior', description: 'Analyzed food for 7 consecutive days', icon: '🔥', unlocked: true },
+    { id: 3, title: 'Accuracy Master', description: 'Achieved 99%+ accuracy 10 times', icon: '⭐', unlocked: false },
+    { id: 4, title: 'Variety Explorer', description: 'Analyzed 50 different foods', icon: '🌍', unlocked: false }
+  ],
+  insights: [
+    {
+      id: 1,
+      type: 'positive',
+      title: 'Great Protein Intake',
+      description: 'Your protein consumption is 15% above your daily goal',
+      icon: <TrendingUp size={20} />
+    },
+    {
+      id: 2,
+      type: 'warning',
+      title: 'Low Fiber Alert',
+      description: 'Consider adding more fiber-rich foods to your diet',
+      icon: <AlertCircle size={20} />
+    },
+    {
+      id: 3,
+      type: 'info',
+      title: 'Calorie Balance',
+      description: 'You\'re maintaining a healthy calorie balance this week',
+      icon: <Info size={20} />
     }
   ]
 };
 
 const Dashboard: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('week');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Calculate total calories from recent analyses
+  useEffect(() => {
+    // Simulate loading state
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Calculate enhanced metrics
   const totalCalories = mockAnalyticsData.recentAnalyses.reduce((sum, analysis) => sum + analysis.totalCalories, 0);
   const averageCaloriesPerMeal = Math.round(totalCalories / mockAnalyticsData.recentAnalyses.length);
+  const totalAccuracy = mockAnalyticsData.recentAnalyses.reduce((sum, analysis) => sum + analysis.accuracy, 0);
+  const averageAccuracy = Math.round(totalAccuracy / mockAnalyticsData.recentAnalyses.length);
 
   // Calculate nutrition totals
   const totalNutrition = mockAnalyticsData.recentAnalyses.reduce((acc, analysis) => ({
@@ -85,6 +148,226 @@ const Dashboard: React.FC = () => {
     carbs: acc.carbs + analysis.carbs,
     fats: acc.fats + analysis.fats
   }), { protein: 0, carbs: 0, fats: 0 });
+
+  const renderEnhancedStats = () => {
+    const stats = [
+      {
+        icon: <Camera size={24} />,
+        number: mockAnalyticsData.totalAnalyses,
+        label: 'Total Analyses',
+        trend: '+12%',
+        trendDirection: 'up',
+        color: '#4caf50',
+        subtitle: 'Lifetime total'
+      },
+      {
+        icon: <Calendar size={24} />,
+        number: mockAnalyticsData.thisWeek,
+        label: 'This Week',
+        trend: '+5',
+        trendDirection: 'up',
+        color: '#2196f3',
+        subtitle: 'vs last week'
+      },
+      {
+        icon: <Zap size={24} />,
+        number: totalCalories,
+        label: 'Total Calories',
+        trend: averageCaloriesPerMeal,
+        trendDirection: 'stable',
+        color: '#ff9800',
+        subtitle: 'Last 3 meals'
+      },
+      {
+        icon: <Target size={24} />,
+        number: mockAnalyticsData.goalProgress,
+        label: 'Goal Progress',
+        trend: averageAccuracy,
+        trendDirection: 'up',
+        color: '#9c27b0',
+        subtitle: '% accuracy'
+      }
+    ];
+
+    return (
+      <div className="stats-grid">
+        {stats.map((stat, index) => (
+          <div key={index} className="stat-card" style={{ '--stat-color': stat.color } as React.CSSProperties}>
+            <div className="stat-header">
+              <div className="stat-icon">
+                {stat.icon}
+              </div>
+              <div className="stat-trend">
+                {stat.trendDirection === 'up' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                <span>{stat.trend}</span>
+              </div>
+            </div>
+            <div className="stat-number">{stat.number}</div>
+            <div className="stat-label">{stat.label}</div>
+            <div className="stat-subtitle">{stat.subtitle}</div>
+            {index === 3 && (
+              <div className="progress-ring">
+                <svg width="60" height="60">
+                  <circle
+                    cx="30"
+                    cy="30"
+                    r="25"
+                    fill="none"
+                    stroke="rgba(156, 39, 176, 0.2)"
+                    strokeWidth="4"
+                  />
+                  <circle
+                    cx="30"
+                    cy="30"
+                    r="25"
+                    fill="none"
+                    stroke="#9c27b0"
+                    strokeWidth="4"
+                    strokeDasharray={`${(mockAnalyticsData.goalProgress / 100) * 157} 157`}
+                    strokeDashoffset="0"
+                    transform="rotate(-90 30 30)"
+                  />
+                </svg>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderQuickActions = () => (
+    <div className="quick-actions">
+      <div className="section-header">
+        <div className="section-badge">
+          <Zap size={16} />
+          <span>Quick Actions</span>
+        </div>
+        <h2>What would you like to do?</h2>
+        <p>Get started with your nutrition tracking journey</p>
+      </div>
+      <div className="actions-grid">
+        <Link to="/analysis" className="action-card primary">
+          <div className="action-icon">
+            <Camera size={24} />
+          </div>
+          <div className="action-content">
+            <h3>New Analysis</h3>
+            <p>Analyze a new meal with AI</p>
+          </div>
+          <ChevronRight size={20} />
+        </Link>
+        
+        <Link to="/history" className="action-card">
+          <div className="action-icon">
+            <BarChart3 size={24} />
+          </div>
+          <div className="action-content">
+            <h3>View History</h3>
+            <p>See your past analyses</p>
+          </div>
+          <ChevronRight size={20} />
+        </Link>
+        
+        <Link to="/settings" className="action-card">
+          <div className="action-icon">
+            <Target size={24} />
+          </div>
+          <div className="action-content">
+            <h3>Set Goals</h3>
+            <p>Update nutrition goals</p>
+          </div>
+          <ChevronRight size={20} />
+        </Link>
+        
+        <div className="action-card">
+          <div className="action-icon">
+            <Download size={24} />
+          </div>
+          <div className="action-content">
+            <h3>Export Data</h3>
+            <p>Download your reports</p>
+          </div>
+          <ChevronRight size={20} />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderInsights = () => (
+    <div className="insights-section">
+      <div className="section-header">
+        <div className="section-badge">
+          <Brain size={16} />
+          <span>AI Insights</span>
+        </div>
+        <h2>Smart Recommendations</h2>
+        <p>Personalized insights based on your nutrition data</p>
+      </div>
+      <div className="insights-grid">
+        {mockAnalyticsData.insights.map((insight) => (
+          <div key={insight.id} className={`insight-card ${insight.type}`}>
+            <div className="insight-icon">
+              {insight.icon}
+            </div>
+            <div className="insight-content">
+              <h3>{insight.title}</h3>
+              <p>{insight.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderAchievements = () => (
+    <div className="achievements-section">
+      <div className="section-header">
+        <div className="section-badge">
+          <Award size={16} />
+          <span>Achievements</span>
+        </div>
+        <h2>Your Progress</h2>
+        <p>Track your milestones and accomplishments</p>
+      </div>
+      <div className="achievements-grid">
+        {mockAnalyticsData.achievements.map((achievement) => (
+          <div key={achievement.id} className={`achievement-card ${achievement.unlocked ? 'unlocked' : 'locked'}`}>
+            <div className="achievement-icon">
+              <span>{achievement.icon}</span>
+            </div>
+            <div className="achievement-content">
+              <h3>{achievement.title}</h3>
+              <p>{achievement.description}</p>
+            </div>
+            {achievement.unlocked && (
+              <div className="achievement-badge">
+                <CheckCircle size={16} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderEnhancedAnalytics = () => (
+    <div className="analytics-section">
+      <div className="section-header">
+        <div className="section-badge">
+          <BarChart3 size={16} />
+          <span>Analytics</span>
+        </div>
+        <h2>Your Nutrition Analytics</h2>
+        <p>Comprehensive insights into your eating patterns</p>
+      </div>
+      <div className="analytics-grid">
+        {renderCalorieChart()}
+        {renderNutritionChart()}
+        {renderTopFoodsChart()}
+      </div>
+    </div>
+  );
 
   const renderCalorieChart = () => {
     const data = selectedPeriod === 'week' ? mockAnalyticsData.weeklyCalories : mockAnalyticsData.monthlyTrend;
@@ -198,7 +481,14 @@ const Dashboard: React.FC = () => {
                   style={{ width: `${(food.frequency / 12) * 100}%` }}
                 ></div>
               </div>
-              <span className="food-frequency">{food.frequency} times</span>
+              <div className="food-meta">
+                <span className="food-frequency">{food.frequency} times</span>
+                <div className={`food-trend ${food.trend}`}>
+                  {food.trend === 'up' ? <TrendingUp size={12} /> : 
+                   food.trend === 'down' ? <TrendingDown size={12} /> : 
+                   <span>—</span>}
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -206,210 +496,91 @@ const Dashboard: React.FC = () => {
     );
   };
 
+  const renderRecentAnalyses = () => (
+    <div className="recent-analyses">
+      <div className="section-header">
+        <div className="section-badge">
+          <Clock size={16} />
+          <span>Recent</span>
+        </div>
+        <h2>Recent Analyses</h2>
+        <p>Your latest nutrition insights</p>
+      </div>
+      <div className="analyses-list">
+        {mockAnalyticsData.recentAnalyses.map((analysis) => (
+          <div key={analysis.id} className="analysis-item">
+            <div className="analysis-icon">
+              <Camera size={20} />
+            </div>
+            <div className="analysis-content">
+              <div className="analysis-header">
+                <div className="analysis-title">
+                  {analysis.foods.slice(0, 2).join(', ')}
+                  {analysis.foods.length > 2 && ` +${analysis.foods.length - 2} more`}
+                </div>
+                <div className="analysis-accuracy">
+                  <Star size={12} />
+                  <span>{analysis.accuracy}%</span>
+                </div>
+              </div>
+              <div className="analysis-details">
+                <span className="analysis-calories">{analysis.totalCalories} calories</span>
+                <span className="analysis-time">{analysis.date} at {analysis.time}</span>
+              </div>
+              <div className="analysis-nutrition">
+                <span className="nutrition-item">P: {analysis.protein}g</span>
+                <span className="nutrition-item">C: {analysis.carbs}g</span>
+                <span className="nutrition-item">F: {analysis.fats}g</span>
+              </div>
+            </div>
+            <div className="analysis-actions">
+              <button className="action-btn">
+                <Eye size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="dashboard-page">
+        <Navigation />
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-page">
       <Navigation />
       <div className="dashboard-content">
         <div className="dashboard-header">
-          <div className="welcome-text">
-            Welcome back! 👋
-          </div>
-          <div className="welcome-subtitle">
-            Here's your nutrition overview for today
-          </div>
-        </div>
-
-        {/* Enhanced Stats Grid */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon">
-              <Camera size={24} />
+          <div className="welcome-section">
+            <div className="welcome-badge">
+              <Sparkles size={16} />
+              <span>Welcome Back</span>
             </div>
-            <div className="stat-number">{mockAnalyticsData.totalAnalyses}</div>
-            <div className="stat-label">Total Analyses</div>
-            <div className="stat-trend positive">
-              <ArrowUp size={16} />
-              <span>+12% this week</span>
-            </div>
-          </div>
-          
-          <div className="stat-card">
-            <div className="stat-icon">
-              <Calendar size={24} />
-            </div>
-            <div className="stat-number">{mockAnalyticsData.thisWeek}</div>
-            <div className="stat-label">This Week</div>
-            <div className="stat-trend positive">
-              <ArrowUp size={16} />
-              <span>+5 from last week</span>
-            </div>
-          </div>
-          
-          <div className="stat-card highlight">
-            <div className="stat-icon">
-              <Zap size={24} />
-            </div>
-            <div className="stat-number">{totalCalories}</div>
-            <div className="stat-label">Total Calories</div>
-            <div className="stat-subtitle">Last 3 meals</div>
-          </div>
-          
-          <div className="stat-card">
-            <div className="stat-icon">
-              <Target size={24} />
-            </div>
-            <div className="stat-number">{mockAnalyticsData.goalProgress}%</div>
-            <div className="stat-label">Goal Progress</div>
-            <div className="progress-ring">
-              <svg width="60" height="60">
-                <circle
-                  cx="30"
-                  cy="30"
-                  r="25"
-                  fill="none"
-                  stroke="rgba(76, 175, 80, 0.2)"
-                  strokeWidth="4"
-                />
-                <circle
-                  cx="30"
-                  cy="30"
-                  r="25"
-                  fill="none"
-                  stroke="#4caf50"
-                  strokeWidth="4"
-                  strokeDasharray={`${(mockAnalyticsData.goalProgress / 100) * 157} 157`}
-                  strokeDashoffset="0"
-                  transform="rotate(-90 30 30)"
-                />
-              </svg>
-            </div>
+            <h1 className="welcome-title">
+              Good morning! 👋
+            </h1>
+            <p className="welcome-subtitle">
+              Here's your nutrition overview for today
+            </p>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="quick-actions">
-          <div className="section-title">Quick Actions</div>
-          <div className="actions-grid">
-            <Link to="/analysis" className="action-card">
-              <div className="action-icon">
-                <Camera size={24} />
-              </div>
-              <div className="action-title">New Analysis</div>
-              <div className="action-description">Analyze a new meal</div>
-            </Link>
-            
-            <Link to="/history" className="action-card">
-              <div className="action-icon">
-                <BarChart3 size={24} />
-              </div>
-              <div className="action-title">View History</div>
-              <div className="action-description">See past analyses</div>
-            </Link>
-            
-            <Link to="/settings" className="action-card">
-              <div className="action-icon">
-                <Target size={24} />
-              </div>
-              <div className="action-title">Set Goals</div>
-              <div className="action-description">Update nutrition goals</div>
-            </Link>
-            
-            <div className="action-card">
-              <div className="action-icon">
-                <Download size={24} />
-              </div>
-              <div className="action-title">Export Data</div>
-              <div className="action-description">Download your reports</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Section */}
-        <div className="charts-section">
-          <div className="section-title">Analytics & Insights</div>
-          <div className="charts-grid">
-            {renderCalorieChart()}
-            {renderNutritionChart()}
-            {renderTopFoodsChart()}
-          </div>
-        </div>
-
-        {/* Enhanced Recent Analyses */}
-        <div className="recent-analyses">
-          <div className="section-title">Recent Analyses</div>
-          <div className="analyses-list">
-            {mockAnalyticsData.recentAnalyses.map((analysis) => (
-              <div key={analysis.id} className="analysis-item">
-                <div className="analysis-icon">
-                  <Camera size={20} />
-                </div>
-                <div className="analysis-content">
-                  <div className="analysis-title">
-                    {analysis.foods.slice(0, 2).join(', ')}
-                    {analysis.foods.length > 2 && ` +${analysis.foods.length - 2} more`}
-                  </div>
-                  <div className="analysis-details">
-                    <span className="analysis-calories">{analysis.totalCalories} calories</span>
-                    <span className="analysis-time">{analysis.date} at {analysis.time}</span>
-                  </div>
-                  <div className="analysis-nutrition">
-                    <span className="nutrition-item">P: {analysis.protein}g</span>
-                    <span className="nutrition-item">C: {analysis.carbs}g</span>
-                    <span className="nutrition-item">F: {analysis.fats}g</span>
-                  </div>
-                </div>
-                <div className="analysis-actions">
-                  <button className="action-btn">
-                    <Eye size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Nutrition Insights */}
-        <div className="nutrition-insights">
-          <div className="insight-card">
-            <div className="insight-header">
-              <div className="insight-icon">
-                <Apple size={20} />
-              </div>
-              <div className="insight-title">Average Calories</div>
-            </div>
-            <div className="insight-content">
-              <div className="insight-value">{averageCaloriesPerMeal} cal/meal</div>
-              <div className="insight-description">
-                Your average calorie intake per meal is well within recommended ranges.
-              </div>
-            </div>
-          </div>
-          
-          <div className="insight-card">
-            <div className="insight-header">
-              <div className="insight-icon">
-                <Activity size={20} />
-              </div>
-              <div className="insight-title">Nutrition Balance</div>
-            </div>
-            <div className="insight-content">
-              <div className="nutrition-summary">
-                <div className="nutrition-item">
-                  <span className="nutrition-label">Protein</span>
-                  <span className="nutrition-value">{Math.round(totalNutrition.protein / mockAnalyticsData.recentAnalyses.length)}g avg</span>
-                </div>
-                <div className="nutrition-item">
-                  <span className="nutrition-label">Carbs</span>
-                  <span className="nutrition-value">{Math.round(totalNutrition.carbs / mockAnalyticsData.recentAnalyses.length)}g avg</span>
-                </div>
-                <div className="nutrition-item">
-                  <span className="nutrition-label">Fats</span>
-                  <span className="nutrition-value">{Math.round(totalNutrition.fats / mockAnalyticsData.recentAnalyses.length)}g avg</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {renderEnhancedStats()}
+        {renderQuickActions()}
+        {renderInsights()}
+        {renderAchievements()}
+        {renderEnhancedAnalytics()}
+        {renderRecentAnalyses()}
       </div>
     </div>
   );
