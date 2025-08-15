@@ -24,7 +24,7 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // Debug endpoint to test Python integration
-router.get('/debug/python', async (req, res) => {
+router.get('/debug/python', async (_req, res) => {
   try {
     const { spawn } = require('child_process');
     const pythonProcess = spawn('python3', ['--version']);
