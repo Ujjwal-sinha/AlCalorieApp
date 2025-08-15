@@ -831,7 +831,7 @@
     width: 100%;
     justify-content: space-between;
   }
-  
+
   .nutrition-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -839,19 +839,19 @@
   .food-tags {
     justify-content: center;
   }
-  
+
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-}
+  }
 
 @media (max-width: 480px) {
   .nutrition-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .results-actions {
     flex-direction: column;
     gap: 12px;
@@ -888,7 +888,7 @@
   .model-list {
     grid-template-columns: 1fr;
   }
-  
+
   .food-detection-item {
     grid-template-columns: 25px 1fr 80px 50px;
     gap: 8px;
@@ -1331,7 +1331,7 @@
   height: 300px;
   display: flex;
   align-items: flex-end;
-  justify-content: center;
+    justify-content: center;
   padding: 20px 0;
 }
 
@@ -1346,7 +1346,7 @@
 
 .bar-item {
   display: flex;
-  flex-direction: column;
+    flex-direction: column;
   align-items: center;
   gap: 12px;
   flex: 1;
@@ -1501,7 +1501,7 @@
   margin-bottom: 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
+    gap: 8px;
   letter-spacing: -0.01em;
 }
 

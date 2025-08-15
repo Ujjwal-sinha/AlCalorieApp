@@ -474,7 +474,7 @@ const Dashboard: React.FC = () => {
                 ></div>
               </div>
               <div className="food-meta">
-                <span className="food-frequency">{food.frequency} times</span>
+              <span className="food-frequency">{food.frequency} times</span>
                 <div className={`food-trend ${food.trend}`}>
                   {food.trend === 'up' ? <TrendingUp size={12} /> : 
                    food.trend === 'down' ? <TrendingDown size={12} /> : 
@@ -497,43 +497,43 @@ const Dashboard: React.FC = () => {
         </div>
         <h2>Recent Analyses</h2>
         <p>Your latest nutrition insights</p>
-      </div>
-      <div className="analyses-list">
-        {mockAnalyticsData.recentAnalyses.map((analysis) => (
-          <div key={analysis.id} className="analysis-item">
-            <div className="analysis-icon">
-              <Camera size={20} />
-            </div>
-            <div className="analysis-content">
+        </div>
+          <div className="analyses-list">
+            {mockAnalyticsData.recentAnalyses.map((analysis) => (
+              <div key={analysis.id} className="analysis-item">
+                <div className="analysis-icon">
+                  <Camera size={20} />
+                </div>
+                <div className="analysis-content">
               <div className="analysis-header">
-                <div className="analysis-title">
-                  {analysis.foods.slice(0, 2).join(', ')}
-                  {analysis.foods.length > 2 && ` +${analysis.foods.length - 2} more`}
+                  <div className="analysis-title">
+                    {analysis.foods.slice(0, 2).join(', ')}
+                    {analysis.foods.length > 2 && ` +${analysis.foods.length - 2} more`}
                 </div>
                 <div className="analysis-accuracy">
                   <Star size={12} />
                   <span>{analysis.accuracy}%</span>
                 </div>
+                  </div>
+                  <div className="analysis-details">
+                    <span className="analysis-calories">{analysis.totalCalories} calories</span>
+                    <span className="analysis-time">{analysis.date} at {analysis.time}</span>
+                  </div>
+                  <div className="analysis-nutrition">
+                    <span className="nutrition-item">P: {analysis.protein}g</span>
+                    <span className="nutrition-item">C: {analysis.carbs}g</span>
+                    <span className="nutrition-item">F: {analysis.fats}g</span>
+                  </div>
+                </div>
+                <div className="analysis-actions">
+                  <button className="action-btn">
+                    <Eye size={16} />
+                  </button>
+                </div>
               </div>
-              <div className="analysis-details">
-                <span className="analysis-calories">{analysis.totalCalories} calories</span>
-                <span className="analysis-time">{analysis.date} at {analysis.time}</span>
-              </div>
-              <div className="analysis-nutrition">
-                <span className="nutrition-item">P: {analysis.protein}g</span>
-                <span className="nutrition-item">C: {analysis.carbs}g</span>
-                <span className="nutrition-item">F: {analysis.fats}g</span>
-              </div>
-            </div>
-            <div className="analysis-actions">
-              <button className="action-btn">
-                <Eye size={16} />
-              </button>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
+        </div>
   );
 
   if (isLoading) {
@@ -543,8 +543,8 @@ const Dashboard: React.FC = () => {
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>Loading your dashboard...</p>
-        </div>
-      </div>
+              </div>
+            </div>
     );
   }
 
