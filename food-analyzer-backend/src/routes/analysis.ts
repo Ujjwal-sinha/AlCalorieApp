@@ -1,12 +1,16 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { FoodDetectionService } from '../services/FoodDetectionService';
+import { GroqAnalysisService } from '../services/GroqAnalysisService';
+import { DietChatService } from '../services/DietChatService';
 // import { validateAnalysisRequest } from '../middleware/validation';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { config } from '../config';
 
 const router = Router();
 const foodDetectionService = FoodDetectionService.getInstance();
+const groqAnalysisService = GroqAnalysisService.getInstance();
+const dietChatService = DietChatService.getInstance();
 
 // Configure multer for file uploads
 const upload = multer({
@@ -220,6 +224,167 @@ router.get('/status', asyncHandler(async (_req: Request, res: Response) => {
       fallback_enabled: config.detection.fallback_enabled
     }
   });
+}));
+
+// GROQ analysis endpoint
+router.post('/groq', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { detectedFoods, nutritionalData, foodItems, imageDescription, mealContext } = req.body;
+
+    if (!detectedFoods || !Array.isArray(detectedFoods)) {
+      return res.status(400).json({
+        success: false,
+        error: 'detectedFoods array is required'
+      });
+    }
+
+    if (!nutritionalData) {
+      return res.status(400).json({
+        success: false,
+        error: 'nutritionalData is required'
+      });
+    }
+
+    console.log('Starting GROQ analysis...');
+    
+    const result = await groqAnalysisService.generateComprehensiveAnalysis({
+      detectedFoods,
+      nutritionalData,
+      foodItems: foodItems || [],
+      imageDescription,
+      mealContext
+    });
+
+    console.log('GROQ analysis completed:', {
+      success: result.success,
+      healthScore: result.healthScore,
+      recommendationsCount: result.recommendations.length
+    });
+
+    return res.json(result);
+  } catch (error) {
+    console.error('GROQ analysis error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'GROQ analysis failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// GROQ health check endpoint
+router.get('/groq/health', asyncHandler(async (_req: Request, res: Response) => {
+  const healthCheck = await groqAnalysisService.healthCheck();
+  
+  return res.json({
+    service: 'GROQ Analysis Service',
+    status: healthCheck.status,
+    available: healthCheck.available,
+    error: healthCheck.error
+  });
+}));
+
+// Diet Chat endpoints
+router.post('/diet-chat', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { question, context, userHistory } = req.body;
+
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Question is required and must be a string'
+      });
+    }
+
+    console.log('Starting diet chat query...');
+    
+    const result = await dietChatService.answerDietQuery({
+      question,
+      context,
+      userHistory
+    });
+
+    console.log('Diet chat completed:', {
+      confidence: result.confidence,
+      suggestionsCount: result.suggestions.length,
+      topicsCount: result.relatedTopics.length
+    });
+
+    return res.json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    console.error('Diet chat error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Diet chat failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Diet chat health check endpoint
+router.get('/diet-chat/health', asyncHandler(async (_req: Request, res: Response) => {
+  const healthCheck = await dietChatService.healthCheck();
+  
+  return res.json({
+    service: 'Diet Chat Service',
+    status: healthCheck.status,
+    available: healthCheck.available,
+    error: healthCheck.error
+  });
+}));
+
+// Get sample questions for diet chat
+router.get('/diet-chat/sample-questions', asyncHandler(async (_req: Request, res: Response) => {
+  const sampleQuestions = dietChatService.getSampleQuestions();
+  
+  return res.json({
+    success: true,
+    questions: sampleQuestions
+  });
+}));
+
+// Generate diet plan from detected foods
+router.post('/generate-diet-plan', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { detectedFoods, nutritionalData, userPreferences: _userPreferences } = req.body;
+
+    if (!detectedFoods || !Array.isArray(detectedFoods) || detectedFoods.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Detected foods array is required'
+      });
+    }
+
+    console.log('Generating diet plan for foods:', detectedFoods);
+
+    // Generate diet plan using GROQ analysis service
+    const result = await groqAnalysisService.generateComprehensiveAnalysis({
+      detectedFoods: detectedFoods.map(food => typeof food === 'string' ? food : food.name),
+      nutritionalData: nutritionalData || {},
+      foodItems: [],
+      imageDescription: `Meal containing: ${detectedFoods.map(food => typeof food === 'string' ? food : food.name).join(', ')}`,
+      mealContext: 'Diet plan generation from detected foods'
+    });
+
+    const dietPlan = result.dailyMealPlan;
+
+    console.log('Generated diet plan structure:', dietPlan);
+
+    return res.json({
+      success: true,
+      dietPlan
+    });
+  } catch (error) {
+    console.error('Diet plan generation error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Diet plan generation failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }));
 
 export default router;

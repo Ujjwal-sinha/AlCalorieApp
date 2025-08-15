@@ -12,6 +12,9 @@ import Settings from './pages/Settings';
 import About from './pages/About';
 
 // Components
+import DietChat from './components/DietChat';
+
+// Components
 import LoadingSpinner from './components/LoadingSpinner';
 
 function App() {
@@ -49,6 +52,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/analysis" element={<Analysis />} />
+          <Route path="/diet-chat" element={<DietChat />} />
           <Route path="/history" element={<History />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/about" element={<About />} />

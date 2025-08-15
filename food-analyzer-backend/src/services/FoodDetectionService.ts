@@ -1,6 +1,8 @@
 import sharp from 'sharp';
 import { spawn } from 'child_process';
 import { NutritionService } from './NutritionService';
+import { GroqAnalysisService } from './GroqAnalysisService';
+import { DietChatService } from './DietChatService';
 import { ProcessedImage, AnalysisResult } from '../types';
 
 interface PythonModelResponse {
@@ -48,9 +50,13 @@ interface ExpertAnalysisResult {
 export class FoodDetectionService {
   private static instance: FoodDetectionService;
   private nutritionService: NutritionService;
+  private groqAnalysisService: GroqAnalysisService;
+  private dietChatService: DietChatService;
 
   private constructor() {
     this.nutritionService = NutritionService.getInstance();
+    this.groqAnalysisService = GroqAnalysisService.getInstance();
+    this.dietChatService = DietChatService.getInstance();
   }
 
   public static getInstance(): FoodDetectionService {
@@ -357,10 +363,65 @@ export class FoodDetectionService {
       // Generate insights
       const insights = this.generateInsights(filteredFoods, modelPerformance, allDetections);
 
+      // Generate GROQ analysis
+      let groqAnalysis = null;
+      try {
+        const groqRequest = {
+          detectedFoods: filteredFoods.map(food => food.name),
+          nutritionalData: totalNutrition,
+          foodItems: totalNutrition.items || [],
+          imageDescription: `Meal containing: ${filteredFoods.map(food => food.name).join(', ')}`,
+          mealContext: 'AI-detected meal analysis'
+        };
+
+        groqAnalysis = await this.groqAnalysisService.generateComprehensiveAnalysis(groqRequest);
+        console.log('GROQ analysis completed successfully');
+      } catch (error) {
+        console.warn('GROQ analysis failed:', error);
+        // Continue without GROQ analysis
+      }
+
+      // Generate automatic diet chat response
+      let dietChatResponse = null;
+      try {
+        const detectedFoodNames = filteredFoods.map(food => food.name);
+        const mealDescription = `I just uploaded a photo of my meal which contains: ${detectedFoodNames.join(', ')}. The total calories are ${totalNutrition.total_calories} with ${totalNutrition.total_protein}g protein, ${totalNutrition.total_carbs}g carbs, and ${totalNutrition.total_fats}g fats.`;
+        
+        const dietQuery = {
+          question: `Can you analyze this meal and give me nutrition advice? ${mealDescription}`,
+          context: `Meal analysis: ${detectedFoodNames.join(', ')} (${totalNutrition.total_calories} calories)`,
+          userHistory: []
+        };
+
+        dietChatResponse = await this.dietChatService.answerDietQuery(dietQuery);
+        console.log('Automatic diet chat response generated successfully');
+      } catch (error) {
+        console.warn('Automatic diet chat generation failed:', error);
+        // Generate fallback diet chat response
+        dietChatResponse = {
+          answer: 'I analyzed your meal and found it contains a variety of foods. For personalized nutrition advice, please ensure your GROQ API key is configured.',
+          suggestions: ['Consider adding more vegetables', 'Balance your protein and carbohydrate intake', 'Stay hydrated throughout the day'],
+          relatedTopics: ['Meal Planning', 'Nutrition Basics', 'Healthy Eating'],
+          confidence: 0.5
+        };
+      }
+
       const processingTime = Date.now() - startTime;
       const avgConfidence = filteredFoods.reduce((sum, food) => sum + food.confidence, 0) / filteredFoods.length;
 
       console.log(`Expert analysis completed in ${processingTime}ms. Detected ${filteredFoods.length} items with ${avgConfidence.toFixed(3)} average confidence.`);
+      
+      // Debug diet chat response
+      if (dietChatResponse) {
+        console.log('✅ Diet chat response generated:', {
+          answer: dietChatResponse.answer?.substring(0, 100) + '...',
+          suggestions: dietChatResponse.suggestions?.length || 0,
+          relatedTopics: dietChatResponse.relatedTopics?.length || 0,
+          confidence: dietChatResponse.confidence
+        });
+      } else {
+        console.log('❌ No diet chat response generated');
+      }
 
       return {
         success: true,
@@ -378,6 +439,24 @@ export class FoodDetectionService {
         processingTime,
         confidence: avgConfidence,
         model_used: 'expert_ensemble',
+        groq_analysis: groqAnalysis?.success ? {
+          summary: groqAnalysis.summary,
+          detailedAnalysis: groqAnalysis.detailedAnalysis,
+          healthScore: groqAnalysis.healthScore,
+          recommendations: groqAnalysis.recommendations,
+          dietaryConsiderations: groqAnalysis.dietaryConsiderations
+        } : undefined,
+        diet_chat_response: dietChatResponse ? {
+          answer: dietChatResponse.answer,
+          suggestions: dietChatResponse.suggestions,
+          relatedTopics: dietChatResponse.relatedTopics,
+          confidence: dietChatResponse.confidence
+        } : {
+          answer: 'Diet chat analysis is currently unavailable. Please try again later.',
+          suggestions: ['Upload a clear food image', 'Ensure good lighting', 'Try different angles'],
+          relatedTopics: ['Food Photography', 'Nutrition Basics'],
+          confidence: 0.3
+        },
         model_info: {
           detection_count: filteredFoods.length,
           total_confidence: avgConfidence,

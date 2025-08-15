@@ -1619,3 +1619,406 @@
     font-size: 0.75rem;
   }
 }
+
+/* Basic Summary Fallback */
+.basic-summary {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 20px 0;
+  color: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.basic-summary .summary-header {
+  margin-bottom: 20px;
+}
+
+.basic-summary .summary-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.basic-summary .summary-title h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+}
+
+.basic-summary .summary-icon {
+  color: #fbbf24;
+}
+
+.basic-summary .summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.basic-summary .summary-main {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.basic-summary .summary-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.basic-summary .insight-icon {
+  color: #fbbf24;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.basic-summary .summary-text p {
+  margin: 0;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+}
+
+.basic-summary .detected-foods-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.basic-summary .detected-foods-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  color: white;
+}
+
+.basic-summary .food-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.basic-summary .food-tag {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.basic-summary .food-tag:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Responsive Design for Basic Summary */
+@media (max-width: 768px) {
+  .basic-summary {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .basic-summary .summary-title h3 {
+    font-size: 1.25rem;
+  }
+
+  .basic-summary .summary-text p {
+    font-size: 1rem;
+  }
+
+  .basic-summary .food-tags {
+    gap: 6px;
+  }
+
+  .basic-summary .food-tag {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+  }
+}
+
+/* AI Diet Chat Section in Model Detection Report */
+.diet-chat-section {
+  margin-top: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.diet-chat-section h4 {
+  margin: 0;
+  padding: 20px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.diet-chat-content {
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.chat-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+.ai-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.summary-info h5 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.confidence-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.confidence-label {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.confidence-value {
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.ai-response {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+}
+
+.ai-response::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 20px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid white;
+}
+
+.response-text {
+  line-height: 1.6;
+  color: #333;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.suggestions-section,
+.topics-section {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.suggestions-section h6,
+.topics-section h6 {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.suggestion-icon {
+  color: #667eea;
+  font-weight: bold;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.suggestion-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #555;
+  margin: 0;
+}
+
+.topics-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topic-tag {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.topic-tag:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design for Diet Chat Section */
+@media (max-width: 768px) {
+  .diet-chat-section {
+    margin-top: 24px;
+  }
+
+  .diet-chat-section h4 {
+    padding: 16px 20px;
+    font-size: 1.1rem;
+  }
+
+  .diet-chat-content {
+    padding: 20px;
+  }
+
+  .summary-header {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .ai-icon {
+    font-size: 1.5rem;
+  }
+
+  .summary-info h5 {
+    font-size: 1rem;
+  }
+
+  .ai-response,
+  .suggestions-section,
+  .topics-section {
+    padding: 16px;
+  }
+
+  .response-text {
+    font-size: 0.95rem;
+  }
+
+  .suggestion-item {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .suggestion-text {
+    font-size: 0.9rem;
+  }
+
+  .topic-tag {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .diet-chat-section h4 {
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+
+  .diet-chat-content {
+    padding: 16px;
+  }
+
+  .summary-header {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .ai-icon {
+    font-size: 1.3rem;
+  }
+
+  .summary-info h5 {
+    font-size: 0.95rem;
+  }
+
+  .confidence-indicator {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .ai-response,
+  .suggestions-section,
+  .topics-section {
+    padding: 12px;
+  }
+
+  .response-text {
+    font-size: 0.9rem;
+  }
+
+  .suggestion-item {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .suggestion-text {
+    font-size: 0.85rem;
+  }
+
+  .topic-tag {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+}

@@ -7,7 +7,8 @@ import {
   Menu, 
   X,
   Home,
-  User
+  User,
+  MessageCircle
 } from 'lucide-react';
 import './Navigation.css';
 
@@ -28,6 +29,7 @@ const Navigation: React.FC = () => {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/analysis', label: 'Analysis', icon: Camera },
+    { path: '/diet-chat', label: 'Diet Chat', icon: MessageCircle },
     { path: '/history', label: 'History', icon: History },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];

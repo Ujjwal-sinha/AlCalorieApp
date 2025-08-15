@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   CheckCircle,
   AlertCircle,
@@ -17,6 +17,12 @@ import {
   
 } from 'lucide-react';
 import type { AnalysisResult } from '../types';
+import GroqAnalysis from './GroqAnalysis';
+import GroqSummary from './GroqSummary';
+import DailyMealPlan from './DailyMealPlan';
+import FoodItemReports from './FoodItemReports';
+import AutoDietChat from './AutoDietChat';
+import GenerateDietPlanButton from './GenerateDietPlanButton';
 import './AnalysisResults.css';
 
 interface AnalysisResultsProps {
@@ -26,7 +32,10 @@ interface AnalysisResultsProps {
 }
 
 // Model Detection Breakdown Component
-const ModelDetectionBreakdown: React.FC<{ modelInfo: AnalysisResult['model_info'] }> = ({ modelInfo }) => {
+const ModelDetectionBreakdown: React.FC<{ 
+  modelInfo: AnalysisResult['model_info'];
+  dietChatResponse?: AnalysisResult['diet_chat_response'];
+}> = ({ modelInfo, dietChatResponse }) => {
   if (!modelInfo) return null;
 
   const { model_performance, detailed_detections } = modelInfo;
@@ -194,6 +203,63 @@ const ModelDetectionBreakdown: React.FC<{ modelInfo: AnalysisResult['model_info'
           <p><strong>Model Agreement:</strong> Foods detected by multiple models are considered more reliable than single-model detections.</p>
         </div>
       </div>
+
+      {/* AI Diet Chat Analysis */}
+      {dietChatResponse && (
+        <div className="diet-chat-section">
+          <h4>🤖 AI Nutrition Assistant Analysis</h4>
+          <div className="diet-chat-content">
+            <div className="chat-summary">
+              <div className="summary-header">
+                <div className="ai-icon">🤖</div>
+                <div className="summary-info">
+                  <h5>Automatic Nutrition Analysis</h5>
+                  <div className="confidence-indicator">
+                    <span className="confidence-label">AI Confidence:</span>
+                    <span className="confidence-value" style={{
+                      color: dietChatResponse.confidence >= 0.8 ? '#22c55e' : 
+                             dietChatResponse.confidence >= 0.6 ? '#f59e0b' : '#ef4444'
+                    }}>
+                      {(dietChatResponse.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="ai-response">
+                <div className="response-text">
+                  {dietChatResponse.answer}
+                </div>
+              </div>
+
+              {dietChatResponse.suggestions && dietChatResponse.suggestions.length > 0 && (
+                <div className="suggestions-section">
+                  <h6>💡 AI Recommendations</h6>
+                  <div className="suggestions-list">
+                    {dietChatResponse.suggestions.map((suggestion, index) => (
+                      <div key={index} className="suggestion-item">
+                        <span className="suggestion-icon">•</span>
+                        <span className="suggestion-text">{suggestion}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {dietChatResponse.relatedTopics && dietChatResponse.relatedTopics.length > 0 && (
+                <div className="topics-section">
+                  <h6>🔗 Related Topics</h6>
+                  <div className="topics-list">
+                    {dietChatResponse.relatedTopics.map((topic, index) => (
+                      <span key={index} className="topic-tag">{topic}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -203,6 +269,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
   onReAnalyze, 
   isReAnalyzing = false 
 }) => {
+  const [generatedDietPlan, setGeneratedDietPlan] = useState<any>(null);
   // Handle case where no food is detected
   if (!result.success) {
     return (
@@ -270,6 +337,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
 
   console.log('AnalysisResults - Full result:', result); // Debug log
   console.log('AnalysisResults - Nutritional data:', nutritionalData); // Debug log
+  console.log('AnalysisResults - Diet chat response:', result.diet_chat_response); // Debug log
 
   // Ensure we have valid numbers for display
   const safeNutritionData = {
@@ -315,7 +383,10 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
       <div className="results-content">
         {/* Model Detection Breakdown */}
         {result.model_info && (
-          <ModelDetectionBreakdown modelInfo={result.model_info} />
+          <ModelDetectionBreakdown 
+          modelInfo={result.model_info} 
+          dietChatResponse={result.diet_chat_response}
+        />
         )}
 
         {/* Nutrition Summary */}
@@ -359,6 +430,43 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
             </div>
           )}
         </div>
+
+        {/* GROQ AI Summary */}
+        {result.groq_analysis ? (
+          <GroqSummary 
+            summary={result.groq_analysis.summary}
+            healthScore={result.groq_analysis.healthScore}
+            detectedFoods={detectedFoods}
+          />
+        ) : detectedFoods.length > 0 ? (
+          <div className="basic-summary">
+            <div className="summary-header">
+              <div className="summary-title">
+                <Brain size={24} className="summary-icon" />
+                <h3>Food Detection Summary</h3>
+              </div>
+            </div>
+            <div className="summary-content">
+              <div className="summary-main">
+                <div className="summary-text">
+                  <Lightbulb size={20} className="insight-icon" />
+                  <p>Successfully detected {detectedFoods.length} food item{detectedFoods.length !== 1 ? 's' : ''} in your image. 
+                  {hasNutritionData ? ' Nutritional analysis completed with basic data.' : ' Enable GROQ API for detailed AI-powered nutrition analysis and personalized recommendations.'}</p>
+                </div>
+              </div>
+              <div className="detected-foods-section">
+                <h4>Detected Foods</h4>
+                <div className="food-tags">
+                  {detectedFoods.map((food, index) => (
+                    <span key={index} className="food-tag">
+                      {food}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Nutrition Breakdown */}
         {hasNutritionData && (
@@ -719,6 +827,48 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
             </ul>
           </div>
         )}
+
+        {/* GROQ AI Analysis */}
+        {result.groq_analysis && (
+          <GroqAnalysis analysis={result.groq_analysis} />
+        )}
+
+        {/* Detailed Food Item Reports */}
+        {result.groq_analysis?.foodItemReports && (
+          <FoodItemReports foodItemReports={result.groq_analysis.foodItemReports} />
+        )}
+
+        {/* Daily Meal Plan */}
+        {result.groq_analysis?.dailyMealPlan && (
+          <DailyMealPlan mealPlan={result.groq_analysis.dailyMealPlan} />
+        )}
+
+        {/* Generate Diet Plan Button */}
+        {detectedFoods.length > 0 && (
+          <>
+            {console.log('Detected foods for diet plan:', detectedFoods)}
+            <GenerateDietPlanButton
+              detectedFoods={detectedFoods}
+              nutritionalData={result.nutritional_data}
+              onDietPlanGenerated={setGeneratedDietPlan}
+            />
+          </>
+        )}
+
+        {/* Generated Diet Plan */}
+        {generatedDietPlan && (
+          <>
+            {console.log('Generated Diet Plan:', generatedDietPlan)}
+            <DailyMealPlan mealPlan={generatedDietPlan} />
+          </>
+        )}
+
+        {/* Automatic Diet Chat Response */}
+        {result.diet_chat_response && (
+          <AutoDietChat dietChatResponse={result.diet_chat_response} />
+        )}
+        
+
 
         {/* Detailed Analysis */}
         {result.analysis && (

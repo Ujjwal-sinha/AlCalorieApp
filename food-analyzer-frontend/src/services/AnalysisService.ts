@@ -91,6 +91,34 @@ export class AnalysisService {
     }
   }
 
+  async generateGroqAnalysis(detectedFoods: string[], nutritionalData: NutritionalData, foodItems: FoodItem[], imageDescription?: string, mealContext?: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/analysis/groq`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          detectedFoods,
+          nutritionalData,
+          foodItems,
+          imageDescription,
+          mealContext
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('GROQ analysis failed:', error);
+      throw error;
+    }
+  }
+
   async analyzeWithSpecificModel(file: File, modelType: string, context?: string): Promise<AnalysisResult> {
     try {
       const formData = new FormData();
@@ -512,5 +540,32 @@ export class AnalysisService {
     }
 
     return analysis;
+  }
+
+  async generateDietPlan(detectedFoods: string[], nutritionalData?: NutritionalData, userPreferences?: any): Promise<any> {
+    try {
+      const response = await this.makeRequest(`${this.apiBaseUrl}/analysis/generate-diet-plan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          detectedFoods,
+          nutritionalData: nutritionalData || {},
+          userPreferences: userPreferences || {}
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Diet plan generation failed:', error);
+      throw error;
+    }
   }
 }

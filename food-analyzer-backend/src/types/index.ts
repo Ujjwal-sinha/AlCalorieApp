@@ -43,6 +43,39 @@ export interface AnalysisResult {
   confidence: number;
   model_used: string;
   error?: string;
+  groq_analysis?: {
+    summary: string;
+    detailedAnalysis: string;
+    healthScore: number;
+    recommendations: string[];
+    dietaryConsiderations: string[];
+    foodItemReports?: {
+      [foodName: string]: {
+        nutritionProfile: string;
+        healthBenefits: string;
+        nutritionalHistory: string;
+        cookingMethods: string;
+        servingSuggestions: string;
+        potentialConcerns: string;
+        alternatives: string;
+      };
+    };
+    dailyMealPlan?: {
+      breakfast: string[];
+      lunch: string[];
+      dinner: string[];
+      snacks: string[];
+      hydration: string[];
+      totalCalories: number;
+      notes: string;
+    };
+  } | undefined;
+  diet_chat_response?: {
+    answer: string;
+    suggestions: string[];
+    relatedTopics: string[];
+    confidence: number;
+  } | undefined;
   model_info?: {
     detection_count: number;
     total_confidence: number;

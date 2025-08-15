@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 try:
     from langchain_groq import ChatGroq
     from langchain.schema import HumanMessage
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.messages import AIMessage
     GROQ_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"LangChain Groq library not available: {e}")
@@ -121,8 +123,13 @@ def load_models() -> Dict[str, Any]:
     # Load LLM
     if GROQ_AVAILABLE and groq_api_key:
         try:
-            models['llm'] = ChatGroq(model_name="llama3-8b-8192", api_key=groq_api_key)
-            logger.info("LLM loaded successfully")
+            models['llm'] = ChatGroq(
+                model_name="llama3-8b-8192", 
+                api_key=groq_api_key,
+                temperature=0.3,
+                max_tokens=2000
+            )
+            logger.info("LLM loaded successfully with LangChain GROQ integration")
         except Exception as e:
             logger.error(f"Failed to load LLM: {e}")
             models['llm'] = None
@@ -313,3 +320,112 @@ def check_model_availability(models: Dict[str, Any], required_models: list = Non
         status[model] = models.get(model) is not None
     
     return status
+
+def generate_comprehensive_food_analysis(detected_foods: list, nutritional_data: dict, models: Dict[str, Any]) -> dict:
+    """Generate comprehensive food analysis using GROQ LLM with LangChain"""
+    if not models.get('llm'):
+        return {
+            'success': False,
+            'error': 'LLM not available',
+            'summary': 'AI analysis not available',
+            'health_score': 5,
+            'recommendations': ['Enable GROQ API for detailed analysis']
+        }
+    
+    try:
+        # Create a comprehensive prompt template
+        prompt_template = ChatPromptTemplate.from_template("""
+        You are an expert nutritionist and food analyst. Provide a comprehensive analysis for the following meal:
+
+        DETECTED FOODS: {detected_foods}
+        NUTRITIONAL DATA: {nutritional_data}
+
+        Please provide your analysis in this exact format:
+
+        ## COMPREHENSIVE FOOD ANALYSIS
+
+        ### EXECUTIVE SUMMARY:
+        [2-3 sentence summary of nutritional profile and health implications]
+
+        ### DETAILED NUTRITIONAL ANALYSIS:
+        [Break down each food item with portion estimates and nutritional impact]
+
+        ### MEAL COMPOSITION ASSESSMENT:
+        - **Meal Type**: [Breakfast/Lunch/Dinner/Snack]
+        - **Cuisine Style**: [If identifiable]
+        - **Portion Size**: [Small/Medium/Large/Extra Large]
+        - **Cooking Methods**: [Grilled, fried, baked, etc.]
+        - **Main Macronutrient**: [Carb-heavy/Protein-rich/Fat-dense/Balanced]
+
+        ### NUTRITIONAL QUALITY SCORE: [1-10]
+        **Score**: [X]/10
+        **Justification**: [Explain the score based on nutritional balance, variety, and health factors]
+
+        ### STRENGTHS:
+        [What's nutritionally good about this meal - 2-3 points]
+
+        ### AREAS FOR IMPROVEMENT:
+        [What could be better - 2-3 specific suggestions]
+
+        ### HEALTH RECOMMENDATIONS:
+        1. **Immediate Suggestions**: [2-3 specific tips for this meal]
+        2. **Portion Adjustments**: [If needed]
+        3. **Complementary Foods**: [What to add for better nutrition]
+        4. **Timing Considerations**: [Best time to eat this meal]
+
+        ### DIETARY CONSIDERATIONS:
+        - **Allergen Information**: [Common allergens present]
+        - **Dietary Restrictions**: [Vegan/Vegetarian/Gluten-free compatibility]
+        - **Blood Sugar Impact**: [High/Medium/Low glycemic impact]
+        - **Special Considerations**: [Any other important dietary notes]
+
+        Be specific, practical, and evidence-based. Focus on actionable insights.
+        """)
+
+        # Format the prompt with actual data
+        formatted_prompt = prompt_template.format_messages({
+            'detected_foods': ', '.join(detected_foods) if isinstance(detected_foods, list) else str(detected_foods),
+            'nutritional_data': str(nutritional_data)
+        })
+
+        # Generate analysis using GROQ
+        response = models['llm'].invoke(formatted_prompt)
+        analysis_text = response.content
+
+        # Parse the response to extract key components
+        import re
+        
+        # Extract health score
+        score_match = re.search(r'NUTRITIONAL QUALITY SCORE:.*?\*\*Score\*\*:\s*(\d+)/10', analysis_text, re.DOTALL)
+        health_score = int(score_match.group(1)) if score_match else 5
+
+        # Extract summary
+        summary_match = re.search(r'### EXECUTIVE SUMMARY:\s*\n([\s\S]*?)(?=\n###|$)', analysis_text)
+        summary = summary_match.group(1).strip() if summary_match else 'Analysis completed successfully.'
+
+        # Extract recommendations
+        recommendations_match = re.search(r'### HEALTH RECOMMENDATIONS:\s*\n([\s\S]*?)(?=\n###|$)', analysis_text)
+        recommendations = []
+        if recommendations_match:
+            rec_text = recommendations_match.group(1)
+            recommendations = [line.strip() for line in rec_text.split('\n') if line.strip() and not line.startswith('#')]
+
+        return {
+            'success': True,
+            'summary': summary,
+            'detailed_analysis': analysis_text,
+            'health_score': health_score,
+            'recommendations': recommendations[:5],  # Limit to 5 recommendations
+            'dietary_considerations': ['Review detailed analysis for specific dietary information'],
+            'model_used': 'GROQ Llama3-8b-8192'
+        }
+
+    except Exception as e:
+        logger.error(f"Error generating comprehensive analysis: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'summary': 'Analysis failed due to technical error',
+            'health_score': 5,
+            'recommendations': ['Try again later', 'Check GROQ API configuration']
+        }

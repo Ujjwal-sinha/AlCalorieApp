@@ -1,0 +1,263 @@
+.food-item-reports {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.reports-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: white;
+}
+
+.reports-header h3 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.reports-header p {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.food-report-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.food-report-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.report-header:hover {
+  background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+}
+
+.food-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.food-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.food-info h4 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.expand-icon {
+  font-size: 1.2rem;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.report-content {
+  padding: 1.5rem;
+  background: white;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.report-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.report-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.report-section h5 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.report-section p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #555;
+  margin: 0;
+  text-align: justify;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .food-item-reports {
+    margin: 1rem 0;
+    padding: 1rem;
+  }
+
+  .reports-header h3 {
+    font-size: 1.5rem;
+  }
+
+  .reports-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .food-report-card {
+    margin-bottom: 1rem;
+  }
+
+  .report-header {
+    padding: 1rem;
+  }
+
+  .food-info h4 {
+    font-size: 1.1rem;
+  }
+
+  .food-icon {
+    font-size: 1.5rem;
+  }
+
+  .report-content {
+    padding: 1rem;
+  }
+
+  .report-section h5 {
+    font-size: 1rem;
+  }
+
+  .report-section p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .food-item-reports {
+    padding: 0.8rem;
+  }
+
+  .reports-header h3 {
+    font-size: 1.3rem;
+  }
+
+  .reports-header p {
+    font-size: 0.9rem;
+  }
+
+  .report-header {
+    padding: 0.8rem;
+  }
+
+  .food-info {
+    gap: 0.8rem;
+  }
+
+  .food-icon {
+    font-size: 1.3rem;
+  }
+
+  .food-info h4 {
+    font-size: 1rem;
+  }
+
+  .report-content {
+    padding: 0.8rem;
+  }
+}
+
+/* Loading Animation */
+.food-item-reports.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.food-item-reports.loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .food-item-reports {
+    background: white;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+
+  .report-header {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  .food-report-card {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+}
