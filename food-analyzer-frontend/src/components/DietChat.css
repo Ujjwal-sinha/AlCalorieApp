@@ -9,7 +9,8 @@
   background: white;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .chat-header {
@@ -93,7 +94,8 @@
   display: flex;
   flex-direction: column;
   background: white;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
 }
 
@@ -106,6 +108,7 @@
   gap: 1rem;
   background: white;
   min-height: 300px;
+  max-height: 60vh;
   border: 2px solid #e9ecef;
   margin: 0.5rem;
   border-radius: 12px;
@@ -402,6 +405,7 @@
   flex-shrink: 0;
   max-height: 20vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sample-questions h4 {

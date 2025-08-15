@@ -3,6 +3,7 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #1a1a1a;
   overflow-x: hidden;
+  overflow-y: auto;
   opacity: 0;
   transform: translateY(20px);
   transition: all 0.8s ease;
@@ -20,7 +21,8 @@
   display: flex;
   align-items: center;
   background: linear-gradient(135deg, #ffffff 0%, #fafafa 50%, #f8f9fa 100%);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .hero-background {
