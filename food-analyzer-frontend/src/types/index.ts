@@ -37,6 +37,11 @@ export interface AnalysisResult {
     }>;
   };
   detected_foods?: string[];
+  detectedFoods?: Array<{
+    name: string;
+    confidence: number;
+    detectionMethods: string[];
+  }>;
   confidence?: number;
   confidence_scores?: { [key: string]: number };
   food_details?: any;

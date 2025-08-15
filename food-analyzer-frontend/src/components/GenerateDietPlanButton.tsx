@@ -33,10 +33,8 @@ const GenerateDietPlanButton: React.FC<GenerateDietPlanButtonProps> = ({
       const result = await analysisService.generateDietPlan(detectedFoods, nutritionalData);
 
       if (result.success && result.dietPlan) {
-        console.log('Diet plan generated successfully:', result.dietPlan);
         onDietPlanGenerated?.(result.dietPlan);
       } else {
-        console.log('Diet plan generation failed:', result);
         setError('Failed to generate diet plan. Please try again.');
       }
     } catch (err) {
@@ -68,8 +66,8 @@ const GenerateDietPlanButton: React.FC<GenerateDietPlanButtonProps> = ({
           )}
         </div>
         <div className="btn-subtitle">
-          <Calendar size={14} />
-          <span>Based on {detectedFoods.length} detected foods</span>
+          
+        
         </div>
       </button>
 

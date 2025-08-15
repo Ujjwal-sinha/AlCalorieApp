@@ -845,22 +845,16 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
 
         {/* Generate Diet Plan Button */}
         {detectedFoods.length > 0 && (
-          <>
-            {console.log('Detected foods for diet plan:', detectedFoods)}
-            <GenerateDietPlanButton
-              detectedFoods={detectedFoods}
-              nutritionalData={result.nutritional_data}
-              onDietPlanGenerated={setGeneratedDietPlan}
-            />
-          </>
+          <GenerateDietPlanButton
+            detectedFoods={result.detectedFoods?.map((food: any) => food.name) || detectedFoods}
+            nutritionalData={result.nutritional_data}
+            onDietPlanGenerated={setGeneratedDietPlan}
+          />
         )}
 
         {/* Generated Diet Plan */}
         {generatedDietPlan && (
-          <>
-            {console.log('Generated Diet Plan:', generatedDietPlan)}
-            <DailyMealPlan mealPlan={generatedDietPlan} />
-          </>
+          <DailyMealPlan mealPlan={generatedDietPlan} />
         )}
 
         {/* Automatic Diet Chat Response */}
