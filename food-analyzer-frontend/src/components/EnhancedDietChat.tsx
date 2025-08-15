@@ -130,7 +130,6 @@ const EnhancedDietChat: React.FC = () => {
 
     let detectedFoods: string[] = [];
     let imageUrl = '';
-    let nutritionalData = {};
 
     // Handle image upload and analysis
     if (imageFile) {
@@ -147,7 +146,6 @@ const EnhancedDietChat: React.FC = () => {
 
       const analysis = await analyzeImage(imageFile);
       detectedFoods = analysis.foods;
-      nutritionalData = analysis.nutritionalData;
 
       if (detectedFoods.length > 0) {
         const detectionMessage: ChatMessage = {

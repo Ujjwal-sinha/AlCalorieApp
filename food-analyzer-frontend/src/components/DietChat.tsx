@@ -24,7 +24,7 @@ const DietChat: React.FC = () => {
   const [userHistory, setUserHistory] = useState<string[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
   const [retryCount, setRetryCount] = useState(0);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
