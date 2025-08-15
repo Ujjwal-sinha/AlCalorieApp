@@ -3,6 +3,7 @@ import analysisRoutes from './analysis';
 import foodRoutes from './food';
 import nutritionRoutes from './nutrition';
 import modelsRoutes from './models';
+import dietRoutes from './diet';
 
 const router = Router();
 
@@ -15,7 +16,8 @@ router.get('/', (_req: Request, res: Response) => {
       analysis: '/api/analysis',
       food: '/api/food',
       nutrition: '/api/nutrition',
-      models: '/api/models'
+      models: '/api/models',
+      diet: '/api/diet'
     },
     documentation: '/api/docs'
   });
@@ -26,5 +28,6 @@ router.use('/analysis', analysisRoutes);
 router.use('/food', foodRoutes);
 router.use('/nutrition', nutritionRoutes);
 router.use('/models', modelsRoutes);
+router.use('/diet', dietRoutes);
 
 export default router;

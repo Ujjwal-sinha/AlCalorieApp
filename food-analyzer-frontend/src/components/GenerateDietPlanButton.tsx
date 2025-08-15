@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AnalysisService } from '../services/AnalysisService';
-import { RefreshCw, ChefHat, Calendar } from 'lucide-react';
+import { RefreshCw, ChefHat } from 'lucide-react';
 import './GenerateDietPlanButton.css';
 
 interface GenerateDietPlanButtonProps {

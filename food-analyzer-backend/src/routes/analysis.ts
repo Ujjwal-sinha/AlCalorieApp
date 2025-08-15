@@ -326,24 +326,44 @@ router.post('/diet-chat', asyncHandler(async (req: Request, res: Response) => {
 
 // Diet chat health check endpoint
 router.get('/diet-chat/health', asyncHandler(async (_req: Request, res: Response) => {
-  const healthCheck = await dietChatService.healthCheck();
-  
-  return res.json({
-    service: 'Diet Chat Service',
-    status: healthCheck.status,
-    available: healthCheck.available,
-    error: healthCheck.error
-  });
+  try {
+    const dietChatService = DietChatService.getInstance();
+    const healthStatus = await dietChatService.healthCheck();
+    
+    return res.json({
+      success: true,
+      available: healthStatus.available,
+      status: healthStatus.status,
+      error: healthStatus.error
+    });
+  } catch (error) {
+    console.error('Diet chat health check error:', error);
+    return res.status(500).json({
+      success: false,
+      available: false,
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }));
 
-// Get sample questions for diet chat
+// Diet chat sample questions endpoint
 router.get('/diet-chat/sample-questions', asyncHandler(async (_req: Request, res: Response) => {
-  const sampleQuestions = dietChatService.getSampleQuestions();
-  
-  return res.json({
-    success: true,
-    questions: sampleQuestions
-  });
+  try {
+    const dietChatService = DietChatService.getInstance();
+    const questions = await dietChatService.getSampleQuestions();
+    
+    return res.json({
+      success: true,
+      questions
+    });
+  } catch (error) {
+    console.error('Sample questions error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }));
 
 // Generate diet plan from detected foods

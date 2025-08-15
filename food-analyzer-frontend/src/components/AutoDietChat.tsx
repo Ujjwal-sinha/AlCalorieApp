@@ -13,10 +13,10 @@ interface AutoDietChatProps {
 const AutoDietChat: React.FC<AutoDietChatProps> = ({ dietChatResponse }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return '#4CAF50';
-    if (confidence >= 0.6) return '#FF9800';
-    return '#F44336';
+  const getConfidenceClass = (confidence: number) => {
+    if (confidence >= 0.8) return 'high';
+    if (confidence >= 0.6) return 'medium';
+    return 'low';
   };
 
   const getConfidenceText = (confidence: number) => {
@@ -27,21 +27,24 @@ const AutoDietChat: React.FC<AutoDietChatProps> = ({ dietChatResponse }) => {
 
   return (
     <div className="auto-diet-chat">
-      <div className="auto-chat-header">
+      <div className="auto-chat-header" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="header-content">
           <div className="header-icon">🤖</div>
           <div className="header-text">
             <h3>AI Nutrition Assistant</h3>
             <p>Automatic meal analysis and nutrition advice</p>
           </div>
-          <div className="confidence-badge" style={{ backgroundColor: getConfidenceColor(dietChatResponse.confidence) }}>
+          <div className={`confidence-badge ${getConfidenceClass(dietChatResponse.confidence)}`}>
             <span className="confidence-text">{getConfidenceText(dietChatResponse.confidence)}</span>
             <span className="confidence-score">{(dietChatResponse.confidence * 100).toFixed(0)}%</span>
           </div>
         </div>
         <button 
           className={`expand-button ${isExpanded ? 'expanded' : ''}`}
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
         >
           {isExpanded ? '▼' : '▶'}
         </button>
@@ -49,31 +52,29 @@ const AutoDietChat: React.FC<AutoDietChatProps> = ({ dietChatResponse }) => {
 
       <div className={`auto-chat-content ${isExpanded ? 'expanded' : ''}`}>
         <div className="ai-response">
-          <div className="response-bubble">
-            <div className="response-text">
-              {dietChatResponse.answer}
-            </div>
+          <div className="response-text">
+            {dietChatResponse.answer}
           </div>
         </div>
 
-        {dietChatResponse.suggestions.length > 0 && (
+        {dietChatResponse.suggestions && dietChatResponse.suggestions.length > 0 && (
           <div className="suggestions-section">
-            <h4>💡 Actionable Suggestions</h4>
-            <div className="suggestions-grid">
+            <h6>💡 Actionable Suggestions</h6>
+            <div className="suggestions-list">
               {dietChatResponse.suggestions.map((suggestion, index) => (
-                <div key={index} className="suggestion-card">
-                  <div className="suggestion-icon">💡</div>
-                  <p>{suggestion}</p>
+                <div key={index} className="suggestion-item">
+                  <span className="suggestion-icon">•</span>
+                  <span className="suggestion-text">{suggestion}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {dietChatResponse.relatedTopics.length > 0 && (
+        {dietChatResponse.relatedTopics && dietChatResponse.relatedTopics.length > 0 && (
           <div className="topics-section">
-            <h4>🔗 Related Topics</h4>
-            <div className="topics-grid">
+            <h6>🔗 Related Topics</h6>
+            <div className="topics-list">
               {dietChatResponse.relatedTopics.map((topic, index) => (
                 <span key={index} className="topic-tag">
                   {topic}

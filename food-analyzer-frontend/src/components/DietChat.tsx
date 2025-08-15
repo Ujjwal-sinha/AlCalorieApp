@@ -10,7 +10,7 @@ interface DietResponse {
 
 interface ChatMessage {
   id: string;
-  type: 'user' | 'assistant';
+  type: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
   response?: DietResponse;
@@ -22,10 +22,14 @@ const DietChat: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sampleQuestions, setSampleQuestions] = useState<string[]>([]);
   const [userHistory, setUserHistory] = useState<string[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
+  const [retryCount, setRetryCount] = useState(0);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadSampleQuestions();
+    checkConnectionStatus();
     scrollToBottom();
   }, [messages]);
 
@@ -33,15 +37,80 @@ const DietChat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const checkConnectionStatus = async () => {
+    try {
+      setConnectionStatus('connecting');
+      const response = await fetch('/api/diet/health', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.available) {
+          setConnectionStatus('connected');
+          setRetryCount(0);
+          
+          // Add welcome message if no messages exist
+          if (messages.length === 0) {
+            const welcomeMessage: ChatMessage = {
+              id: 'welcome',
+              type: 'system',
+              content: 'Welcome! I\'m your AI Nutrition Assistant. I can help you with diet advice, meal planning, and nutrition questions. Feel free to ask me anything!',
+              timestamp: new Date()
+            };
+            setMessages([welcomeMessage]);
+          }
+        } else {
+          setConnectionStatus('disconnected');
+        }
+      } else {
+        setConnectionStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('Connection check failed:', error);
+      setConnectionStatus('disconnected');
+    }
+  };
+
   const loadSampleQuestions = async () => {
     try {
-      const response = await fetch('/api/analysis/diet-chat/sample-questions');
+      const response = await fetch('/api/diet/sample-questions');
       const data = await response.json();
-      if (data.success) {
+      if (data.questions) {
         setSampleQuestions(data.questions);
+      } else {
+        // Fallback to default questions if API fails
+        setSampleQuestions([
+          "What should I eat to lose weight healthily?",
+          "How much protein do I need daily?",
+          "What are the best sources of vitamin D?",
+          "How can I improve my gut health?",
+          "What's a good breakfast for energy?",
+          "How do I read nutrition labels?",
+          "What foods help with muscle recovery?",
+          "How can I reduce my sugar intake?",
+          "What's the best diet for heart health?",
+          "How do I plan healthy meals for the week?"
+        ]);
       }
     } catch (error) {
       console.error('Failed to load sample questions:', error);
+      // Fallback to default questions
+      setSampleQuestions([
+        "What should I eat to lose weight healthily?",
+        "How much protein do I need daily?",
+        "What are the best sources of vitamin D?",
+        "How can I improve my gut health?",
+        "What's a good breakfast for energy?",
+        "How do I read nutrition labels?",
+        "What foods help with muscle recovery?",
+        "How can I reduce my sugar intake?",
+        "What's the best diet for heart health?",
+        "How do I plan healthy meals for the week?"
+      ]);
     }
   };
 
@@ -64,7 +133,7 @@ const DietChat: React.FC = () => {
     setUserHistory(newHistory);
 
     try {
-      const response = await fetch('/api/analysis/diet-chat', {
+      const response = await fetch('/api/diet/query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,9 +144,9 @@ const DietChat: React.FC = () => {
         }),
       });
 
-      const data = await response.json();
+      if (response.ok) {
+        const data = await response.json();
 
-      if (data.success) {
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
@@ -92,24 +161,44 @@ const DietChat: React.FC = () => {
         };
 
         setMessages(prev => [...prev, assistantMessage]);
+        setConnectionStatus('connected');
+        setRetryCount(0);
       } else {
-        const errorMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, errorMessage]);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      const errorMessage: ChatMessage = {
+      
+      // Increment retry count
+      setRetryCount(prev => prev + 1);
+      
+      let errorMessage = 'Sorry, I\'m having trouble connecting. Please check your internet connection.';
+      
+      if (retryCount < 2) {
+        errorMessage = `Connection attempt ${retryCount + 1} failed. Retrying...`;
+      } else {
+        errorMessage = 'I\'m experiencing technical difficulties. Please try again in a few moments or check your internet connection.';
+        setConnectionStatus('disconnected');
+      }
+
+      const errorMessageObj: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: 'Sorry, I\'m having trouble connecting. Please check your internet connection.',
-        timestamp: new Date()
+        content: errorMessage,
+        timestamp: new Date(),
+        response: {
+          answer: errorMessage,
+          suggestions: [
+            'Check your internet connection',
+            'Try refreshing the page',
+            'Wait a few moments and try again'
+          ],
+          relatedTopics: ['Technical Support', 'Connection Issues'],
+          confidence: 0.1
+        }
       };
-      setMessages(prev => [...prev, errorMessage]);
+      
+      setMessages(prev => [...prev, errorMessageObj]);
     } finally {
       setIsLoading(false);
     }
@@ -122,6 +211,26 @@ const DietChat: React.FC = () => {
 
   const handleSampleQuestionClick = (question: string) => {
     sendMessage(question);
+  };
+
+  const handleRetryConnection = () => {
+    checkConnectionStatus();
+  };
+
+  const handleQuickAction = (action: string) => {
+    const actionQuestions = {
+      'weight-loss': 'What should I eat to lose weight healthily?',
+      'protein': 'How much protein do I need daily?',
+      'vitamins': 'What are the best sources of vitamin D?',
+      'gut-health': 'How can I improve my gut health?',
+      'breakfast': 'What\'s a good breakfast for energy?',
+      'meal-planning': 'How do I plan healthy meals for the week?'
+    };
+    
+    const question = actionQuestions[action as keyof typeof actionQuestions];
+    if (question) {
+      sendMessage(question);
+    }
   };
 
   const getConfidenceColor = (confidence: number) => {
@@ -139,6 +248,18 @@ const DietChat: React.FC = () => {
       <div className="chat-header">
         <h2>🍎 AI Nutrition Assistant</h2>
         <p>Ask me anything about diet, nutrition, and healthy eating!</p>
+        <div className="connection-status">
+          <span className={`status-indicator ${connectionStatus}`}>
+            {connectionStatus === 'connected' && '🟢 Connected'}
+            {connectionStatus === 'connecting' && '🟡 Connecting...'}
+            {connectionStatus === 'disconnected' && '🔴 Disconnected'}
+          </span>
+          {connectionStatus === 'disconnected' && (
+            <button onClick={handleRetryConnection} className="retry-button">
+              🔄 Retry
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="chat-container">
@@ -148,6 +269,14 @@ const DietChat: React.FC = () => {
               <div className="welcome-icon">🤖</div>
               <h3>Welcome to your AI Nutrition Assistant!</h3>
               <p>I'm here to help you with all your diet and nutrition questions. Try asking me something or pick from the sample questions below.</p>
+              {connectionStatus === 'disconnected' && (
+                <div className="connection-warning">
+                  <p>⚠️ Connection issues detected. Some features may be limited.</p>
+                  <button onClick={handleRetryConnection} className="retry-button">
+                    🔄 Retry Connection
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -220,6 +349,18 @@ const DietChat: React.FC = () => {
           <div ref={messagesEndRef} />
         </div>
 
+        <div className="quick-actions">
+          <h4>⚡ Quick Actions:</h4>
+          <div className="action-buttons">
+            <button onClick={() => handleQuickAction('weight-loss')}>Weight Loss</button>
+            <button onClick={() => handleQuickAction('protein')}>Protein Needs</button>
+            <button onClick={() => handleQuickAction('vitamins')}>Vitamins</button>
+            <button onClick={() => handleQuickAction('gut-health')}>Gut Health</button>
+            <button onClick={() => handleQuickAction('breakfast')}>Breakfast</button>
+            <button onClick={() => handleQuickAction('meal-planning')}>Meal Planning</button>
+          </div>
+        </div>
+
         <div className="sample-questions">
           <h4>💭 Sample Questions:</h4>
           <div className="question-grid">
@@ -228,7 +369,7 @@ const DietChat: React.FC = () => {
                 key={index}
                 className="sample-question"
                 onClick={() => handleSampleQuestionClick(question)}
-                disabled={isLoading}
+                disabled={isLoading || connectionStatus === 'disconnected'}
               >
                 {question}
               </button>
@@ -242,12 +383,12 @@ const DietChat: React.FC = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Ask me about diet, nutrition, or healthy eating..."
-            disabled={isLoading}
+            disabled={isLoading || connectionStatus === 'disconnected'}
             className="message-input"
           />
           <button 
             type="submit" 
-            disabled={isLoading || !inputValue.trim()}
+            disabled={isLoading || !inputValue.trim() || connectionStatus === 'disconnected'}
             className="send-button"
           >
             {isLoading ? '⏳' : '📤'}
