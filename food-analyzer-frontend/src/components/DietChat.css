@@ -1,38 +1,39 @@
-/* Diet Chat - Matching Project Theme */
+/* Diet Chat - Full Screen Layout */
 .diet-chat {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 1rem;
-  min-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   background: white;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .chat-header {
   text-align: center;
   color: white;
-  margin-bottom: 1.5rem;
-  padding: 2rem;
+  margin: 0;
+  padding: 1rem 2rem;
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(76, 175, 80, 0.2);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.2);
   flex-shrink: 0;
+  z-index: 10;
 }
 
 .chat-header h2 {
   margin: 0 0 0.5rem 0;
-  font-size: 2rem;
+  font-size: 1.6rem;
   font-weight: 700;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .chat-header p {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 0.75rem 0;
   opacity: 0.95;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 500;
 }
 
@@ -40,15 +41,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .status-indicator {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 25px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -72,11 +73,11 @@
 .retry-button {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 25px;
+  border-radius: 16px;
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.75rem 1.5rem;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: all 0.2s ease;
   backdrop-filter: blur(10px);
@@ -92,75 +93,74 @@
   display: flex;
   flex-direction: column;
   background: white;
-  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
-  min-height: 600px;
+  min-height: 0;
 }
 
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   background: white;
   min-height: 300px;
-  align-items: stretch;
+  border: 2px solid #e9ecef;
+  margin: 0.5rem;
+  border-radius: 12px;
 }
 
 .welcome-message {
   text-align: center;
-  padding: 3rem 2rem;
+  padding: 2rem 1.5rem;
   color: #333;
   background: #f8f9fa;
   border-radius: 16px;
   border: 1px solid #e9ecef;
-  margin: 1rem 0;
+  margin: 0.5rem 0;
 }
 
 .welcome-icon {
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
+  font-size: 3rem;
+  margin-bottom: 1rem;
 }
 
 .welcome-message h3 {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
   color: #1a1a1a;
   font-weight: 600;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
 }
 
 .welcome-message p {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
   line-height: 1.6;
   color: #555;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .connection-warning {
   background: rgba(255, 152, 0, 0.1);
   border: 1px solid rgba(255, 152, 0, 0.3);
   border-radius: 12px;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
+  padding: 1rem;
+  margin-top: 1rem;
 }
 
 .connection-warning p {
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.75rem 0;
   color: #e65100;
   font-weight: 500;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .connection-warning .retry-button {
   background: #ff9800;
   border: none;
   color: white;
-  font-size: 0.9rem;
-  padding: 0.75rem 1.5rem;
+  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
 }
 
 .connection-warning .retry-button:hover {
@@ -169,7 +169,7 @@
 
 .message {
   display: flex;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   width: 100%;
   align-items: flex-start;
 }
@@ -188,10 +188,10 @@
 
 .message-content {
   max-width: 75%;
-  padding: 1.25rem;
-  border-radius: 18px;
+  padding: 1rem;
+  border-radius: 16px;
   position: relative;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   word-wrap: break-word;
   display: flex;
   flex-direction: column;
@@ -200,14 +200,14 @@
 .message.user .message-content {
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
   color: white;
-  border-bottom-right-radius: 8px;
+  border-bottom-right-radius: 6px;
 }
 
 .message.assistant .message-content {
   background: white;
   color: #1a1a1a;
   border: 1px solid #e9ecef;
-  border-bottom-left-radius: 8px;
+  border-bottom-left-radius: 6px;
 }
 
 .message.system .message-content {
@@ -219,10 +219,10 @@
 }
 
 .message-text {
-  margin-bottom: 0.75rem;
-  line-height: 1.6;
-  font-size: 1rem;
-  white-space: pre-line; /* Preserve line breaks and bullet points */
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+  font-size: 0.95rem;
+  white-space: pre-line;
 }
 
 /* Bullet point styling */
@@ -242,21 +242,21 @@
 }
 
 .message-time {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   opacity: 0.7;
   text-align: right;
   font-weight: 500;
 }
 
 .message-details {
-  margin-top: 1.25rem;
-  padding-top: 1.25rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
   border-top: 1px solid #e9ecef;
 }
 
 .confidence-indicator {
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
   color: #555;
   font-weight: 500;
 }
@@ -268,37 +268,37 @@
 
 .suggestions h4,
 .related-topics h4 {
-  margin: 0.75rem 0;
-  font-size: 1rem;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
   color: #1a1a1a;
   font-weight: 600;
 }
 
 .suggestions ul {
-  margin: 0.75rem 0;
-  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
 }
 
 .suggestions li {
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
   color: #555;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .topic-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .topic-tag {
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
   color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 16px;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
@@ -307,7 +307,7 @@
 }
 
 .topic-tag:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
   background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
 }
@@ -315,19 +315,19 @@
 .loading-indicator {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   color: #555;
   font-weight: 500;
 }
 
 .typing-dots {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .typing-dots span {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   background: #4CAF50;
   border-radius: 50%;
   animation: typing 1.4s infinite ease-in-out;
@@ -348,16 +348,16 @@
 }
 
 .quick-actions {
-  padding: 2rem;
+  padding: 0.75rem;
   background: #f8f9fa;
   border-top: 1px solid #e9ecef;
   flex-shrink: 0;
 }
 
 .quick-actions h4 {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 0.5rem 0;
   color: #1a1a1a;
-  font-size: 1.2rem;
+  font-size: 0.9rem;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -366,8 +366,8 @@
 
 .action-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 0.375rem;
   align-items: stretch;
 }
 
@@ -375,14 +375,14 @@
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
   color: white;
   border: none;
-  border-radius: 15px;
-  padding: 1rem;
-  font-size: 0.9rem;
+  border-radius: 8px;
+  padding: 0.4rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
-  min-height: 50px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -390,50 +390,57 @@
 }
 
 .action-buttons button:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
   background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
 }
 
 .sample-questions {
-  padding: 2rem;
+  padding: 0.75rem;
   background: white;
   border-top: 1px solid #e9ecef;
   flex-shrink: 0;
+  max-height: 20vh;
+  overflow-y: auto;
 }
 
 .sample-questions h4 {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 0.5rem 0;
   color: #1a1a1a;
-  font-size: 1.2rem;
+  font-size: 0.9rem;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 0.25rem 0;
+  z-index: 5;
 }
 
 .question-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.25rem;
   max-width: 100%;
   align-items: stretch;
 }
 
 .sample-question {
   background: white;
-  border: 2px solid #e9ecef;
-  border-radius: 15px;
-  padding: 1.25rem;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 0.5rem;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.75rem;
+  line-height: 1.2;
   color: #1a1a1a;
   font-weight: 500;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  min-height: 60px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  min-height: 32px;
   display: flex;
   align-items: center;
   width: 100%;
@@ -445,8 +452,8 @@
 .sample-question:hover:not(:disabled) {
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
   color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(76, 175, 80, 0.2);
   border-color: #4CAF50;
 }
 
@@ -460,8 +467,8 @@
 
 .input-container {
   display: flex;
-  gap: 1rem;
-  padding: 2rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
   background: white;
   border-top: 1px solid #e9ecef;
   flex-shrink: 0;
@@ -469,15 +476,15 @@
 
 .message-input {
   flex: 1;
-  padding: 1rem 1.5rem;
+  padding: 0.625rem 0.875rem;
   border: 2px solid #e9ecef;
-  border-radius: 30px;
-  font-size: 1rem;
+  border-radius: 16px;
+  font-size: 0.85rem;
   outline: none;
   transition: all 0.2s ease;
   color: #1a1a1a;
   font-weight: 500;
-  min-height: 50px;
+  min-height: 35px;
 }
 
 .message-input:focus {
@@ -497,25 +504,25 @@
 }
 
 .send-button {
-  width: 55px;
-  height: 55px;
+  width: 35px;
+  height: 35px;
   border: none;
   border-radius: 50%;
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
   color: white;
-  font-size: 1.3rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
   flex-shrink: 0;
 }
 
 .send-button:hover:not(:disabled) {
-  transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.3);
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
   background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
 }
 
@@ -529,114 +536,107 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .diet-chat {
-    padding: 0.5rem;
-    min-height: 100vh;
-  }
-
-  .chat-header {
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .chat-header h2 {
-    font-size: 1.6rem;
-  }
-
-  .chat-header p {
-    font-size: 1rem;
-  }
-
-  .connection-status {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .chat-container {
-    min-height: 500px;
+    height: 100vh;
   }
 
   .messages-container {
-    padding: 1.5rem;
     min-height: 250px;
-  }
-
-  .message-content {
-    max-width: 90%;
     padding: 1rem;
-  }
-
-  .quick-actions {
-    padding: 1.5rem;
-  }
-
-  .action-buttons {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-
-  .action-buttons button {
-    padding: 0.875rem;
-    font-size: 0.85rem;
-    min-height: 45px;
-  }
-
-  .sample-questions {
-    padding: 1.5rem;
-  }
-
-  .question-grid {
-    gap: 0.5rem;
-  }
-
-  .sample-question {
-    padding: 1rem;
-    min-height: 55px;
-    font-size: 0.85rem;
-  }
-
-  .input-container {
-    padding: 1.5rem;
-    gap: 0.75rem;
-  }
-
-  .message-input {
-    font-size: 0.9rem;
-    padding: 0.875rem 1.25rem;
-    min-height: 45px;
-  }
-
-  .send-button {
-    width: 50px;
-    height: 50px;
-    font-size: 1.2rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .diet-chat {
-    padding: 0.25rem;
+    margin: 0.25rem;
   }
 
   .chat-header {
-    padding: 1.25rem;
+    padding: 0.75rem 1rem;
   }
 
   .chat-header h2 {
     font-size: 1.4rem;
   }
 
-  .messages-container {
-    padding: 1rem;
-    min-height: 200px;
+  .chat-header p {
+    font-size: 0.85rem;
+  }
+
+  .connection-status {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .message-content {
-    max-width: 95%;
+    max-width: 85%;
     padding: 0.875rem;
   }
 
   .quick-actions {
-    padding: 1rem;
+    padding: 0.5rem;
+  }
+
+  .action-buttons {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.25rem;
+  }
+
+  .action-buttons button {
+    padding: 0.375rem;
+    font-size: 0.7rem;
+    min-height: 24px;
+  }
+
+  .sample-questions {
+    padding: 0.5rem;
+    max-height: 15vh;
+  }
+
+  .question-grid {
+    gap: 0.2rem;
+  }
+
+  .sample-question {
+    padding: 0.375rem;
+    min-height: 28px;
+    font-size: 0.7rem;
+  }
+
+  .input-container {
+    padding: 0.5rem;
+    gap: 0.375rem;
+  }
+
+  .message-input {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 32px;
+  }
+
+  .send-button {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .messages-container {
+    min-height: 200px;
+    padding: 0.75rem;
+    margin: 0.25rem;
+  }
+
+  .chat-header {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .chat-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .message-content {
+    max-width: 90%;
+    padding: 0.75rem;
+  }
+
+  .quick-actions {
+    padding: 0.375rem;
   }
 
   .action-buttons {
@@ -644,60 +644,61 @@
   }
 
   .sample-questions {
-    padding: 1rem;
-  }
-
-  .question-grid {
-    gap: 0.5rem;
+    padding: 0.375rem;
+    max-height: 12vh;
   }
 
   .sample-question {
-    padding: 0.875rem;
-    min-height: 50px;
-    font-size: 0.8rem;
+    padding: 0.25rem;
+    min-height: 24px;
+    font-size: 0.65rem;
   }
 
   .topic-tags {
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 
   .topic-tag {
-    font-size: 0.8rem;
-    padding: 0.4rem 0.8rem;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
   }
 
   .input-container {
-    padding: 1rem;
+    padding: 0.375rem;
   }
 
   .message-input {
-    font-size: 0.85rem;
-    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    padding: 0.375rem 0.625rem;
   }
 
   .send-button {
-    width: 45px;
-    height: 45px;
-    font-size: 1.1rem;
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
   }
 }
 
 /* Scrollbar Styling */
-.messages-container::-webkit-scrollbar {
-  width: 8px;
+.messages-container::-webkit-scrollbar,
+.sample-questions::-webkit-scrollbar {
+  width: 6px;
 }
 
-.messages-container::-webkit-scrollbar-track {
+.messages-container::-webkit-scrollbar-track,
+.sample-questions::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-.messages-container::-webkit-scrollbar-thumb {
+.messages-container::-webkit-scrollbar-thumb,
+.sample-questions::-webkit-scrollbar-thumb {
   background: #4CAF50;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-.messages-container::-webkit-scrollbar-thumb:hover {
+.messages-container::-webkit-scrollbar-thumb:hover,
+.sample-questions::-webkit-scrollbar-thumb:hover {
   background: #45a049;
 }
 
@@ -710,12 +711,12 @@
 body {
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* Ensure the chat container takes full height */
 #root {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
 }
