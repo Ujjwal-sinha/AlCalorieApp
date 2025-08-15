@@ -16,14 +16,14 @@
       }
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "food-analyzer-backend/dist/server.js"
+      "source": "/api/(.*)",
+      "destination": "food-analyzer-backend/dist/server.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "food-analyzer-frontend/dist/$1"
+      "source": "/(.*)",
+      "destination": "food-analyzer-frontend/dist/index.html"
     }
   ],
   "env": {
