@@ -23,6 +23,35 @@ router.get('/', (_req: Request, res: Response) => {
   });
 });
 
+// Debug endpoint to test Python integration
+router.get('/debug/python', async (req, res) => {
+  try {
+    const { spawn } = require('child_process');
+    const pythonProcess = spawn('python3', ['--version']);
+    
+    pythonProcess.stdout.on('data', (data: Buffer) => {
+      res.json({ 
+        success: true, 
+        python_version: data.toString().trim(),
+        message: 'Python is available'
+      });
+    });
+    
+    pythonProcess.stderr.on('data', (data: Buffer) => {
+      res.status(500).json({ 
+        success: false, 
+        error: data.toString(),
+        message: 'Python not available'
+      });
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Mount route modules
 router.use('/analysis', analysisRoutes);
 router.use('/food', foodRoutes);
