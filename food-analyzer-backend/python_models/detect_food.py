@@ -133,26 +133,17 @@ def load_model(model_type: str) -> Optional[Any]:
                 return None
             
         elif model_type == 'swin' and TRANSFORMERS_AVAILABLE:
-            print(f"Loading Swin model...", file=sys.stderr)
+            print(f"Swin model disabled due to stability issues, using ViT as fallback", file=sys.stderr)
+            # Always use ViT for Swin due to stability issues
             try:
-                # Use AutoProcessor and AutoModel for Swin
-                processor = AutoImageProcessor.from_pretrained('microsoft/swin-base-patch4-window7-224')
-                model = AutoModelForImageClassification.from_pretrained('microsoft/swin-base-patch4-window7-224')
+                processor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
+                model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
                 MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
-                print(f"Swin model loaded successfully", file=sys.stderr)
+                print(f"Swin fallback to ViT loaded successfully", file=sys.stderr)
                 return MODEL_CACHE[model_type]
-            except Exception as e:
-                print(f"Swin model failed to load, using ViT as fallback: {e}", file=sys.stderr)
-                # Fallback to ViT for Swin
-                try:
-                    processor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
-                    model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
-                    MODEL_CACHE[model_type] = {'processor': processor, 'model': model}
-                    print(f"Swin fallback to ViT loaded successfully", file=sys.stderr)
-                    return MODEL_CACHE[model_type]
-                except Exception as fallback_error:
-                    print(f"Swin fallback also failed: {fallback_error}", file=sys.stderr)
-                    return None
+            except Exception as fallback_error:
+                print(f"Swin fallback to ViT failed: {fallback_error}", file=sys.stderr)
+                return None
             
         elif model_type == 'blip' and TRANSFORMERS_AVAILABLE:
             print(f"Loading BLIP model...", file=sys.stderr)
@@ -647,7 +638,14 @@ def detect_with_vit(image: Image.Image) -> Dict[str, Any]:
         processor = model_data['processor']
         model = model_data['model']
         
-        # Process image
+        # Ensure image is in the correct format for ViT
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Resize image to standard size for ViT model
+        image = image.resize((224, 224), Image.Resampling.LANCZOS)
+        
+        # Process image with basic preprocessing
         inputs = processor(images=image, return_tensors="pt")
         
         with torch.no_grad():
@@ -706,31 +704,41 @@ def detect_with_vit(image: Image.Image) -> Dict[str, Any]:
         
     except Exception as e:
         print(f"Optimized ViT detection error: {str(e)}", file=sys.stderr)
+        traceback.print_exc()
         return {"success": False, "error": f"Optimized ViT detection error: {str(e)}"}
 
 def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
-    """Optimized Swin detection with faster processing and better food mapping"""
+    """Swin detection using ViT fallback for stability"""
     try:
         if not TRANSFORMERS_AVAILABLE:
             return {"success": False, "error": "Transformers not available"}
         
+        print("Running Swin detection (using ViT fallback)...", file=sys.stderr)
+        
+        # Always use ViT for Swin due to stability issues
         model_data = load_model('swin')
         if not model_data:
-            return {"success": False, "error": "Failed to load Swin model"}
-        
-        print("Running optimized Swin detection...", file=sys.stderr)
+            print("Swin model failed to load, falling back to ViT", file=sys.stderr)
+            return detect_with_vit(image)
         
         processor = model_data['processor']
         model = model_data['model']
         
-        # Process image
+        # Ensure image is in the correct format
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Resize image to standard size
+        image = image.resize((224, 224), Image.Resampling.LANCZOS)
+        
+        # Simple preprocessing
         inputs = processor(images=image, return_tensors="pt")
         
         with torch.no_grad():
             outputs = model(**inputs)
             logits = outputs.logits
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            top_probs, top_indices = torch.topk(probs, 15)  # Reduced from 25 to 15 predictions
+            top_probs, top_indices = torch.topk(probs, 10)
         
         detected_foods = []
         confidence_scores = {}
@@ -742,8 +750,8 @@ def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
             # Get food label from index
             food_name = get_food_label_from_index(idx)
             
-            # Higher threshold for faster processing
-            if confidence > 0.01:  # Increased from 0.005 to 0.01
+            # Higher threshold for stability
+            if confidence > 0.02:
                 # Normalize food name
                 normalized_name = normalize_food_name(food_name)
                 
@@ -751,22 +759,13 @@ def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
                 if normalized_name not in detected_foods:
                     detected_foods.append(normalized_name)
                     confidence_scores[normalized_name] = confidence
-                    print(f"Swin detected: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
+                    print(f"Swin (ViT) detected: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
                 elif confidence > confidence_scores[normalized_name]:
                     # Update with higher confidence
                     confidence_scores[normalized_name] = confidence
-                    print(f"Swin updated: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
+                    print(f"Swin (ViT) updated: {normalized_name} (confidence: {confidence:.3f})", file=sys.stderr)
         
-        # Simplified post-processing for faster execution
-        if len(detected_foods) < 3:  # Only add context if we have few detections
-            additional_foods = detect_additional_foods_from_context(detected_foods, image)
-            for food_name, confidence in additional_foods.items():
-                if food_name not in detected_foods:
-                    detected_foods.append(food_name)
-                    confidence_scores[food_name] = confidence * 0.8
-                    print(f"Swin context detected: {food_name} (confidence: {confidence_scores[food_name]:.3f})", file=sys.stderr)
-        
-        print(f"Optimized Swin total detections: {len(detected_foods)}", file=sys.stderr)
+        print(f"Swin (ViT) total detections: {len(detected_foods)}", file=sys.stderr)
         
         return {
             "success": True,
@@ -775,14 +774,15 @@ def detect_with_swin(image: Image.Image) -> Dict[str, Any]:
             "model_info": {
                 "model_type": "swin",
                 "detection_count": len(detected_foods),
-                "confidence_threshold": 0.01,
-                "detection_method": "optimized_fast_threshold"
+                "confidence_threshold": 0.02,
+                "detection_method": "swin_with_vit_fallback"
             }
         }
         
     except Exception as e:
-        print(f"Optimized Swin detection error: {str(e)}", file=sys.stderr)
-        return {"success": False, "error": f"Optimized Swin detection error: {str(e)}"}
+        print(f"Swin detection error, falling back to ViT: {str(e)}", file=sys.stderr)
+        # Final fallback to ViT
+        return detect_with_vit(image)
 
 def detect_with_blip(image: Image.Image) -> Dict[str, Any]:
     """Optimized BLIP detection with faster processing and better food extraction"""
