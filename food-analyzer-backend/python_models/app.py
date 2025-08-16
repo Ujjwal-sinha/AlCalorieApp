@@ -11,7 +11,10 @@ import json
 import time
 import os
 import sys
-from detect_food import load_model, detect_with_yolo, detect_with_vit, detect_with_swin, detect_with_blip, detect_with_clip
+from models_optimized import (
+    load_model, detect_with_yolo, detect_with_vit, detect_with_swin, detect_with_blip, detect_with_clip,
+    MODEL_AVAILABILITY
+)
 
 app = Flask(__name__)
 CORS(app)
@@ -25,7 +28,10 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'food-detection-api',
-        'models_loaded': list(MODEL_CACHE.keys())
+        'models_loaded': list(MODEL_CACHE.keys()),
+        'model_availability': MODEL_AVAILABILITY,
+        'python_version': sys.version,
+        'environment': os.environ.get('FLASK_ENV', 'production')
     })
 
 @app.route('/detect', methods=['POST'])
@@ -59,7 +65,11 @@ def detect_food():
         if model_type not in MODEL_CACHE:
             model = load_model(model_type)
             if model is None:
-                return jsonify({'success': False, 'error': f'Failed to load {model_type} model'}), 500
+                return jsonify({
+                    'success': False, 
+                    'error': f'Failed to load {model_type} model. Model may not be available.',
+                    'available_models': [k for k, v in MODEL_AVAILABILITY.items() if v]
+                }), 500
             MODEL_CACHE[model_type] = model
         
         # Perform detection
@@ -114,9 +124,18 @@ def list_models():
     """List available models"""
     return jsonify({
         'available_models': ['yolo', 'vit', 'swin', 'blip', 'clip'],
-        'loaded_models': list(MODEL_CACHE.keys())
+        'loaded_models': list(MODEL_CACHE.keys()),
+        'model_availability': MODEL_AVAILABILITY,
+        'note': 'Models will be loaded on first use'
     })
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    try:
+        port = int(os.environ.get('PORT', 5000))
+        print(f"Starting Food Detection API on port {port}")
+        print(f"Environment: {os.environ.get('FLASK_ENV', 'production')}")
+        print(f"Python version: {sys.version}")
+        app.run(host='0.0.0.0', port=port, debug=False)
+    except Exception as e:
+        print(f"Failed to start server: {str(e)}", file=sys.stderr)
+        sys.exit(1)
