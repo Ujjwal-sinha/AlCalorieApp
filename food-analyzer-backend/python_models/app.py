@@ -22,6 +22,21 @@ CORS(app)
 # Global model cache
 MODEL_CACHE = {}
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint"""
+    return jsonify({
+        'message': 'Food Detection API is running!',
+        'service': 'food-detection-api',
+        'endpoints': {
+            'health': '/health',
+            'test': '/test',
+            'models': '/models',
+            'detect': '/detect (POST)'
+        },
+        'status': 'healthy'
+    })
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -32,6 +47,16 @@ def health_check():
         'model_availability': MODEL_AVAILABILITY,
         'python_version': sys.version,
         'environment': os.environ.get('FLASK_ENV', 'production')
+    })
+
+@app.route('/test', methods=['GET'])
+def test_endpoint():
+    """Test endpoint to verify the service is working"""
+    return jsonify({
+        'message': 'Food Detection API is working!',
+        'timestamp': time.time(),
+        'port': os.environ.get('PORT', 5000),
+        'model_availability': MODEL_AVAILABILITY
     })
 
 @app.route('/detect', methods=['POST'])
@@ -135,6 +160,8 @@ if __name__ == '__main__':
         print(f"Starting Food Detection API on port {port}")
         print(f"Environment: {os.environ.get('FLASK_ENV', 'production')}")
         print(f"Python version: {sys.version}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Files in current directory: {os.listdir('.')}")
         app.run(host='0.0.0.0', port=port, debug=False)
     except Exception as e:
         print(f"Failed to start server: {str(e)}", file=sys.stderr)

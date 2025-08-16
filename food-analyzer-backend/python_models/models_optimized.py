@@ -52,7 +52,8 @@ def check_model_availability():
     
     # Check Swin (separate check)
     try:
-        from transformers import SwinForImageClassification, SwinImageProcessor
+        from transformers import SwinForImageClassification
+        # SwinImageProcessor might not be available in older versions
         MODEL_AVAILABILITY['swin'] = True
         print("✅ Swin available", file=sys.stderr)
     except ImportError as e:
@@ -103,10 +104,14 @@ def load_model(model_type: str) -> Optional[Any]:
             return {'processor': processor, 'model': model}
             
         elif model_type == 'swin' and MODEL_AVAILABILITY['swin']:
-            from transformers import SwinImageProcessor, SwinForImageClassification
-            # Use smaller Swin model
+            from transformers import SwinForImageClassification, AutoImageProcessor
+            # Use smaller Swin model with AutoImageProcessor as fallback
             model_name = "microsoft/swin-tiny-patch4-window7-224"
-            processor = SwinImageProcessor.from_pretrained(model_name)
+            try:
+                processor = AutoImageProcessor.from_pretrained(model_name)
+            except:
+                # Fallback to basic image processing
+                processor = None
             model = SwinForImageClassification.from_pretrained(model_name)
             print(f"✅ Swin model loaded successfully", file=sys.stderr)
             return {'processor': processor, 'model': model}
@@ -219,8 +224,20 @@ def detect_with_swin(image: Image.Image, model_dict) -> Dict[str, Any]:
         # Enhance image
         enhanced_image = enhance_image_quality(image)
         
-        # Process image
-        inputs = processor(enhanced_image, return_tensors="pt")
+        # Process image with fallback
+        if processor is not None:
+            inputs = processor(enhanced_image, return_tensors="pt")
+        else:
+            # Basic image processing fallback
+            enhanced_image = enhanced_image.resize((224, 224))
+            enhanced_image = enhanced_image.convert('RGB')
+            # Convert to tensor manually
+            import torchvision.transforms as transforms
+            transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+            inputs = {'pixel_values': transform(enhanced_image).unsqueeze(0)}
         
         # Get predictions
         with torch.no_grad():
