@@ -20,6 +20,14 @@ class FoodDetection:
     final_label: str
     confidence_score: float
     detection_method: str = "YOLO11m"
+    classifier_probability: float = 0.0
+    clip_similarity: float = 0.0
+    top_3_alternatives: List[Tuple[str, float]] = None
+    blip_description: str = None
+    
+    def __post_init__(self):
+        if self.top_3_alternatives is None:
+            self.top_3_alternatives = []
 
 class YOLO11mFoodRecognitionSystem:
     """
@@ -28,26 +36,45 @@ class YOLO11mFoodRecognitionSystem:
     
     def __init__(self, models: Dict[str, Any]):
         self.models = models
-        self.confidence_threshold = 0.3
-        self.min_crop_size = 50
+        self.confidence_threshold = 0.15  # Lower threshold to detect more items
+        self.min_crop_size = 30  # Smaller minimum crop size
         
         # Food-related COCO classes (YOLO11m is trained on COCO dataset)
         self.food_classes = {
-            'apple', 'orange', 'banana', 'carrot', 'broccoli', 'pizza', 'hot dog', 
-            'sandwich', 'cake', 'donut', 'cookie', 'cup', 'bowl', 'spoon', 'fork', 
-            'knife', 'wine glass', 'bottle', 'book', 'cell phone', 'remote', 
-            'keyboard', 'mouse', 'laptop', 'tv', 'microwave', 'oven', 'toaster',
-            'sink', 'refrigerator', 'chair', 'couch', 'bed', 'dining table',
-            'toilet', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase',
-            'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
-            'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle',
-            'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana',
-            'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog',
-            'pizza', 'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed',
-            'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
-            'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
-            'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear',
-            'hair drier', 'toothbrush'
+            # Fruits
+            'apple', 'orange', 'banana', 'strawberry', 'grape', 'pineapple', 'mango', 'peach', 'pear', 'kiwi',
+            # Vegetables
+            'carrot', 'broccoli', 'tomato', 'potato', 'onion', 'garlic', 'pepper', 'cucumber', 'celery', 'mushroom',
+            'corn', 'pea', 'bean', 'cabbage', 'cauliflower', 'asparagus', 'zucchini', 'eggplant', 'lettuce', 'spinach',
+            # Prepared Foods
+            'pizza', 'hot dog', 'sandwich', 'cake', 'donut', 'cookie', 'bread', 'pasta', 'rice', 'noodle',
+            'burger', 'hamburger', 'cheeseburger', 'taco', 'burrito', 'sushi', 'salad', 'soup', 'stew',
+            # Meat & Protein
+            'chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'egg', 'meat', 'steak', 'bacon', 'ham', 'turkey',
+            'duck', 'lamb', 'veal', 'sausage', 'meatball', 'shrimp', 'lobster', 'crab',
+            # Dairy
+            'milk', 'cheese', 'yogurt', 'butter', 'cream', 'ice cream',
+            # Beverages
+            'coffee', 'tea', 'juice', 'soda', 'water', 'wine', 'beer',
+            # Utensils & Containers (food-related)
+            'cup', 'bowl', 'spoon', 'fork', 'knife', 'wine glass', 'bottle', 'plate', 'dish', 'mug',
+            # Appliances (kitchen-related)
+            'microwave', 'oven', 'toaster', 'refrigerator', 'sink', 'stove', 'blender', 'mixer',
+            # Furniture (dining-related)
+            'dining table', 'chair', 'table'
+        }
+        
+        # Non-food items to exclude
+        self.non_food_items = {
+            'cat', 'dog', 'bird', 'horse', 'cow', 'sheep', 'pig', 'elephant', 'giraffe', 'zebra', 'lion', 'tiger',
+            'bear', 'wolf', 'fox', 'deer', 'rabbit', 'squirrel', 'mouse', 'rat', 'hamster', 'guinea pig',
+            'book', 'cell phone', 'remote', 'keyboard', 'mouse', 'laptop', 'tv', 'computer', 'monitor',
+            'chair', 'couch', 'bed', 'sofa', 'toilet', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase',
+            'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 
+            'skateboard', 'surfboard', 'tennis racket', 'clock', 'vase', 'scissors', 'teddy bear',
+            'hair drier', 'toothbrush', 'potted plant', 'tree', 'flower', 'grass', 'sky', 'cloud', 'sun',
+            'moon', 'star', 'car', 'truck', 'bus', 'bicycle', 'motorcycle', 'airplane', 'train', 'boat',
+            'traffic light', 'stop sign', 'fire hydrant', 'bench', 'person', 'child', 'man', 'woman'
         }
         
         # Enhanced food keywords for better classification
@@ -74,7 +101,7 @@ class YOLO11mFoodRecognitionSystem:
     
     def detect_food_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
         """
-        Detect food candidate crops using YOLO11m
+        Detect food candidate crops using YOLO11m with enhanced strategy
         Returns: List of (crop_image, bounding_box)
         """
         crops = []
@@ -86,7 +113,9 @@ class YOLO11mFoodRecognitionSystem:
                 crops.append((image, (0, 0, image.width, image.height)))
                 return crops
             
-            logger.info("Using YOLO11m for food crop detection")
+            logger.info("Using YOLO11m for enhanced food crop detection")
+            
+            # Strategy 1: Run YOLO11m on the full image
             yolo_results = self.models['yolo_model'](image, verbose=False)
             
             for result in yolo_results:
@@ -104,19 +133,58 @@ class YOLO11mFoodRecognitionSystem:
                         # Get class name
                         class_name = self.models['yolo_model'].names[class_id]
                         
-                        # Only process if confidence is high enough and it's a food-related item
-                        if confidence >= self.confidence_threshold:
+                        # Process if confidence is above threshold and it's a food item
+                        if confidence >= self.confidence_threshold and self._is_food_item(class_name):
                             # Crop the image
                             crop = image.crop((x1, y1, x2, y2))
                             
-                            # Only keep reasonable sized crops
+                            # Keep reasonable sized crops
                             if crop.width > self.min_crop_size and crop.height > self.min_crop_size:
                                 crops.append((crop, (x1, y1, x2, y2)))
-                                logger.info(f"YOLO11m detected: {class_name} (conf: {confidence:.2f}) at {crop.width}x{crop.height}")
+                                logger.info(f"YOLO11m detected food: {class_name} (conf: {confidence:.2f}) at {crop.width}x{crop.height}")
             
-            # If no crops detected, use the whole image
+            # Strategy 2: If we have crops, run YOLO11m on each crop for more detailed detection
+            additional_crops = []
+            for crop, bbox in crops[:3]:  # Limit to first 3 crops to avoid too many detections
+                try:
+                    crop_results = self.models['yolo_model'](crop, verbose=False)
+                    for result in crop_results:
+                        boxes = result.boxes
+                        if boxes is not None:
+                            for box in boxes:
+                                confidence = float(box.conf[0].cpu().numpy())
+                                class_id = int(box.cls[0].cpu().numpy())
+                                class_name = self.models['yolo_model'].names[class_id]
+                                
+                                if confidence >= self.confidence_threshold and self._is_food_item(class_name):
+                                    # Adjust coordinates relative to original image
+                                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                                    
+                                    # Convert to original image coordinates
+                                    orig_x1 = bbox[0] + x1
+                                    orig_y1 = bbox[1] + y1
+                                    orig_x2 = bbox[0] + x2
+                                    orig_y2 = bbox[1] + y2
+                                    
+                                    # Create new crop
+                                    new_crop = image.crop((orig_x1, orig_y1, orig_x2, orig_y2))
+                                    if new_crop.width > self.min_crop_size and new_crop.height > self.min_crop_size:
+                                        additional_crops.append((new_crop, (orig_x1, orig_y1, orig_x2, orig_y2)))
+                except Exception as e:
+                    logger.warning(f"Error processing crop: {e}")
+            
+            # Add additional crops
+            crops.extend(additional_crops)
+            
+            # Strategy 3: If still no crops, use grid-based cropping
             if not crops:
-                logger.info("No YOLO11m detections, using whole image")
+                logger.info("No YOLO11m detections, using grid-based cropping")
+                crops = self._create_grid_crops(image)
+            
+            # Strategy 4: If still no crops, use the whole image
+            if not crops:
+                logger.info("No crops detected, using whole image")
                 crops.append((image, (0, 0, image.width, image.height)))
                 
         except Exception as e:
@@ -168,7 +236,7 @@ class YOLO11mFoodRecognitionSystem:
     
     def _get_yolo11m_detection(self, crop: Image.Image, bounding_box: Tuple[int, int, int, int]) -> List[FoodDetection]:
         """
-        Get YOLO11m detections for a specific crop
+        Get YOLO11m detections for a specific crop with multiple confidence thresholds
         """
         detections = []
         
@@ -176,36 +244,92 @@ class YOLO11mFoodRecognitionSystem:
             if not self.models.get('yolo_model'):
                 return detections
             
-            # Run YOLO11m on the crop
-            results = self.models['yolo_model'](crop, verbose=False)
+            # Run YOLO11m on the crop with different confidence thresholds
+            confidence_thresholds = [0.15, 0.25, 0.35]  # Multiple thresholds to catch more items
             
-            for result in results:
-                boxes = result.boxes
-                if boxes is not None:
-                    for box in boxes:
-                        confidence = float(box.conf[0].cpu().numpy())
-                        class_id = int(box.cls[0].cpu().numpy())
-                        class_name = self.models['yolo_model'].names[class_id]
-                        
-                        # Only include high confidence detections
-                        if confidence >= self.confidence_threshold:
-                            # Improve the label
-                            improved_label = self._improve_food_label(class_name)
+            for threshold in confidence_thresholds:
+                results = self.models['yolo_model'](crop, verbose=False, conf=threshold)
+                
+                for result in results:
+                    boxes = result.boxes
+                    if boxes is not None:
+                        for box in boxes:
+                            confidence = float(box.conf[0].cpu().numpy())
+                            class_id = int(box.cls[0].cpu().numpy())
+                            class_name = self.models['yolo_model'].names[class_id]
                             
-                            detection = FoodDetection(
-                                bounding_box=bounding_box,
-                                final_label=improved_label,
-                                confidence_score=confidence,
-                                detection_method="YOLO11m"
-                            )
-                            detections.append(detection)
-                            
-                            logger.info(f"Detection: {improved_label} (conf: {confidence:.2f})")
+                            # Only include food items above our base threshold
+                            if confidence >= self.confidence_threshold and self._is_food_item(class_name):
+                                # Improve the label
+                                improved_label = self._improve_food_label(class_name)
+                                
+                                detection = FoodDetection(
+                                    bounding_box=bounding_box,
+                                    final_label=improved_label,
+                                    confidence_score=confidence,
+                                    detection_method="YOLO11m"
+                                )
+                                detections.append(detection)
+                                
+                                logger.info(f"Food detection: {improved_label} (conf: {confidence:.2f})")
         
         except Exception as e:
             logger.warning(f"YOLO11m detection failed for crop: {e}")
         
         return detections
+    
+    def _is_food_item(self, class_name: str) -> bool:
+        """
+        Check if a detected item is food-related
+        """
+        class_lower = class_name.lower()
+        
+        # Check if it's in our food classes
+        if class_lower in self.food_classes:
+            return True
+        
+        # Check if it's in our non-food items (exclude these)
+        if class_lower in self.non_food_items:
+            return False
+        
+        # Additional food-related keywords
+        food_keywords = [
+            'food', 'meal', 'dish', 'cuisine', 'ingredient', 'spice', 'herb', 'seasoning',
+            'sauce', 'dressing', 'condiment', 'spread', 'dip', 'snack', 'dessert', 'sweet',
+            'drink', 'beverage', 'liquid', 'soup', 'stew', 'curry', 'stir fry', 'grill',
+            'bake', 'roast', 'fry', 'steam', 'boil', 'cook', 'prepared', 'fresh', 'organic'
+        ]
+        
+        return any(keyword in class_lower for keyword in food_keywords)
+    
+    def _create_grid_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
+        """
+        Create grid-based crops for food detection
+        """
+        crops = []
+        width, height = image.size
+        
+        # Create a 3x3 grid
+        grid_size = 3
+        crop_width = width // grid_size
+        crop_height = height // grid_size
+        
+        for i in range(grid_size):
+            for j in range(grid_size):
+                x1 = i * crop_width
+                y1 = j * crop_height
+                x2 = x1 + crop_width
+                y2 = y1 + crop_height
+                
+                # Ensure we don't go beyond image boundaries
+                x2 = min(x2, width)
+                y2 = min(y2, height)
+                
+                crop = image.crop((x1, y1, x2, y2))
+                if crop.width > self.min_crop_size and crop.height > self.min_crop_size:
+                    crops.append((crop, (x1, y1, x2, y2)))
+        
+        return crops
     
     def _improve_food_label(self, class_name: str) -> str:
         """
@@ -242,7 +366,7 @@ class YOLO11mFoodRecognitionSystem:
     
     def _filter_detections(self, detections: List[FoodDetection]) -> List[FoodDetection]:
         """
-        Filter and deduplicate detections
+        Filter and deduplicate detections with enhanced logic
         """
         if not detections:
             return []
@@ -250,19 +374,28 @@ class YOLO11mFoodRecognitionSystem:
         # Sort by confidence
         sorted_detections = sorted(detections, key=lambda x: x.confidence_score, reverse=True)
         
-        # Remove duplicates (same label with similar bounding boxes)
+        # Enhanced deduplication - allow similar items if confidence is high enough
         filtered = []
-        seen_labels = set()
+        seen_labels = {}
         
         for detection in sorted_detections:
             label_lower = detection.final_label.lower()
             
-            # Skip if we've already seen this label (simple deduplication)
-            if label_lower in seen_labels:
-                continue
-            
-            seen_labels.add(label_lower)
-            filtered.append(detection)
+            # If we haven't seen this label, add it
+            if label_lower not in seen_labels:
+                seen_labels[label_lower] = detection
+                filtered.append(detection)
+            else:
+                # If we have seen this label, only replace if new detection has higher confidence
+                existing_confidence = seen_labels[label_lower].confidence_score
+                if detection.confidence_score > existing_confidence + 0.1:  # 10% improvement threshold
+                    # Replace the existing detection
+                    filtered.remove(seen_labels[label_lower])
+                    seen_labels[label_lower] = detection
+                    filtered.append(detection)
+        
+        # Sort again by confidence
+        filtered = sorted(filtered, key=lambda x: x.confidence_score, reverse=True)
         
         return filtered
     

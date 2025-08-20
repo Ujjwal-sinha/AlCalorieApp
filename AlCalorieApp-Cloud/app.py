@@ -952,16 +952,7 @@ def display_expert_results(detections, summary):
             continue
         valid_detections.append(detection)
     
-    # Debug: Show detection information
-    st.write(f"**Debug Info:** Total detections received: {len(detections) if isinstance(detections, list) else 'Not a list'}")
-    if isinstance(detections, list) and detections:
-        st.write(f"**Debug Info:** Sample detection type: {type(detections[0])}")
-        if hasattr(detections[0], 'final_label'):
-            st.write(f"**Debug Info:** Sample detection label: {detections[0].final_label}")
-    
-    st.write(f"**Debug Info:** Valid detections after filtering: {len(valid_detections)}")
-    for i, detection in enumerate(valid_detections[:3]):  # Show first 3
-        st.write(f"  - Detection {i+1}: {detection.final_label} (confidence: {detection.confidence_score:.2f})")
+
     
     # Create comprehensive report header
     if valid_detections:
