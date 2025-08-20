@@ -1346,7 +1346,31 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.markdown("### ⚙️ Settings")
+        st.markdown("""
+        <div class="metric-card">
+            <h3>⚙️ Settings</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Display size configuration
+        max_display_size = st.slider(
+            "🖼️ Max Image Display Size",
+            min_value=400,
+            max_value=1200,
+            value=800,
+            step=100,
+            help="Maximum size for displayed images (doesn't affect detection quality)"
+        )
+        
+        # Daily calorie target
+        st.session_state.calorie_target = st.number_input(
+            "🎯 Daily Calorie Target",
+            min_value=1000,
+            max_value=5000,
+            value=st.session_state.calorie_target,
+            step=100,
+            help="Set your daily calorie goal"
+        )
         
         # Model status with improved styling
         with st.expander("🔍 YOLO11m Model Status", expanded=True):
@@ -1357,25 +1381,14 @@ def main():
                 status_icon = "✅" if is_available else "❌"
                 st.markdown(f"**{status_icon} {model_name}**")
         
-        # Calorie target
-        st.markdown("#### 🎯 Daily Calorie Target")
-        calorie_target = st.number_input(
-            "Target Calories", 
-            min_value=1000, 
-            max_value=5000, 
-            value=st.session_state.calorie_target,
-            step=100
-        )
-        st.session_state.calorie_target = calorie_target
-        
         # Today's progress
         today = date.today().isoformat()
         today_calories = st.session_state.daily_calories.get(today, 0)
-        progress = min(today_calories / calorie_target, 1.0)
+        progress = min(today_calories / st.session_state.calorie_target, 1.0)
         
         st.markdown("#### 📊 Today's Progress")
         st.progress(progress)
-        st.metric("Calories", f"{today_calories:.0f} / {calorie_target}")
+        st.metric("Calories", f"{today_calories:.0f} / {st.session_state.calorie_target}")
         
         # Clear data button
         if st.button("🗑️ Clear All Data"):
@@ -1411,7 +1424,36 @@ def main():
         
         if uploaded_file:
             image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Food Image", use_column_width=True)
+            
+            # Optimize image for display and detection
+            display_image = image
+            optimized_image = image  # Default to original
+            if UTILS_AVAILABLE:
+                try:
+                    from utils.expert_food_recognition import YOLO11mFoodRecognitionSystem
+                    yolo_system = YOLO11mFoodRecognitionSystem(models)
+                    optimized_image = yolo_system.optimize_image_for_detection(image)
+                    
+                    # Use the UI utility for display optimization
+                    from utils.ui import optimize_image_for_display
+                    display_image = optimize_image_for_display(optimized_image, max_display_size=max_display_size)
+                    
+                    st.info(f"🖼️ Image optimized: {image.size} → {optimized_image.size} → {display_image.size}")
+                    
+                    # Store optimized image in session state for reuse
+                    st.session_state.optimized_image = optimized_image
+                        
+                except Exception as e:
+                    st.warning(f"Image optimization failed, using original: {str(e)}")
+                    # Use the UI utility for display optimization of original image
+                    from utils.ui import optimize_image_for_display
+                    display_image = optimize_image_for_display(image, max_display_size=max_display_size)
+                    st.info(f"🖼️ Display resized: {image.size} → {display_image.size}")
+                    
+                    st.session_state.optimized_image = image
+            
+            # Display the optimized/resized image
+            st.image(display_image, caption="Optimized Food Image for Analysis", use_column_width=True)
         
         # YOLO11m Analysis
         st.markdown("### 🔍 YOLO11m Analysis")
@@ -1426,18 +1468,14 @@ def main():
                     status_text.text("📷 Loading and optimizing image...")
                     progress_bar.progress(10)
                     
-                    image = Image.open(uploaded_file)
-                    
-                    # Optimize image for better detection
-                    if UTILS_AVAILABLE:
-                        try:
-                            from utils.expert_food_recognition import YOLO11mFoodRecognitionSystem
-                            yolo_system = YOLO11mFoodRecognitionSystem(models)
-                            optimized_image = yolo_system.optimize_image_for_detection(image)
-                            st.info(f"🔄 Image optimized from {image.size} to {optimized_image.size} for perfect detection")
-                            image = optimized_image
-                        except Exception as e:
-                            st.warning(f"Image optimization failed, using original: {str(e)}")
+                    # Use the already optimized image from session state
+                    if hasattr(st.session_state, 'optimized_image'):
+                        image = st.session_state.optimized_image
+                        st.info(f"🔄 Using optimized image: {image.size}")
+                    else:
+                        # Fallback to original image if optimization failed
+                        image = Image.open(uploaded_file)
+                        st.warning("Using original image (optimization not available)")
                     
                     # YOLO11m Analysis
                     status_text.text("🔍 Running YOLO11m analysis...")

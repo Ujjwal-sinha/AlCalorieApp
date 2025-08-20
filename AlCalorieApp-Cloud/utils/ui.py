@@ -1,5 +1,9 @@
 import streamlit as st
 from typing import Dict, Any
+from PIL import Image
+import logging
+
+logger = logging.getLogger(__name__)
 
 def create_header():
     """Create the main header for the app"""
@@ -141,3 +145,66 @@ def create_success_message(success_msg):
         <div style="color: #666; margin-top: 5px;">{success_msg}</div>
     </div>
     """, unsafe_allow_html=True)
+
+def optimize_image_for_display(image: Image.Image, max_display_size: int = 800) -> Image.Image:
+    """
+    Optimize image for frontend display with reasonable size limits
+    
+    Args:
+        image: Input PIL Image
+        max_display_size: Maximum display size (default: 800px)
+        
+    Returns:
+        Optimized PIL Image for display
+    """
+    try:
+        display_width, display_height = image.size
+        
+        # If image is already within display limits, return as is
+        if display_width <= max_display_size and display_height <= max_display_size:
+            return image
+        
+        # Calculate new size maintaining aspect ratio
+        aspect_ratio = display_width / display_height
+        
+        if aspect_ratio > 1:  # Landscape
+            new_width = max_display_size
+            new_height = int(max_display_size / aspect_ratio)
+        else:  # Portrait
+            new_height = max_display_size
+            new_width = int(max_display_size * aspect_ratio)
+        
+        # Resize with high-quality resampling
+        display_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        return display_image
+        
+    except Exception as e:
+        logger.warning(f"Display optimization failed: {e}")
+        return image
+
+def create_optimized_image_display(image: Image.Image, caption: str = "Food Image") -> Image.Image:
+    """
+    Create an optimized image for display in Streamlit
+    
+    Args:
+        image: Input PIL Image
+        caption: Image caption
+        
+    Returns:
+        Optimized PIL Image for display
+    """
+    try:
+        # Optimize for display
+        display_image = optimize_image_for_display(image)
+        
+        # Display the image
+        st.image(display_image, caption=caption, use_column_width=True)
+        
+        return display_image
+        
+    except Exception as e:
+        logger.error(f"Failed to create optimized display: {e}")
+        # Fallback to original image
+        st.image(image, caption=caption, use_column_width=True)
+        return image
