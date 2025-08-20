@@ -26,6 +26,10 @@ plotly>=5.15.0,<6.0.0
 # Web requests for enhanced agent
 requests>=2.25.0,<3.0.0
 
+# Additional dependencies for Streamlit Cloud
+packaging>=21.0
+setuptools>=65.0.0
+
 
 
 

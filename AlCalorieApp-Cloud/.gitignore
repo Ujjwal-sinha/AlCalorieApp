@@ -59,8 +59,9 @@ temp_*
 *.tmp
 *.temp
 
-# Model files (if any)
+# Model files (excluding yolo11m.pt which is required for deployment)
 *.pt
+!yolo11m.pt
 *.pth
 *.h5
 *.pkl
