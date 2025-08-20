@@ -1423,10 +1423,21 @@ def main():
                 status_text = st.empty()
                 
                 try:
-                    status_text.text("📷 Loading image...")
+                    status_text.text("📷 Loading and optimizing image...")
                     progress_bar.progress(10)
                     
                     image = Image.open(uploaded_file)
+                    
+                    # Optimize image for better detection
+                    if UTILS_AVAILABLE:
+                        try:
+                            from utils.expert_food_recognition import YOLO11mFoodRecognitionSystem
+                            yolo_system = YOLO11mFoodRecognitionSystem(models)
+                            optimized_image = yolo_system.optimize_image_for_detection(image)
+                            st.info(f"🔄 Image optimized from {image.size} to {optimized_image.size} for perfect detection")
+                            image = optimized_image
+                        except Exception as e:
+                            st.warning(f"Image optimization failed, using original: {str(e)}")
                     
                     # YOLO11m Analysis
                     status_text.text("🔍 Running YOLO11m analysis...")

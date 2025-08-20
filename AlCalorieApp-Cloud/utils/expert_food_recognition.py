@@ -7,9 +7,16 @@ Uses only YOLO11m for accurate food detection and classification
 import logging
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
-from PIL import Image
+from PIL import Image, ImageEnhance
 import torch
 from dataclasses import dataclass
+
+# Import the new image optimizer
+try:
+    from .image_optimizer import optimize_image_for_detection, create_multiple_scales
+    IMAGE_OPTIMIZER_AVAILABLE = True
+except ImportError:
+    IMAGE_OPTIMIZER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +45,11 @@ class YOLO11mFoodRecognitionSystem:
         self.models = models
         self.confidence_threshold = 0.15  # Lower threshold to detect more items
         self.min_crop_size = 30  # Smaller minimum crop size
+        
+        # Optimal image size for YOLO11m detection
+        self.optimal_width = 1024
+        self.optimal_height = 1024
+        self.max_image_size = 2048  # Maximum size to prevent memory issues
         
         # Food-related COCO classes (YOLO11m is trained on COCO dataset)
         self.food_classes = {
@@ -98,101 +110,148 @@ class YOLO11mFoodRecognitionSystem:
             'wine glass': ['wine glass', 'glass', 'drink'],
             'bottle': ['bottle', 'water bottle', 'drink']
         }
-    
+
+    def optimize_image_for_detection(self, image: Image.Image) -> Image.Image:
+        """
+        Optimize image size and quality for perfect YOLO11m detection
+        
+        This function:
+        1. Resizes images to optimal dimensions for YOLO11m
+        2. Maintains aspect ratio to prevent distortion
+        3. Enhances image quality for better detection
+        4. Ensures all food items remain clearly visible
+        """
+        if IMAGE_OPTIMIZER_AVAILABLE:
+            # Use the new comprehensive image optimizer
+            return optimize_image_for_detection(image)
+        else:
+            # Fallback to original optimization method
+            return self._legacy_optimize_image(image)
+
+    def _legacy_optimize_image(self, image: Image.Image) -> Image.Image:
+        """
+        Legacy image optimization method (fallback)
+        """
+        try:
+            original_width, original_height = image.size
+            logger.info(f"Original image size: {original_width}x{original_height}")
+            
+            # Calculate optimal size while maintaining aspect ratio
+            aspect_ratio = original_width / original_height
+            
+            if aspect_ratio > 1:  # Landscape
+                new_width = min(self.optimal_width, original_width)
+                new_height = int(new_width / aspect_ratio)
+            else:  # Portrait or square
+                new_height = min(self.optimal_height, original_height)
+                new_width = int(new_height * aspect_ratio)
+            
+            # Ensure minimum size for detection
+            if new_width < 512:
+                new_width = 512
+                new_height = int(new_width / aspect_ratio)
+            if new_height < 512:
+                new_height = 512
+                new_width = int(new_height * aspect_ratio)
+            
+            # Ensure maximum size to prevent memory issues
+            if new_width > self.max_image_size:
+                new_width = self.max_image_size
+                new_height = int(new_width / aspect_ratio)
+            if new_height > self.max_image_size:
+                new_height = self.max_image_size
+                new_width = int(new_height * aspect_ratio)
+            
+            logger.info(f"Optimized image size: {new_width}x{new_height}")
+            
+            # Resize with high-quality resampling
+            optimized_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Enhance image quality for better detection
+            enhanced_image = self._enhance_image_quality(optimized_image)
+            
+            logger.info("Image optimization completed successfully")
+            return enhanced_image
+            
+        except Exception as e:
+            logger.error(f"Image optimization failed: {e}")
+            # Return original image if optimization fails
+            return image
+
+    def _enhance_image_quality(self, image: Image.Image) -> Image.Image:
+        """
+        Enhance image quality for better food detection
+        """
+        try:
+            # Convert to RGB if needed
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Enhance contrast slightly for better edge detection
+            contrast_enhancer = ImageEnhance.Contrast(image)
+            enhanced_image = contrast_enhancer.enhance(1.1)  # 10% increase
+            
+            # Enhance sharpness for better detail recognition
+            sharpness_enhancer = ImageEnhance.Sharpness(enhanced_image)
+            enhanced_image = sharpness_enhancer.enhance(1.05)  # 5% increase
+            
+            # Enhance brightness slightly if image is too dark
+            brightness_enhancer = ImageEnhance.Brightness(enhanced_image)
+            enhanced_image = brightness_enhancer.enhance(1.02)  # 2% increase
+            
+            return enhanced_image
+            
+        except Exception as e:
+            logger.warning(f"Image enhancement failed: {e}")
+            return image
+
     def detect_food_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
         """
-        Detect food candidate crops using YOLO11m with enhanced strategy
-        Returns: List of (crop_image, bounding_box)
+        Detect food crops with optimized image processing
         """
+        # First optimize the image for detection
+        optimized_image = self.optimize_image_for_detection(image)
+        
+        # Create multiple crop strategies for comprehensive detection
         crops = []
         
-        try:
-            if not self.models.get('yolo_model'):
-                logger.warning("YOLO11m model not available")
-                # Fallback to whole image
-                crops.append((image, (0, 0, image.width, image.height)))
-                return crops
-            
-            logger.info("Using YOLO11m for enhanced food crop detection")
-            
-            # Strategy 1: Run YOLO11m on the full image
-            yolo_results = self.models['yolo_model'](image, verbose=False)
-            
-            for result in yolo_results:
-                boxes = result.boxes
-                if boxes is not None:
-                    for box in boxes:
-                        # Get bounding box coordinates
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                        
-                        # Get confidence and class
-                        confidence = float(box.conf[0].cpu().numpy())
-                        class_id = int(box.cls[0].cpu().numpy())
-                        
-                        # Get class name
-                        class_name = self.models['yolo_model'].names[class_id]
-                        
-                        # Process if confidence is above threshold and it's a food item
-                        if confidence >= self.confidence_threshold and self._is_food_item(class_name):
-                            # Crop the image
-                            crop = image.crop((x1, y1, x2, y2))
-                            
-                            # Keep reasonable sized crops
-                            if crop.width > self.min_crop_size and crop.height > self.min_crop_size:
-                                crops.append((crop, (x1, y1, x2, y2)))
-                                logger.info(f"YOLO11m detected food: {class_name} (conf: {confidence:.2f}) at {crop.width}x{crop.height}")
-            
-            # Strategy 2: If we have crops, run YOLO11m on each crop for more detailed detection
-            additional_crops = []
-            for crop, bbox in crops[:3]:  # Limit to first 3 crops to avoid too many detections
-                try:
-                    crop_results = self.models['yolo_model'](crop, verbose=False)
-                    for result in crop_results:
-                        boxes = result.boxes
-                        if boxes is not None:
-                            for box in boxes:
-                                confidence = float(box.conf[0].cpu().numpy())
-                                class_id = int(box.cls[0].cpu().numpy())
-                                class_name = self.models['yolo_model'].names[class_id]
-                                
-                                if confidence >= self.confidence_threshold and self._is_food_item(class_name):
-                                    # Adjust coordinates relative to original image
-                                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                                    
-                                    # Convert to original image coordinates
-                                    orig_x1 = bbox[0] + x1
-                                    orig_y1 = bbox[1] + y1
-                                    orig_x2 = bbox[0] + x2
-                                    orig_y2 = bbox[1] + y2
-                                    
-                                    # Create new crop
-                                    new_crop = image.crop((orig_x1, orig_y1, orig_x2, orig_y2))
-                                    if new_crop.width > self.min_crop_size and new_crop.height > self.min_crop_size:
-                                        additional_crops.append((new_crop, (orig_x1, orig_y1, orig_x2, orig_y2)))
-                except Exception as e:
-                    logger.warning(f"Error processing crop: {e}")
-            
-            # Add additional crops
-            crops.extend(additional_crops)
-            
-            # Strategy 3: If still no crops, use grid-based cropping
-            if not crops:
-                logger.info("No YOLO11m detections, using grid-based cropping")
-                crops = self._create_grid_crops(image)
-            
-            # Strategy 4: If still no crops, use the whole image
-            if not crops:
-                logger.info("No crops detected, using whole image")
-                crops.append((image, (0, 0, image.width, image.height)))
-                
-        except Exception as e:
-            logger.warning(f"Food crop detection failed: {e}")
-            # Fallback to whole image
-            crops.append((image, (0, 0, image.width, image.height)))
+        # Strategy 1: Full optimized image
+        crops.append((optimized_image, (0, 0, optimized_image.width, optimized_image.height)))
         
-        logger.info(f"Total crops detected: {len(crops)}")
+        # Strategy 2: Multiple scales for comprehensive detection
+        if IMAGE_OPTIMIZER_AVAILABLE:
+            scaled_images = create_multiple_scales(optimized_image, [0.75, 1.0, 1.25])
+            for scaled_image, scale in scaled_images:
+                crops.append((scaled_image, (0, 0, scaled_image.width, scaled_image.height)))
+        
+        # Strategy 3: Grid-based crops for detailed analysis
+        grid_crops = self._create_grid_crops(optimized_image)
+        crops.extend(grid_crops)
+        
+        # Strategy 4: Sliding window crops for overlapping detection
+        sliding_crops = self._create_sliding_window_crops(optimized_image)
+        crops.extend(sliding_crops)
+        
+        logger.info(f"Created {len(crops)} crop strategies for comprehensive detection")
+        return crops
+
+    def _create_sliding_window_crops(self, image: Image.Image) -> List[Tuple[Image.Image, Tuple[int, int, int, int]]]:
+        """
+        Create sliding window crops for overlapping detection
+        """
+        crops = []
+        width, height = image.size
+        
+        # Sliding window parameters
+        window_size = min(512, width, height)  # Optimal window size
+        stride = window_size // 2  # 50% overlap
+        
+        for y in range(0, height - window_size + 1, stride):
+            for x in range(0, width - window_size + 1, stride):
+                crop = image.crop((x, y, x + window_size, y + window_size))
+                if crop.width >= self.min_crop_size and crop.height >= self.min_crop_size:
+                    crops.append((crop, (x, y, x + window_size, y + window_size)))
+        
         return crops
     
     def recognize_food(self, image: Image.Image) -> Dict[str, Any]:
