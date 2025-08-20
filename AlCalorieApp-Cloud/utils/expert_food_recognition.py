@@ -110,7 +110,7 @@ class YOLO11mFoodRecognitionSystem:
             'wine glass': ['wine glass', 'glass', 'drink'],
             'bottle': ['bottle', 'water bottle', 'drink']
         }
-
+    
     def optimize_image_for_detection(self, image: Image.Image) -> Image.Image:
         """
         Optimize image size and quality for perfect YOLO11m detection
@@ -200,7 +200,7 @@ class YOLO11mFoodRecognitionSystem:
             enhanced_image = brightness_enhancer.enhance(1.02)  # 2% increase
             
             return enhanced_image
-            
+                
         except Exception as e:
             logger.warning(f"Image enhancement failed: {e}")
             return image
