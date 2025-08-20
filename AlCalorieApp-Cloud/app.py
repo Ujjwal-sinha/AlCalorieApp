@@ -749,9 +749,16 @@ def create_analysis_page_with_navigation():
                     try:
                         from utils.expert_food_recognition import YOLO11mFoodRecognitionSystem
                         yolo_system = YOLO11mFoodRecognitionSystem(models)
-                        detections = yolo_system.recognize_food(image)
-                        expert_summary = yolo_system.get_detection_summary(detections)
-                        expert_result = {"detections": detections, "summary": expert_summary}
+                        recognition_result = yolo_system.recognize_food(image)
+                        
+                        # Generate summary using the proper method
+                        expert_summary = yolo_system.get_detection_summary(recognition_result)
+                        
+                        if expert_summary["success"]:
+                            expert_result = {"detections": recognition_result["detections"], "summary": expert_summary}
+                        else:
+                            st.error(f"YOLO11m recognition failed: {expert_summary.get('error', 'Unknown error')}")
+                            return
                     except Exception as e:
                         st.error(f"YOLO11m system error: {str(e)}")
                         return
@@ -917,19 +924,298 @@ def main():
 
 # Placeholder functions for compatibility
 def display_expert_results(detections, summary):
-    """Display expert analysis results"""
-    st.subheader("🔍 Detection Results")
+    """Display comprehensive expert analysis results"""
+    st.subheader("🔍 Comprehensive Detection Report")
     
     if detections and len(detections) > 0:
         st.success(f"✅ Found {len(detections)} food items")
         
-        for i, detection in enumerate(detections):
-            with st.expander(f"🍽️ {detection.final_label} (Confidence: {detection.confidence_score:.2f})"):
-                st.write(f"**Label:** {detection.final_label}")
-                st.write(f"**Confidence:** {detection.confidence_score:.2f}")
-                st.write(f"**Method:** {detection.detection_method}")
+        # Create tabs for different sections
+        tab1, tab2, tab3, tab4 = st.tabs(["📋 Detected Items", "📊 Nutrition Analysis", "🔍 Detection Details", "💡 AI Insights"])
+        
+        with tab1:
+            st.markdown("### 🍽️ Detected Food Items")
+            
+            # Group detections by food type
+            food_groups = {}
+            for detection in detections:
+                # Handle different data types
+                if hasattr(detection, 'final_label'):
+                    label = detection.final_label
+                    confidence = detection.confidence_score
+                    method = detection.detection_method
+                elif isinstance(detection, dict):
+                    label = detection.get('final_label', detection.get('label', 'Unknown'))
+                    confidence = detection.get('confidence_score', detection.get('confidence', 0.0))
+                    method = detection.get('detection_method', 'YOLO11m')
+                elif isinstance(detection, str):
+                    label = detection
+                    confidence = 0.8
+                    method = 'YOLO11m'
+                else:
+                    label = str(detection)
+                    confidence = 0.8
+                    method = 'YOLO11m'
+                
+                if label not in food_groups:
+                    food_groups[label] = {
+                        'count': 0,
+                        'total_confidence': 0,
+                        'methods': set(),
+                        'detections': []
+                    }
+                
+                food_groups[label]['count'] += 1
+                food_groups[label]['total_confidence'] += confidence
+                food_groups[label]['methods'].add(method)
+                food_groups[label]['detections'].append({
+                    'label': label,
+                    'confidence': confidence,
+                    'method': method
+                })
+            
+            # Display grouped results
+            for food_name, group_data in food_groups.items():
+                avg_confidence = group_data['total_confidence'] / group_data['count']
+                methods_str = ', '.join(group_data['methods'])
+                
+                with st.expander(f"🍽️ {food_name} (Count: {group_data['count']}, Avg Confidence: {avg_confidence:.2f})", expanded=True):
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Detection Count", group_data['count'])
+                    
+                    with col2:
+                        st.metric("Average Confidence", f"{avg_confidence:.2f}")
+                    
+                    with col3:
+                        st.metric("Detection Methods", methods_str)
+                    
+                    # Show individual detections
+                    st.markdown("**Individual Detections:**")
+                    for i, detection in enumerate(group_data['detections']):
+                        st.write(f"  • Detection {i+1}: {detection['method']} (Confidence: {detection['confidence']:.2f})")
+        
+        with tab2:
+            st.markdown("### 📊 Nutritional Analysis")
+            
+            # Calculate nutrition data
+            nutritional_data = calculate_nutrition_from_expert_detections(detections)
+            
+            # Display nutrition metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Calories", f"{nutritional_data['total_calories']:.0f} kcal")
+            
+            with col2:
+                st.metric("Protein", f"{nutritional_data['total_protein']:.1f} g")
+            
+            with col3:
+                st.metric("Carbohydrates", f"{nutritional_data['total_carbs']:.1f} g")
+            
+            with col4:
+                st.metric("Fats", f"{nutritional_data['total_fats']:.1f} g")
+            
+            # Nutrition breakdown by food item
+            st.markdown("#### 🍎 Nutrition Breakdown by Food Item")
+            
+            food_nutrition = {}
+            for detection in detections:
+                # Handle different data types
+                if hasattr(detection, 'final_label'):
+                    food_item = detection.final_label.lower()
+                elif isinstance(detection, dict):
+                    food_item = detection.get('final_label', detection.get('label', '')).lower()
+                elif isinstance(detection, str):
+                    food_item = detection.lower()
+                else:
+                    food_item = str(detection).lower()
+                
+                # Basic nutrition mapping
+                nutrition_map = {
+                    'pizza': {'calories': 285, 'protein': 12, 'carbs': 33, 'fat': 10},
+                    'salad': {'calories': 120, 'protein': 8, 'carbs': 15, 'fat': 5},
+                    'burger': {'calories': 350, 'protein': 20, 'carbs': 30, 'fat': 15},
+                    'apple': {'calories': 95, 'protein': 0.5, 'carbs': 25, 'fat': 0.3},
+                    'banana': {'calories': 105, 'protein': 1.3, 'carbs': 27, 'fat': 0.4},
+                    'chicken': {'calories': 165, 'protein': 31, 'carbs': 0, 'fat': 3.6},
+                    'rice': {'calories': 130, 'protein': 2.7, 'carbs': 28, 'fat': 0.3},
+                    'bread': {'calories': 79, 'protein': 3.1, 'carbs': 15, 'fat': 1.0},
+                    'milk': {'calories': 103, 'protein': 8, 'carbs': 12, 'fat': 2.4},
+                    'egg': {'calories': 78, 'protein': 6.3, 'carbs': 0.6, 'fat': 5.3},
+                    'hot dog': {'calories': 151, 'protein': 5.2, 'carbs': 2.2, 'fat': 13.8},
+                    'sandwich': {'calories': 200, 'protein': 10, 'carbs': 25, 'fat': 8},
+                    'cake': {'calories': 257, 'protein': 3.2, 'carbs': 45, 'fat': 8.1},
+                    'donut': {'calories': 253, 'protein': 4.5, 'carbs': 31, 'fat': 12.8},
+                    'cookie': {'calories': 502, 'protein': 6.8, 'carbs': 65, 'fat': 24.5},
+                }
+                
+                if food_item in nutrition_map:
+                    if food_item not in food_nutrition:
+                        food_nutrition[food_item] = {
+                            'count': 0,
+                            'calories': 0,
+                            'protein': 0,
+                            'carbs': 0,
+                            'fat': 0
+                        }
+                    
+                    food_nutrition[food_item]['count'] += 1
+                    food_nutrition[food_item]['calories'] += nutrition_map[food_item]['calories']
+                    food_nutrition[food_item]['protein'] += nutrition_map[food_item]['protein']
+                    food_nutrition[food_item]['carbs'] += nutrition_map[food_item]['carbs']
+                    food_nutrition[food_item]['fat'] += nutrition_map[food_item]['fat']
+            
+            # Display nutrition breakdown
+            for food_name, nutrition in food_nutrition.items():
+                with st.expander(f"🍽️ {food_name.title()} (Count: {nutrition['count']})"):
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Calories", f"{nutrition['calories']:.0f} kcal")
+                    
+                    with col2:
+                        st.metric("Protein", f"{nutrition['protein']:.1f} g")
+                    
+                    with col3:
+                        st.metric("Carbs", f"{nutrition['carbs']:.1f} g")
+                    
+                    with col4:
+                        st.metric("Fat", f"{nutrition['fat']:.1f} g")
+        
+        with tab3:
+            st.markdown("### 🔍 Detection Analysis Details")
+            
+            # Detection statistics
+            total_detections = len(detections)
+            methods_used = set()
+            confidence_scores = []
+            
+            for detection in detections:
+                # Handle different data types
+                if hasattr(detection, 'detection_method'):
+                    methods_used.add(detection.detection_method)
+                    confidence_scores.append(detection.confidence_score)
+                elif isinstance(detection, dict):
+                    methods_used.add(detection.get('detection_method', 'YOLO11m'))
+                    confidence_scores.append(detection.get('confidence_score', detection.get('confidence', 0.0)))
+                else:
+                    methods_used.add('YOLO11m')
+                    confidence_scores.append(0.8)
+            
+            avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Total Detections", total_detections)
+            
+            with col2:
+                st.metric("Average Confidence", f"{avg_confidence:.2f}")
+            
+            with col3:
+                st.metric("Detection Methods", len(methods_used))
+            
+            # Confidence distribution
+            st.markdown("#### 📈 Confidence Distribution")
+            if confidence_scores:
+                import plotly.express as px
+                import pandas as pd
+                
+                df = pd.DataFrame({'Confidence': confidence_scores})
+                fig = px.histogram(df, x='Confidence', nbins=10, title='Detection Confidence Distribution')
+                st.plotly_chart(fig, use_container_width=True)
+            
+            # Method breakdown
+            st.markdown("#### 🔧 Detection Methods Used")
+            for method in methods_used:
+                st.write(f"• **{method}**")
+        
+        with tab4:
+            st.markdown("### 💡 AI Analysis Insights")
+            
+            # Generate insights based on detection results
+            insights = []
+            
+            if detections:
+                # Count different food types
+                food_types = {}
+                for detection in detections:
+                    if hasattr(detection, 'final_label'):
+                        food_type = detection.final_label.lower()
+                    elif isinstance(detection, dict):
+                        food_type = detection.get('final_label', detection.get('label', '')).lower()
+                    elif isinstance(detection, str):
+                        food_type = detection.lower()
+                    else:
+                        food_type = str(detection).lower()
+                    
+                    food_types[food_type] = food_types.get(food_type, 0) + 1
+                
+                # Generate insights
+                if len(food_types) > 3:
+                    insights.append("🎯 **Variety Detected**: Your meal contains a good variety of different food items, which is excellent for balanced nutrition.")
+                
+                if any('vegetable' in food or 'salad' in food for food in food_types.keys()):
+                    insights.append("🥗 **Vegetables Present**: Great! Vegetables provide essential vitamins, minerals, and fiber for your health.")
+                
+                if any('fruit' in food or 'apple' in food or 'banana' in food for food in food_types.keys()):
+                    insights.append("🍎 **Fruits Detected**: Fruits are excellent sources of natural sugars, vitamins, and antioxidants.")
+                
+                if any('protein' in food or 'chicken' in food or 'egg' in food for food in food_types.keys()):
+                    insights.append("🥩 **Protein Sources**: Protein is essential for muscle building and repair. Good choice!")
+                
+                if any('carb' in food or 'bread' in food or 'rice' in food for food in food_types.keys()):
+                    insights.append("🍞 **Carbohydrates Present**: Carbs provide energy. Consider portion sizes for your goals.")
+                
+                # Nutrition insights
+                nutritional_data = calculate_nutrition_from_expert_detections(detections)
+                
+                if nutritional_data['total_calories'] > 800:
+                    insights.append("⚠️ **High Calorie Meal**: This appears to be a substantial meal. Consider your daily calorie goals.")
+                elif nutritional_data['total_calories'] < 200:
+                    insights.append("🍽️ **Light Meal**: This is a light meal. You might want to add more food for balanced nutrition.")
+                
+                if nutritional_data['total_protein'] > 30:
+                    insights.append("💪 **High Protein**: Excellent protein content! This will help with muscle maintenance and satiety.")
+                
+                if nutritional_data['total_fats'] > 20:
+                    insights.append("🧈 **Moderate Fat Content**: Be mindful of fat intake, especially if you're watching your weight.")
+            
+            if insights:
+                for insight in insights:
+                    st.info(insight)
+            else:
+                st.info("📊 Upload a food image to get personalized AI insights about your meal!")
+        
+        # Summary section
+        st.markdown("---")
+        st.markdown("### 📋 Analysis Summary")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Detection Summary:**")
+            st.write(f"• Total items detected: {len(detections)}")
+            st.write(f"• Unique food types: {len(set([d.final_label if hasattr(d, 'final_label') else str(d) for d in detections]))}")
+            st.write(f"• Analysis method: YOLO11m Object Detection")
+        
+        with col2:
+            st.markdown("**Nutritional Summary:**")
+            nutritional_data = calculate_nutrition_from_expert_detections(detections)
+            st.write(f"• Total calories: {nutritional_data['total_calories']:.0f} kcal")
+            st.write(f"• Protein: {nutritional_data['total_protein']:.1f} g")
+            st.write(f"• Carbohydrates: {nutritional_data['total_carbs']:.1f} g")
+            st.write(f"• Fats: {nutritional_data['total_fats']:.1f} g")
+    
     else:
         st.warning("No food items detected. Try uploading a clearer image.")
+        st.info("💡 **Tips for better detection:**")
+        st.write("• Ensure good lighting")
+        st.write("• Take a clear, focused photo")
+        st.write("• Include the entire meal in the frame")
+        st.write("• Avoid blurry or dark images")
 
 def calculate_nutrition_from_expert_detections(detections):
     """Calculate nutrition data from expert detections"""
@@ -951,10 +1237,35 @@ def calculate_nutrition_from_expert_detections(detections):
         'bread': {'calories': 79, 'protein': 3.1, 'carbs': 15, 'fat': 1.0},
         'milk': {'calories': 103, 'protein': 8, 'carbs': 12, 'fat': 2.4},
         'egg': {'calories': 78, 'protein': 6.3, 'carbs': 0.6, 'fat': 5.3},
+        'hot dog': {'calories': 151, 'protein': 5.2, 'carbs': 2.2, 'fat': 13.8},
+        'sandwich': {'calories': 200, 'protein': 10, 'carbs': 25, 'fat': 8},
+        'cake': {'calories': 257, 'protein': 3.2, 'carbs': 45, 'fat': 8.1},
+        'donut': {'calories': 253, 'protein': 4.5, 'carbs': 31, 'fat': 12.8},
+        'cookie': {'calories': 502, 'protein': 6.8, 'carbs': 65, 'fat': 24.5},
+        'cup': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
+        'bowl': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
+        'spoon': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
+        'fork': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
+        'knife': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
+        'wine glass': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
+        'bottle': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
     }
     
     for detection in detections:
-        food_item = detection.final_label.lower()
+        # Handle different data types
+        if hasattr(detection, 'final_label'):
+            # FoodDetection object
+            food_item = detection.final_label.lower()
+        elif isinstance(detection, dict):
+            # Dictionary format
+            food_item = detection.get('final_label', detection.get('label', '')).lower()
+        elif isinstance(detection, str):
+            # String format
+            food_item = detection.lower()
+        else:
+            # Fallback
+            food_item = str(detection).lower()
+        
         if food_item in nutrition_map:
             nutrition = nutrition_map[food_item]
             total_calories += nutrition['calories']
