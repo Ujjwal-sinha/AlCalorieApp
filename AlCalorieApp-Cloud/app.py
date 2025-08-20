@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 # Streamlit page configuration
 st.set_page_config(
-    page_title="🍱 AI Calorie Tracker", 
+    page_title="🍱 YOLO11m Calorie Tracker", 
     layout="wide", 
-    page_icon="🍽️",
+    page_icon="🔍",
     initial_sidebar_state="expanded"
 )
 
@@ -871,27 +871,23 @@ def improve_food_name_display(food_name: str) -> str:
     return food_name.replace('_', ' ').title()
 
 def calculate_nutrition_from_expert_detections(detections):
-    """Calculate nutrition data from expert detections"""
+    """Calculate nutrition data from YOLO11m detections"""
     total_calories = 0
     total_protein = 0
     total_carbs = 0
     total_fats = 0
     
-    # Handle different detection formats
+    # Handle YOLO11m detection format
     if isinstance(detections, dict):
-        # New comprehensive format - extract all detections
-        all_detections = []
-        if "blip_detections" in detections:
-            all_detections.extend(detections["blip_detections"])
-        if "vit_detections" in detections:
-            all_detections.extend(detections["vit_detections"])
-        if "swin_detections" in detections:
-            all_detections.extend(detections["swin_detections"])
-        if "clip_detections" in detections:
-            all_detections.extend(detections["clip_detections"])
-        if "yolo_detections" in detections:
-            all_detections.extend(detections["yolo_detections"])
-        detections = all_detections
+        # Extract detections from the result dictionary
+        if "detections" in detections:
+            detections = detections["detections"]
+        else:
+            # Legacy format fallback
+            all_detections = []
+            if "yolo_detections" in detections:
+                all_detections.extend(detections["yolo_detections"])
+            detections = all_detections
     
     # Ensure detections is a list
     if not isinstance(detections, list):
@@ -921,23 +917,19 @@ def calculate_nutrition_from_expert_detections(detections):
     }
 
 def display_expert_results(detections, summary):
-    """Display expert analysis results with comprehensive report format"""
+    """Display YOLO11m analysis results with comprehensive report format"""
     
-    # Handle new comprehensive format
+    # Handle YOLO11m format - detections should be a list of FoodDetection objects
     if isinstance(detections, dict):
-        # New comprehensive format - extract all detections
-        all_detections = []
-        if "blip_detections" in detections:
-            all_detections.extend(detections["blip_detections"])
-        if "vit_detections" in detections:
-            all_detections.extend(detections["vit_detections"])
-        if "swin_detections" in detections:
-            all_detections.extend(detections["swin_detections"])
-        if "clip_detections" in detections:
-            all_detections.extend(detections["clip_detections"])
-        if "yolo_detections" in detections:
-            all_detections.extend(detections["yolo_detections"])
-        detections = all_detections
+        # Extract detections from the result dictionary
+        if "detections" in detections:
+            detections = detections["detections"]
+        else:
+            # Legacy format fallback
+            all_detections = []
+            if "yolo_detections" in detections:
+                all_detections.extend(detections["yolo_detections"])
+            detections = all_detections
     
     # Ensure detections is a list
     if not isinstance(detections, list):
@@ -953,12 +945,23 @@ def display_expert_results(detections, summary):
             
         # Skip generic/non-food items
         label_lower = detection.final_label.lower()
-        if any(skip_word in label_lower for skip_word in ['what', 'how', 'when', 'where', 'why', 'food_item', 'unknown', 'other']):
+        if any(skip_word in label_lower for skip_word in ['what', 'how', 'when', 'where', 'why', 'unknown', 'other']):
             continue
-        # Skip items that are clearly not food
-        if any(non_food in label_lower for non_food in ['bottle', 'cup', 'plate', 'utensil', 'container']):
+        # Only skip clearly non-food items (be more permissive for food-related items)
+        if any(non_food in label_lower for non_food in ['chair', 'couch', 'bed', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone']):
             continue
         valid_detections.append(detection)
+    
+    # Debug: Show detection information
+    st.write(f"**Debug Info:** Total detections received: {len(detections) if isinstance(detections, list) else 'Not a list'}")
+    if isinstance(detections, list) and detections:
+        st.write(f"**Debug Info:** Sample detection type: {type(detections[0])}")
+        if hasattr(detections[0], 'final_label'):
+            st.write(f"**Debug Info:** Sample detection label: {detections[0].final_label}")
+    
+    st.write(f"**Debug Info:** Valid detections after filtering: {len(valid_detections)}")
+    for i, detection in enumerate(valid_detections[:3]):  # Show first 3
+        st.write(f"  - Detection {i+1}: {detection.final_label} (confidence: {detection.confidence_score:.2f})")
     
     # Create comprehensive report header
     if valid_detections:
@@ -974,11 +977,11 @@ def display_expert_results(detections, summary):
                     box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
             <div style="display: flex; align-items: center; margin-bottom: 20px;">
                 <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px;">
-                    <span style="font-size: 24px;">🧠</span>
+                    <span style="font-size: 24px;">🔍</span>
                 </div>
                 <div>
-                    <h3 style="color: white; margin: 0; font-size: 24px;">Expert Multi-Model Analysis Results</h3>
-                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Advanced AI-Powered Food Detection</p>
+                    <h3 style="color: white; margin: 0; font-size: 24px;">YOLO11m Analysis Results</h3>
+                    <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0;">Advanced Object Detection Powered by YOLO11m</p>
                 </div>
             </div>
             <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px;">
@@ -986,7 +989,7 @@ def display_expert_results(detections, summary):
                     <strong style="color: #ff6b6b;">Detected Items:</strong> {description}
                 </p>
                 <p style="font-size: 14px; margin: 10px 0 0 0; color: #666;">
-                    <strong>Total Items:</strong> {len(valid_detections)} | <strong>Detection Method:</strong> Expert Multi-Model System
+                    <strong>Total Items:</strong> {len(valid_detections)} | <strong>Detection Method:</strong> YOLO11m Object Detection
                 </p>
             </div>
         </div>
@@ -1137,10 +1140,10 @@ def display_expert_results(detections, summary):
         
         # Show detection method
         st.markdown("### 🔬 Detection Method")
-        st.info("Expert Multi-Model System: YOLO + ViT-B/16 + Swin + CLIP + BLIP")
+        st.info("YOLO11m Object Detection System")
         
     else:
-        st.info("No valid food items detected in expert analysis")
+        st.info("No valid food items detected in YOLO11m analysis")
 
 def categorize_food(food_name):
     """Categorize food into main categories"""
@@ -1345,8 +1348,8 @@ def main():
     # Header
     st.markdown("""
     <div class="header-card">
-        <h1>🍱 AI Calorie Tracker</h1>
-        <p>Advanced AI-powered food analysis and nutrition tracking</p>
+        <h1>🍱 YOLO11m Calorie Tracker</h1>
+        <p>Advanced object detection powered by YOLO11m for food analysis and nutrition tracking</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1355,13 +1358,13 @@ def main():
         st.markdown("### ⚙️ Settings")
         
         # Model status with improved styling
-        with st.expander("🤖 AI Model Status", expanded=True):
+        with st.expander("🔍 YOLO11m Model Status", expanded=True):
             model_status = get_fresh_model_status()
             
             for model_name, is_available in model_status.items():
-                # Status indicator and model name with "Finetune" prefix
+                # Status indicator and model name
                 status_icon = "✅" if is_available else "❌"
-                st.markdown(f"**{status_icon} Finetune {model_name}**")
+                st.markdown(f"**{status_icon} {model_name}**")
         
         # Calorie target
         st.markdown("#### 🎯 Daily Calorie Target")
@@ -1419,10 +1422,10 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption="Uploaded Food Image", use_column_width=True)
         
-        # Expert Analysis
-        st.markdown("### 🧠 Expert Analysis")
+        # YOLO11m Analysis
+        st.markdown("### 🔍 YOLO11m Analysis")
         
-        if st.button("🧠 Run Expert Analysis", disabled=not uploaded_file, type="primary"):
+        if st.button("🔍 Run YOLO11m Analysis", disabled=not uploaded_file, type="primary"):
             if uploaded_file and UTILS_AVAILABLE and "error" not in models:
                 # Progress tracking
                 progress_bar = st.progress(0)
@@ -1434,26 +1437,26 @@ def main():
                     
                     image = Image.open(uploaded_file)
                     
-                    # Expert Analysis
-                    status_text.text("🧠 Running expert multi-model analysis...")
+                    # YOLO11m Analysis
+                    status_text.text("🔍 Running YOLO11m analysis...")
                     progress_bar.progress(50)
                     
                     expert_result = None
                     try:
-                        from utils.expert_food_recognition import ExpertFoodRecognitionSystem
-                        expert_system = ExpertFoodRecognitionSystem(models)
-                        detections = expert_system.recognize_food(image)
-                        expert_summary = expert_system.get_detection_summary(detections)
+                        from utils.expert_food_recognition import YOLO11mFoodRecognitionSystem
+                        yolo_system = YOLO11mFoodRecognitionSystem(models)
+                        detections = yolo_system.recognize_food(image)
+                        expert_summary = yolo_system.get_detection_summary(detections)
                         expert_result = {"detections": detections, "summary": expert_summary}
                     except Exception as e:
-                        st.error(f"Expert system error: {str(e)}")
+                        st.error(f"YOLO11m system error: {str(e)}")
                         return
                     
                     status_text.text("📊 Finalizing expert analysis...")
                     progress_bar.progress(90)
                     
                     progress_bar.progress(100)
-                    status_text.text("✅ Expert analysis complete!")
+                    status_text.text("✅ YOLO11m analysis complete!")
                     
                     # Clear progress
                     progress_bar.empty()
@@ -1461,7 +1464,7 @@ def main():
                     
                     # Display results
                     if expert_result and expert_result["summary"]["success"]:
-                        st.success("✅ Expert analysis completed!")
+                        st.success("✅ YOLO11m analysis completed!")
                         
                         # Display expert results
                         display_expert_results(expert_result["detections"], expert_result["summary"])
@@ -1473,8 +1476,8 @@ def main():
                         history_entry = {
                             'timestamp': datetime.now(),
                             'image_name': uploaded_file.name,
-                            'description': f"Expert analysis: {len(expert_result['detections'])} items detected",
-                            'analysis': f"Expert multi-model analysis with {expert_result['summary'].get('total_detections', 0)} detections",
+                            'description': f"YOLO11m analysis: {len(expert_result['detections'])} items detected",
+                            'analysis': f"YOLO11m analysis with {expert_result['summary'].get('total_detections', 0)} detections",
                             'nutritional_data': nutritional_data,
                             'context': context,
                             'expert_detections': expert_result["detections"]
@@ -1491,10 +1494,10 @@ def main():
                         st.success(f"📝 Added {nutritional_data['total_calories']:.0f} calories to today's total!")
                     
                     else:
-                        st.error("❌ Expert analysis failed or no detections found")
+                        st.error("❌ YOLO11m analysis failed or no detections found")
                 
                 except Exception as e:
-                    st.error(f"Error during expert analysis: {str(e)}")
+                    st.error(f"Error during YOLO11m analysis: {str(e)}")
             else:
                 st.error("❌ AI models not available. Please check the configuration.")
     
@@ -1568,15 +1571,15 @@ def main():
     # Footer
     st.markdown("""
     <div class="modern-footer">
-        <h3>🍱 AI Calorie Tracker</h3>
-        <p>🔬 AI Visualizations • 📊 Nutrition Analysis • 🚀 Modern Interface</p>
+        <h3>🍱 YOLO11m Calorie Tracker</h3>
+        <p>🔍 YOLO11m Object Detection • 📊 Nutrition Analysis • 🚀 Modern Interface</p>
         <p><strong>Developed by Ujjwal Sinha</strong></p>
         <div style="margin-top: 1rem;">
             <a href="https://github.com/Ujjwal-sinha" target="_blank" style="color: white; margin: 0 1rem; text-decoration: none;">📱 GitHub</a>
             <a href="https://www.linkedin.com/in/sinhaujjwal01/" target="_blank" style="color: white; margin: 0 1rem; text-decoration: none;">💼 LinkedIn</a>
         </div>
         <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
-            © 2025 Ujjwal Sinha • Built with ❤️ using Streamlit & Advanced AI
+            © 2025 Ujjwal Sinha • Built with ❤️ using Streamlit & YOLO11m
         </p>
     </div>
     """, unsafe_allow_html=True)

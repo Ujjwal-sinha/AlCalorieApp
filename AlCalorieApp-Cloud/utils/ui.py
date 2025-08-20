@@ -5,21 +5,19 @@ def create_header():
     """Create the main header for the app"""
     st.markdown("""
     <div class="header-card">
-        <h1>🍱 AI Calorie Tracker</h1>
-        <p>Track your nutrition with AI-powered food analysis</p>
+        <h1>🍱 YOLO11m Calorie Tracker</h1>
+        <p>Track your nutrition with YOLO11m-powered food analysis</p>
     </div>
     """, unsafe_allow_html=True)
 
 def create_sidebar(models: Dict[str, Any]):
     """Create the sidebar with model status and user settings"""
     with st.sidebar:
-        st.markdown("### 🤖 AI Models Status")
+        st.markdown("### 🔍 YOLO11m Model Status")
         
         model_status = {
-            'BLIP (Image Analysis)': models.get('blip_model') is not None,
+            'YOLO11m (Object Detection)': models.get('yolo_model') is not None,
             'LLM (Nutrition Analysis)': models.get('llm') is not None,
-            'YOLO (Object Detection)': models.get('yolo_model') is not None,
-            'CNN (Visualizations)': models.get('cnn_model') is not None
         }
         
         for model, status in model_status.items():
@@ -102,29 +100,44 @@ def create_nutrition_summary(nutrition_data):
     with col4:
         st.metric("Fats", f"{nutrition_data['total_fats']}g")
 
-def create_tips_section():
-    """Create tips section"""
-    with st.expander("💡 Tips for Better Results"):
-        st.markdown("""
-        - 📸 Take clear photos in good lighting
-        - 🍽️ Include all food items in the frame
-        - 📝 Add context description if needed
-        - 🔄 Try different angles if detection is incomplete
-        """)
-
-def create_footer():
-    """Create the modern footer"""
-    st.markdown("""
-    <div class="modern-footer">
-        <h3>🍱 AI Calorie Tracker</h3>
-        <p>🔬 AI Visualizations • 📊 Nutrition Analysis • 🚀 Modern Interface</p>
-        <p><strong>Developed by Ujjwal Sinha</strong></p>
-        <div style="margin-top: 1rem;">
-            <a href="https://github.com/Ujjwal-sinha" target="_blank" style="color: white; margin: 0 1rem; text-decoration: none;">📱 GitHub</a>
-            <a href="https://www.linkedin.com/in/sinhaujjwal01/" target="_blank" style="color: white; margin: 0 1rem; text-decoration: none;">💼 LinkedIn</a>
+def create_detection_results(detections):
+    """Create detection results display"""
+    if not detections:
+        st.warning("No food items detected in the image.")
+        return
+    
+    st.markdown("### 🔍 Detected Food Items")
+    for i, detection in enumerate(detections):
+        confidence = detection.confidence_score if hasattr(detection, 'confidence_score') else 0.0
+        label = detection.final_label if hasattr(detection, 'final_label') else str(detection)
+        
+        st.markdown(f"""
+        <div class="metric-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>{label}</strong>
+                    <br>
+                    <small style="color: #666;">Confidence: {confidence:.2f}</small>
+                </div>
+                <div style="font-size: 1.5rem;">🍽️</div>
+            </div>
         </div>
-        <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
-            © 2025 Ujjwal Sinha • Built with ❤️ using Streamlit & Advanced AI
-        </p>
+        """, unsafe_allow_html=True)
+
+def create_error_message(error_msg):
+    """Create an error message with styling"""
+    st.markdown(f"""
+    <div style="background: #ffebee; border: 1px solid #f44336; border-radius: 8px; padding: 15px; margin: 10px 0;">
+        <div style="color: #d32f2f; font-weight: bold;">❌ Error</div>
+        <div style="color: #666; margin-top: 5px;">{error_msg}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def create_success_message(success_msg):
+    """Create a success message with styling"""
+    st.markdown(f"""
+    <div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 8px; padding: 15px; margin: 10px 0;">
+        <div style="color: #2e7d32; font-weight: bold;">✅ Success</div>
+        <div style="color: #666; margin-top: 5px;">{success_msg}</div>
     </div>
     """, unsafe_allow_html=True)

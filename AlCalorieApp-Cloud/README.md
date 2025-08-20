@@ -1,18 +1,17 @@
-# 🍱 AI Calorie Tracker - Cloud Optimized
+# 🍱 YOLO11m Calorie Tracker - Cloud Optimized
 
-An AI-powered calorie tracking application built with Streamlit that analyzes food images and provides comprehensive nutritional information. This version is specifically optimized for Streamlit Cloud deployment.
+An AI-powered calorie tracking application built with Streamlit that analyzes food images using YOLO11m object detection and provides comprehensive nutritional information. This version is specifically optimized for Streamlit Cloud deployment.
 
 ## ✨ Features
 
-- 🧠 **Advanced Vision Transformer Detection**: State-of-the-art food identification using ViT-B/16 and Swin Transformer models
-- 📷 **Multi-Model AI Food Detection**: Upload food images for automatic identification using Vision Transformers, BLIP, and YOLO models
+- 🔍 **YOLO11m Object Detection**: State-of-the-art food identification using YOLO11m model
+- 📷 **Advanced Food Detection**: Upload food images for automatic identification using YOLO11m
 - 📊 **Comprehensive Nutrition Analysis**: Get detailed calorie and macronutrient breakdown with LLM analysis
 - 📈 **Progress Tracking**: Monitor daily calorie intake and goals with visual progress indicators
 - 📋 **History Management**: View and manage your food analysis history with detailed insights
 - 🎯 **Goal Setting**: Set and track daily calorie targets with progress visualization
-- 🔬 **Advanced Analytics**: AI interpretability features (Grad-CAM, SHAP, LIME) for model transparency
 - 📊 **Data Visualization**: Interactive charts and analytics dashboard
-- 🎯 **Ensemble Detection**: Combines multiple AI models for maximum accuracy
+- 🚀 **Fast Detection**: Optimized YOLO11m model for quick and accurate food detection
 
 ## 🚀 Deployment on Streamlit Cloud
 
@@ -46,14 +45,15 @@ The app requires the following environment variable:
 ```
 AlCalorieApp-Cloud/
 ├── app.py                    # Main application file
-├── requirements.txt          # Python dependencies (optimized)
+├── requirements.txt          # Python dependencies (YOLO11m optimized)
+├── yolo11m.pt               # YOLO11m model file
 ├── .streamlit/
 │   └── config.toml          # Streamlit configuration
 ├── utils/
-│   ├── models.py            # AI model loading and management
-│   ├── analysis.py          # Food analysis functions
+│   ├── models.py            # YOLO11m model loading and management
+│   ├── expert_food_recognition.py  # YOLO11m food detection system
 │   └── ui.py               # UI components and utilities
-├── assets/                  # Static files (if any)
+├── test_yolo11m_integration.py  # Test script for YOLO11m integration
 └── README.md               # This file
 ```
 
@@ -61,15 +61,12 @@ AlCalorieApp-Cloud/
 
 ### AI Models Used
 
-- **Vision Transformer (ViT-B/16)**: Advanced transformer-based food detection with high accuracy
-- **Swin Transformer (Swin-T)**: Hierarchical vision transformer for robust food identification
-- **BLIP (Salesforce)**: For image captioning and food detection
-- **YOLO (Ultralytics)**: For object detection and food identification
+- **YOLO11m**: Advanced object detection model for food identification
 - **Groq LLM**: For nutritional analysis and recommendations
-- **CNN (DenseNet)**: For AI interpretability visualizations
 
 ### Key Optimizations
 
+- **YOLO11m Focus**: Simplified architecture using only YOLO11m for detection
 - **Modular Design**: Separated concerns into utils modules for better maintainability
 - **Error Handling**: Comprehensive error handling with graceful fallbacks
 - **Caching**: Model loading is cached using `@st.cache_resource`
@@ -82,187 +79,102 @@ AlCalorieApp-Cloud/
 #### Core Dependencies
 - **Streamlit**: Web framework
 - **PyTorch**: Deep learning framework
-- **Transformers**: Hugging Face transformers library
 - **LangChain**: LLM integration
-- **Ultralytics**: YOLO model framework
+- **Ultralytics**: YOLO11m model framework
 
 #### Visualization Dependencies
 - **Matplotlib**: Data visualization
 - **Plotly**: Interactive charts
 - **Seaborn**: Statistical visualizations
 
-#### Optional Dependencies
-- **Captum**: Model interpretability
-- **LIME**: Local interpretability
-- **OpenCV**: Computer vision
+#### Computer Vision
+- **OpenCV**: Computer vision operations
+- **Pillow**: Image processing
 
-## 🧠 Vision Transformer (ViT) & Swin Transformer Features
+## 🔍 YOLO11m Features
 
-The app now includes state-of-the-art **Vision Transformer** models for superior food detection:
+### Object Detection Capabilities
 
-### Vision Transformer Models
+YOLO11m is trained on the COCO dataset and can detect various food-related objects including:
 
-- **ViT-B/16 (Vision Transformer Base/16)**: 
-  - 86M parameters, 16x16 patch size
-  - Pre-trained on ImageNet-21k and fine-tuned on ImageNet-1k
-  - Excellent for general food classification
-  - High accuracy for common food items
+- **Fruits**: Apple, Orange, Banana
+- **Vegetables**: Carrot, Broccoli
+- **Food Items**: Pizza, Hot Dog, Sandwich, Cake, Donut, Cookie
+- **Utensils**: Cup, Bowl, Spoon, Fork, Knife, Wine Glass, Bottle
+- **Furniture**: Chair, Couch, Bed, Dining Table
+- **Appliances**: Microwave, Oven, Toaster, Refrigerator
 
-- **Swin Transformer (Swin-T)**:
-  - Hierarchical vision transformer with shifted windows
-  - Better handling of multi-scale food objects
-  - Improved performance on complex food scenes
-  - Memory-efficient design for cloud deployment
+### Detection Process
 
-### Detection Capabilities
+1. **Image Upload**: User uploads a food image
+2. **YOLO11m Detection**: The model identifies objects in the image
+3. **Food Classification**: Detected objects are classified as food items
+4. **Nutrition Analysis**: LLM provides nutritional information
+5. **Results Display**: Comprehensive analysis with visualizations
 
-The Vision Transformer models can detect:
-- **Fruits**: Apple, banana, orange, strawberry, pineapple, etc.
-- **Vegetables**: Broccoli, cauliflower, carrot, bell pepper, etc.
-- **Proteins**: Chicken, beef, fish, eggs, etc.
-- **Grains**: Rice, pasta, bread, etc.
-- **Dairy**: Milk, cheese, yogurt, etc.
-- **Prepared Foods**: Pizza, hamburger, sandwich, etc.
-- **Beverages**: Coffee, tea, juice, etc.
-- **Desserts**: Ice cream, cake, cookies, etc.
+## 🧪 Testing
 
-### Ensemble Detection Strategy
+Run the integration test to verify YOLO11m functionality:
 
-The app uses a sophisticated ensemble approach:
-1. **Primary**: Vision Transformer (ViT-B/16) detection
-2. **Secondary**: Swin Transformer detection
-3. **Ensemble**: Weighted combination of both models
-4. **Fallback**: BLIP and YOLO models for additional coverage
-5. **Color-based**: Final fallback for edge cases
+```bash
+python test_yolo11m_integration.py
+```
 
-### Performance Benefits
+This test will:
+- Check if yolo11m.pt file exists
+- Test model loading
+- Test detection on sample images
 
-- **Higher Accuracy**: Vision Transformers achieve better food classification than traditional CNNs
-- **Better Generalization**: Improved performance on diverse food types and presentations
-- **Robust Detection**: Handles variations in lighting, angle, and food preparation
-- **Fast Inference**: Optimized for real-time analysis in the web interface
+## 🚀 Performance
 
-## 🤖 Enhanced Food Agent
+- **Fast Detection**: YOLO11m provides real-time object detection
+- **High Accuracy**: State-of-the-art detection performance
+- **Memory Efficient**: Optimized for cloud deployment
+- **Scalable**: Can handle multiple concurrent users
 
-The app includes an advanced **Enhanced Food Agent** that provides comprehensive food analysis with web search capabilities:
+## 🔧 Customization
 
-### Agent Features
+### Adding New Food Categories
 
-1. **Image Analysis**: Advanced food detection using multiple AI models
-2. **Web Search**: Real-time information from the web about food items
-3. **Context Management**: Store analysis context for follow-up questions
-4. **Comprehensive Information**: 
-   - Nutritional facts and health benefits
-   - Cultural and historical background
-   - Recipe suggestions and cooking methods
-   - Dietary considerations and allergen information
+To add support for new food categories, modify the `food_classes` set in `utils/expert_food_recognition.py`.
 
-### How to Use the Enhanced Agent
+### Adjusting Detection Thresholds
 
-1. **Navigate to the "🤖 Enhanced Agent" tab**
-2. **Upload a food image** for analysis
-3. **Click "Analyze with Enhanced Agent"** to start processing
-4. **View comprehensive results** including web-sourced information
-5. **Ask follow-up questions** about the food without re-uploading
-6. **Explore detailed insights** about nutrition, culture, and preparation
+Modify the `confidence_threshold` parameter in the `YOLO11mFoodRecognitionSystem` class to adjust detection sensitivity.
 
-### Agent Architecture
+## 📊 Usage
 
-- **Modular Design**: Each component can be upgraded independently
-- **Caching System**: Efficient storage of search results and context
-- **Error Handling**: Graceful fallbacks when web search is unavailable
-- **Session Management**: Unique session IDs for each analysis
-
-## 📖 Usage Guide
-
-### 1. Upload Food Image
-- Use the file uploader to select a food image (PNG, JPG, JPEG)
-- Ensure good lighting and clear visibility of all food items
-
-### 2. Add Context (Optional)
-- Provide additional description of the meal
-- Include cooking methods, portion sizes, or special ingredients
-
-### 3. Analyze
-- Click "Analyze Food" to start the AI analysis
-- The app will detect food items and provide nutritional breakdown
-
-### 4. View Results
-- See detailed nutritional information (calories, protein, carbs, fats)
-- View comprehensive health analysis and recommendations
-- Check AI interpretability visualizations (if available)
-
-### 5. Track Progress
-- Monitor daily calorie intake in the sidebar
-- View progress towards your daily calorie target
-- Access analysis history and trends
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **"LLM service unavailable"**
-   - Check your Groq API key in Streamlit secrets
-   - Ensure the API key is valid and has sufficient credits
-
-2. **"Image analysis unavailable"**
-   - Models may take time to load on first run
-   - Check if all dependencies are properly installed
-
-3. **"Models not available"**
-   - Some models may fail to load due to memory constraints
-   - The app will work with available models and provide fallbacks
-
-4. **Slow performance**
-   - First run may be slower due to model downloading
-   - Subsequent runs will be faster due to caching
-
-### Performance Tips
-
-- Use clear, well-lit food images
-- Add context descriptions for better analysis
-- The app works best with common food items
-- Close other browser tabs to free up memory
-
-## 🎯 Features Breakdown
-
-### Core Features
-- ✅ Image upload and processing
-- ✅ AI-powered food detection
-- ✅ Nutritional analysis
-- ✅ Progress tracking
-- ✅ History management
-
-### Advanced Features
-- ✅ AI interpretability (Grad-CAM, SHAP, LIME)
-- ✅ Multiple detection strategies (BLIP + YOLO)
-- ✅ Comprehensive error handling
-- ✅ Responsive UI design
-- ✅ Data visualization
-
-### Deployment Optimizations
-- ✅ Modular code structure
-- ✅ Proper caching strategies
-- ✅ Memory optimization
-- ✅ Error resilience
-- ✅ Version constraints
+1. **Upload Image**: Click "Choose a food image" and select your food photo
+2. **Run Analysis**: Click "Run YOLO11m Analysis" to start detection
+3. **View Results**: See detected items, nutritional information, and recommendations
+4. **Track Progress**: Monitor your daily calorie intake and goals
 
 ## 🤝 Contributing
 
-Feel free to submit issues and enhancement requests! This project is designed to be easily extensible.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test with the integration script
+5. Submit a pull request
 
 ## 📄 License
 
-This project is open source and available under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
-- **Streamlit**: For the amazing web framework
-- **Hugging Face**: For the transformers library
-- **Groq**: For fast LLM inference
-- **Ultralytics**: For YOLO models
-- **Salesforce**: For BLIP models
+- **Ultralytics**: For the YOLO11m model
+- **Groq**: For LLM capabilities
+- **Streamlit**: For the web framework
+- **COCO Dataset**: For training data
+
+## 📞 Support
+
+For support and questions:
+- Create an issue on GitHub
+- Check the test script for troubleshooting
+- Review the model status in the app sidebar
 
 ---
 
-**Note**: This version is specifically optimized for Streamlit Cloud deployment while maintaining all the advanced features of the original application. The modular design ensures better maintainability and easier debugging.
+**Built with ❤️ using Streamlit & YOLO11m**
