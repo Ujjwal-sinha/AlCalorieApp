@@ -662,7 +662,7 @@ def create_analysis_page_with_navigation():
             st.rerun()
     
     # Main content
-    tab1, tab2, tab3 = st.tabs(["🔍 Food Analysis", "📊 History", "📈 Analytics"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🔍 Food Analysis", "🤖 AI Diet Analysis", "📊 History", "📈 Analytics"])
     
     with tab1:
         st.markdown("""
@@ -783,6 +783,30 @@ def create_analysis_page_with_navigation():
                         # Calculate nutrition data from expert detections
                         nutritional_data = calculate_nutrition_from_expert_detections(expert_result["detections"])
                         
+                        # Extract detected food names for GROQ analysis
+                        detected_foods = []
+                        for detection in expert_result["detections"]:
+                            if hasattr(detection, 'final_label'):
+                                detected_foods.append(detection.final_label)
+                            elif isinstance(detection, dict):
+                                detected_foods.append(detection.get('final_label', detection.get('label', '')))
+                            elif isinstance(detection, str):
+                                detected_foods.append(detection)
+                            else:
+                                detected_foods.append(str(detection))
+                        
+                        # Store results in session state for AI Diet Analysis tab
+                        st.session_state.last_analysis = {
+                            'detections': expert_result["detections"],
+                            'nutritional_data': nutritional_data,
+                            'detected_foods': detected_foods,
+                            'context': context,
+                            'image_name': uploaded_file.name,
+                            'timestamp': datetime.now()
+                        }
+                        
+                        st.success("🎉 Analysis complete! Switch to '🤖 AI Diet Analysis' tab to get personalized nutrition insights!")
+                        
                         # Save to history
                         history_entry = {
                             'timestamp': datetime.now(),
@@ -791,7 +815,8 @@ def create_analysis_page_with_navigation():
                             'analysis': f"YOLO11m analysis with {expert_result['summary'].get('total_detections', 0)} detections",
                             'nutritional_data': nutritional_data,
                             'context': context,
-                            'expert_detections': expert_result["detections"]
+                            'expert_detections': expert_result["detections"],
+                            'detected_foods': detected_foods
                         }
                         
                         st.session_state.history.append(history_entry)
@@ -813,6 +838,171 @@ def create_analysis_page_with_navigation():
                 st.error("❌ AI models not available. Please check the configuration.")
     
     with tab2:
+        st.markdown("""
+        <div class="metric-card">
+            <h3 style="color: var(--primary-green); margin-bottom: 1rem;">🤖 AI Diet Analysis</h3>
+            <p style="color: var(--text-light);">Get personalized nutrition insights and diet recommendations powered by GROQ AI.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Check if we have analysis results
+        if 'last_analysis' not in st.session_state:
+            st.info("📸 No analysis data available. Please run YOLO11m analysis in the '🔍 Food Analysis' tab first.")
+        else:
+            analysis_data = st.session_state.last_analysis
+            
+            # Display analysis summary
+            st.markdown("### 📊 Analysis Summary")
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Detected Foods", len(analysis_data['detected_foods']))
+            with col2:
+                st.metric("Total Calories", f"{analysis_data['nutritional_data']['total_calories']:.0f} kcal")
+            with col3:
+                st.metric("Protein", f"{analysis_data['nutritional_data']['total_protein']:.1f} g")
+            with col4:
+                st.metric("Carbs", f"{analysis_data['nutritional_data']['total_carbs']:.1f} g")
+            
+            # Show detected foods
+            st.markdown("#### 🍽️ Detected Foods")
+            food_chips = " ".join([f"`{food}`" for food in analysis_data['detected_foods']])
+            st.markdown(food_chips)
+            
+            # GROQ Diet Report Generation
+            st.markdown("---")
+            st.markdown("### 🤖 Generate AI Diet Report")
+            
+            # Check if GROQ is available
+            groq_available = False
+            try:
+                from utils.groq_service import groq_service
+                groq_available = groq_service.is_available()
+            except ImportError:
+                pass
+            
+            if groq_available:
+                # Add meal time selection
+                col1, col2 = st.columns(2)
+                with col1:
+                    meal_time = st.selectbox(
+                        "🍽️ Meal Time",
+                        ["breakfast", "lunch", "dinner", "snack"],
+                        index=1,  # Default to lunch
+                        help="Select the time of day for this meal"
+                    )
+                
+                with col2:
+                    st.write("")  # Spacer
+                    generate_report = st.button("🤖 Generate AI Diet Report", type="primary", use_container_width=True)
+                
+                # Generate and display GROQ report
+                groq_report = None
+                if generate_report:
+                    with st.spinner("🤖 Generating comprehensive diet report with GROQ AI..."):
+                        groq_report = groq_service.generate_diet_report(
+                            detected_foods=analysis_data['detected_foods'],
+                            nutritional_data=analysis_data['nutritional_data'],
+                            context=analysis_data['context'],
+                            meal_time=meal_time
+                        )
+                
+                # Display GROQ report if available
+                if groq_report:
+                    if groq_report["success"]:
+                        st.success("✅ AI Diet Report Generated Successfully!")
+                        
+                        # Create tabs for different views
+                        report_tab1, report_tab2 = st.tabs(["📋 Full Report", "📊 Quick Summary"])
+                        
+                        with report_tab1:
+                            st.markdown("### 🍽️ AI-Generated Diet Report")
+                            st.markdown(groq_report["report"])
+                            
+                            # Add report metadata
+                            with st.expander("📋 Report Details"):
+                                st.write(f"**Generated at:** {groq_report['generated_at']}")
+                                st.write(f"**AI Model:** {groq_report['model_used']}")
+                                st.write(f"**Meal Time:** {meal_time.title()}")
+                                st.write(f"**Detected Foods:** {', '.join(analysis_data['detected_foods'])}")
+                        
+                        with report_tab2:
+                            st.markdown("### 📊 Quick Summary")
+                            # Extract key points from the report
+                            report_text = groq_report["report"]
+                            
+                            # Show nutritional summary
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("Total Calories", f"{analysis_data['nutritional_data']['total_calories']:.0f} kcal")
+                            with col2:
+                                st.metric("Protein", f"{analysis_data['nutritional_data']['total_protein']:.1f} g")
+                            with col3:
+                                st.metric("Carbs", f"{analysis_data['nutritional_data']['total_carbs']:.1f} g")
+                            with col4:
+                                st.metric("Fats", f"{analysis_data['nutritional_data']['total_fats']:.1f} g")
+                            
+                            # Show key insights
+                            st.markdown("#### 💡 Key Insights")
+                            if "STRENGTHS" in report_text and "AREAS FOR IMPROVEMENT" in report_text:
+                                strengths_start = report_text.find("### ✅ STRENGTHS")
+                                improvements_start = report_text.find("### ⚠️ AREAS FOR IMPROVEMENT")
+                                
+                                if strengths_start != -1 and improvements_start != -1:
+                                    strengths_section = report_text[strengths_start:improvements_start]
+                                    # Extract bullet points
+                                    lines = strengths_section.split('\n')
+                                    for line in lines:
+                                        if line.strip().startswith('-') or line.strip().startswith('•'):
+                                            st.write(f"✅ {line.strip()[1:].strip()}")
+                            
+                            # Show recommendations
+                            st.markdown("#### 🎯 Recommendations")
+                            if "HEALTH RECOMMENDATIONS" in report_text:
+                                rec_start = report_text.find("### 💡 HEALTH RECOMMENDATIONS")
+                                if rec_start != -1:
+                                    rec_section = report_text[rec_start:rec_start+500]  # First 500 chars
+                                    lines = rec_section.split('\n')
+                                    for line in lines:
+                                        if line.strip().startswith('1.') or line.strip().startswith('2.') or line.strip().startswith('3.') or line.strip().startswith('4.'):
+                                            st.write(f"💡 {line.strip()}")
+                        
+                        # Save report to history
+                        if 'groq_report' not in analysis_data:
+                            analysis_data['groq_report'] = groq_report
+                            analysis_data['meal_time'] = meal_time
+                            
+                    else:
+                        st.error(f"❌ GROQ report generation failed: {groq_report.get('error', 'Unknown error')}")
+                        st.info("💡 Make sure GROQ_API_KEY is configured in your environment variables.")
+                
+                elif not generate_report:
+                    # Show preview of what will be generated
+                    st.info("💡 Click 'Generate AI Diet Report' to get comprehensive nutrition analysis and personalized recommendations!")
+                    
+                    # Show nutritional preview
+                    st.markdown("#### 📊 Nutritional Data for Analysis:")
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Calories", f"{analysis_data['nutritional_data']['total_calories']:.0f} kcal")
+                    with col2:
+                        st.metric("Protein", f"{analysis_data['nutritional_data']['total_protein']:.1f} g")
+                    with col3:
+                        st.metric("Carbs", f"{analysis_data['nutritional_data']['total_carbs']:.1f} g")
+                    with col4:
+                        st.metric("Fats", f"{analysis_data['nutritional_data']['total_fats']:.1f} g")
+            
+            else:
+                st.warning("🤖 GROQ AI Analysis Not Available")
+                st.info("""
+                **To enable AI Diet Reports:**
+                1. Get a GROQ API key from [console.groq.com](https://console.groq.com)
+                2. Set the `GROQ_API_KEY` environment variable
+                3. Restart the app
+                
+                The app will work without GROQ, but you'll miss out on personalized AI nutrition insights!
+                """)
+    
+    with tab3:
         st.markdown("""
         <div class="metric-card">
             <h3 style="color: var(--primary-green); margin-bottom: 1rem;">📊 Analysis History</h3>
@@ -840,10 +1030,23 @@ def create_analysis_page_with_navigation():
                             st.metric("Carbs", f"{nutrition['total_carbs']:.1f}g")
                         with col4:
                             st.metric("Fat", f"{nutrition['total_fats']:.1f}g")
+                    
+                    # Display GROQ report if available
+                    if entry.get('groq_report') and entry['groq_report'].get('success'):
+                        st.markdown("---")
+                        st.markdown("### 🤖 AI Diet Report")
+                        st.markdown(entry['groq_report']['report'])
+                        
+                        # Show report metadata
+                        with st.expander("📋 Report Details"):
+                            st.write(f"**Generated at:** {entry['groq_report']['generated_at']}")
+                            st.write(f"**AI Model:** {entry['groq_report']['model_used']}")
+                            if entry.get('detected_foods'):
+                                st.write(f"**Detected Foods:** {', '.join(entry['detected_foods'])}")
         else:
             st.info("No analysis history yet. Upload an image to get started!")
     
-    with tab3:
+    with tab4:
         st.markdown("""
         <div class="metric-card">
             <h3 style="color: var(--primary-green); margin-bottom: 1rem;">📈 Analytics Dashboard</h3>

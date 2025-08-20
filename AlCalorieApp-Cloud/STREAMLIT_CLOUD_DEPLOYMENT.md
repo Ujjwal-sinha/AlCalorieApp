@@ -46,10 +46,20 @@ This guide will help you deploy your AI-Powered Nutrition Analysis app to Stream
 
 If you're using GROQ API for enhanced analysis:
 
-1. **In Streamlit Cloud Dashboard**:
+1. **Get GROQ API Key**:
+   - Sign up at [console.groq.com](https://console.groq.com)
+   - Create a new API key
+   - Copy the API key
+
+2. **In Streamlit Cloud Dashboard**:
    - Go to your app settings
    - Add environment variable: `GROQ_API_KEY`
    - Set the value to your GROQ API key
+
+3. **Test GROQ Integration** (Optional):
+   ```bash
+   python test_groq_integration.py
+   ```
 
 ## 📁 File Structure for Deployment
 
@@ -132,13 +142,15 @@ AlCalorieApp-Cloud/
 - Image upload and optimization
 - YOLO11m food detection
 - Comprehensive nutrition analysis
+- **🤖 AI-Generated Diet Reports** (with GROQ LLM)
 - History tracking and analytics
 
 ### Technical Features
 - Image optimization for better detection
 - Consolidated food item reports
 - Nutritional breakdown
-- AI insights and recommendations
+- **AI insights and recommendations** (GROQ-powered)
+- **Comprehensive diet analysis** with meal time context
 
 ## 📊 Monitoring
 
