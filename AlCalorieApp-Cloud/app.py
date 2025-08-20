@@ -997,21 +997,8 @@ def display_expert_results(detections, summary):
                             <h4 style="margin: 0; color: #28a745; font-size: 18px;">🍽️ {food_name}</h4>
                             <p style="margin: 5px 0; color: #6c757d; font-size: 14px;">
                                 <strong>Count:</strong> {group_data['count']} | 
-                                <strong>Avg Confidence:</strong> {avg_confidence:.2f} | 
                                 <strong>Method:</strong> {methods_str}
                             </p>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="
-                                background: {f'#28a745' if avg_confidence > 0.7 else f'#ffc107' if avg_confidence > 0.5 else f'#dc3545'}; 
-                                color: white; 
-                                padding: 5px 10px; 
-                                border-radius: 15px; 
-                                font-size: 12px; 
-                                font-weight: bold;
-                            ">
-                                {f'High' if avg_confidence > 0.7 else f'Medium' if avg_confidence > 0.5 else f'Low'} Confidence
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1022,15 +1009,12 @@ def display_expert_results(detections, summary):
             st.markdown("#### 📊 Detection Summary")
             total_items = len(food_groups)
             total_detections = sum(group['count'] for group in food_groups.values())
-            avg_overall_confidence = sum(group['total_confidence'] for group in food_groups.values()) / total_detections if total_detections > 0 else 0
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
             with col1:
                 st.metric("Unique Food Items", total_items)
             with col2:
                 st.metric("Total Detections", total_detections)
-            with col3:
-                st.metric("Overall Confidence", f"{avg_overall_confidence:.2f}")
         
         with tab2:
             st.markdown("### 📊 Nutritional Analysis")
@@ -1145,42 +1129,23 @@ def display_expert_results(detections, summary):
             # Detection statistics
             total_detections = len(detections)
             methods_used = set()
-            confidence_scores = []
             
             for detection in detections:
                 # Handle different data types
                 if hasattr(detection, 'detection_method'):
                     methods_used.add(detection.detection_method)
-                    confidence_scores.append(detection.confidence_score)
                 elif isinstance(detection, dict):
                     methods_used.add(detection.get('detection_method', 'YOLO11m'))
-                    confidence_scores.append(detection.get('confidence_score', detection.get('confidence', 0.0)))
                 else:
                     methods_used.add('YOLO11m')
-                    confidence_scores.append(0.8)
             
-            avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
-            
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
             
             with col1:
                 st.metric("Total Detections", total_detections)
             
             with col2:
-                st.metric("Average Confidence", f"{avg_confidence:.2f}")
-            
-            with col3:
                 st.metric("Detection Methods", len(methods_used))
-            
-            # Confidence distribution
-            st.markdown("#### 📈 Confidence Distribution")
-            if confidence_scores:
-                import plotly.express as px
-                import pandas as pd
-                
-                df = pd.DataFrame({'Confidence': confidence_scores})
-                fig = px.histogram(df, x='Confidence', nbins=10, title='Detection Confidence Distribution')
-                st.plotly_chart(fig, use_container_width=True)
             
             # Method breakdown
             st.markdown("#### 🔧 Detection Methods Used")
