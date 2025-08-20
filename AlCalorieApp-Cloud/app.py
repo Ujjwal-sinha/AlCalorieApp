@@ -624,7 +624,7 @@ def create_analysis_page_with_navigation():
         
         # YOLO11m Status
         st.markdown("#### 🔍 AI Model Status")
-        st.markdown("**✅ YOLO11m (Object Detection)**")
+        st.markdown("**✅ FineTune YOLO11m **")
         
         # Daily calorie target
         st.session_state.calorie_target = st.number_input(
