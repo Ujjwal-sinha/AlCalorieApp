@@ -622,23 +622,9 @@ def create_analysis_page_with_navigation():
             help="Maximum size for displayed images (doesn't affect detection quality)"
         )
         
-        # Fine-tune options
-        st.markdown("#### 🎛️ Fine-Tune Options")
-        
-        confidence_threshold = st.slider(
-            "🎯 Detection Confidence",
-            min_value=0.1,
-            max_value=0.9,
-            value=0.15,
-            step=0.05,
-            help="Minimum confidence threshold for food detection"
-        )
-        
-        detection_mode = st.selectbox(
-            "🔍 Detection Mode",
-            ["Balanced", "High Accuracy", "High Coverage"],
-            help="Choose detection strategy"
-        )
+        # YOLO11m Status
+        st.markdown("#### 🔍 AI Model Status")
+        st.markdown("**✅ YOLO11m (Object Detection)**")
         
         # Daily calorie target
         st.session_state.calorie_target = st.number_input(
