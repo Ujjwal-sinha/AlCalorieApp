@@ -974,27 +974,63 @@ def display_expert_results(detections, summary):
                     'method': method
                 })
             
-            # Display grouped results
-            for food_name, group_data in food_groups.items():
+            # Display all items in a single consolidated report
+            st.markdown("#### 📋 All Detected Items")
+            
+            # Create a table-like display for all items
+            for i, (food_name, group_data) in enumerate(food_groups.items()):
                 avg_confidence = group_data['total_confidence'] / group_data['count']
                 methods_str = ', '.join(group_data['methods'])
                 
-                with st.expander(f"🍽️ {food_name} (Count: {group_data['count']}, Avg Confidence: {avg_confidence:.2f})", expanded=True):
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("Detection Count", group_data['count'])
-                    
-                    with col2:
-                        st.metric("Average Confidence", f"{avg_confidence:.2f}")
-                    
-                    with col3:
-                        st.metric("Detection Methods", methods_str)
-                    
-                    # Show individual detections
-                    st.markdown("**Individual Detections:**")
-                    for i, detection in enumerate(group_data['detections']):
-                        st.write(f"  • Detection {i+1}: {detection['method']} (Confidence: {detection['confidence']:.2f})")
+                # Create a card-like display for each food item
+                st.markdown(f"""
+                <div style="
+                    border: 1px solid #e0e0e0; 
+                    border-radius: 8px; 
+                    padding: 15px; 
+                    margin: 10px 0; 
+                    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0; color: #28a745; font-size: 18px;">🍽️ {food_name}</h4>
+                            <p style="margin: 5px 0; color: #6c757d; font-size: 14px;">
+                                <strong>Count:</strong> {group_data['count']} | 
+                                <strong>Avg Confidence:</strong> {avg_confidence:.2f} | 
+                                <strong>Method:</strong> {methods_str}
+                            </p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="
+                                background: {f'#28a745' if avg_confidence > 0.7 else f'#ffc107' if avg_confidence > 0.5 else f'#dc3545'}; 
+                                color: white; 
+                                padding: 5px 10px; 
+                                border-radius: 15px; 
+                                font-size: 12px; 
+                                font-weight: bold;
+                            ">
+                                {f'High' if avg_confidence > 0.7 else f'Medium' if avg_confidence > 0.5 else f'Low'} Confidence
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Summary statistics
+            st.markdown("---")
+            st.markdown("#### 📊 Detection Summary")
+            total_items = len(food_groups)
+            total_detections = sum(group['count'] for group in food_groups.values())
+            avg_overall_confidence = sum(group['total_confidence'] for group in food_groups.values()) / total_detections if total_detections > 0 else 0
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Unique Food Items", total_items)
+            with col2:
+                st.metric("Total Detections", total_detections)
+            with col3:
+                st.metric("Overall Confidence", f"{avg_overall_confidence:.2f}")
         
         with tab2:
             st.markdown("### 📊 Nutritional Analysis")
@@ -1049,6 +1085,9 @@ def display_expert_results(detections, summary):
                     'cake': {'calories': 257, 'protein': 3.2, 'carbs': 45, 'fat': 8.1},
                     'donut': {'calories': 253, 'protein': 4.5, 'carbs': 31, 'fat': 12.8},
                     'cookie': {'calories': 502, 'protein': 6.8, 'carbs': 65, 'fat': 24.5},
+                    'broccoli': {'calories': 55, 'protein': 3.7, 'carbs': 11.2, 'fat': 0.6},
+                    'orange': {'calories': 62, 'protein': 1.2, 'carbs': 15.4, 'fat': 0.2},
+                    'carrot': {'calories': 41, 'protein': 0.9, 'carbs': 9.6, 'fat': 0.2},
                 }
                 
                 if food_item in nutrition_map:
@@ -1067,22 +1106,38 @@ def display_expert_results(detections, summary):
                     food_nutrition[food_item]['carbs'] += nutrition_map[food_item]['carbs']
                     food_nutrition[food_item]['fat'] += nutrition_map[food_item]['fat']
             
-            # Display nutrition breakdown
+            # Display nutrition breakdown in a single consolidated view
             for food_name, nutrition in food_nutrition.items():
-                with st.expander(f"🍽️ {food_name.title()} (Count: {nutrition['count']})"):
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Calories", f"{nutrition['calories']:.0f} kcal")
-                    
-                    with col2:
-                        st.metric("Protein", f"{nutrition['protein']:.1f} g")
-                    
-                    with col3:
-                        st.metric("Carbs", f"{nutrition['carbs']:.1f} g")
-                    
-                    with col4:
-                        st.metric("Fat", f"{nutrition['fat']:.1f} g")
+                st.markdown(f"""
+                <div style="
+                    border: 1px solid #e0e0e0; 
+                    border-radius: 8px; 
+                    padding: 15px; 
+                    margin: 10px 0; 
+                    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                ">
+                    <h5 style="margin: 0 0 10px 0; color: #28a745;">🍽️ {food_name.title()} (Count: {nutrition['count']})</h5>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                        <div style="text-align: center; padding: 8px; background: #e8f5e8; border-radius: 5px;">
+                            <div style="font-weight: bold; color: #28a745;">Calories</div>
+                            <div>{nutrition['calories']:.0f} kcal</div>
+                        </div>
+                        <div style="text-align: center; padding: 8px; background: #e8f5e8; border-radius: 5px;">
+                            <div style="font-weight: bold; color: #28a745;">Protein</div>
+                            <div>{nutrition['protein']:.1f} g</div>
+                        </div>
+                        <div style="text-align: center; padding: 8px; background: #e8f5e8; border-radius: 5px;">
+                            <div style="font-weight: bold; color: #28a745;">Carbs</div>
+                            <div>{nutrition['carbs']:.1f} g</div>
+                        </div>
+                        <div style="text-align: center; padding: 8px; background: #e8f5e8; border-radius: 5px;">
+                            <div style="font-weight: bold; color: #28a745;">Fat</div>
+                            <div>{nutrition['fat']:.1f} g</div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
         
         with tab3:
             st.markdown("### 🔍 Detection Analysis Details")
@@ -1157,10 +1212,10 @@ def display_expert_results(detections, summary):
                 if len(food_types) > 3:
                     insights.append("🎯 **Variety Detected**: Your meal contains a good variety of different food items, which is excellent for balanced nutrition.")
                 
-                if any('vegetable' in food or 'salad' in food for food in food_types.keys()):
+                if any('vegetable' in food or 'salad' in food or 'broccoli' in food or 'carrot' in food for food in food_types.keys()):
                     insights.append("🥗 **Vegetables Present**: Great! Vegetables provide essential vitamins, minerals, and fiber for your health.")
                 
-                if any('fruit' in food or 'apple' in food or 'banana' in food for food in food_types.keys()):
+                if any('fruit' in food or 'apple' in food or 'banana' in food or 'orange' in food for food in food_types.keys()):
                     insights.append("🍎 **Fruits Detected**: Fruits are excellent sources of natural sugars, vitamins, and antioxidants.")
                 
                 if any('protein' in food or 'chicken' in food or 'egg' in food for food in food_types.keys()):
@@ -1242,13 +1297,9 @@ def calculate_nutrition_from_expert_detections(detections):
         'cake': {'calories': 257, 'protein': 3.2, 'carbs': 45, 'fat': 8.1},
         'donut': {'calories': 253, 'protein': 4.5, 'carbs': 31, 'fat': 12.8},
         'cookie': {'calories': 502, 'protein': 6.8, 'carbs': 65, 'fat': 24.5},
-        'cup': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
-        'bowl': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
-        'spoon': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
-        'fork': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
-        'knife': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
-        'wine glass': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
-        'bottle': {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0},
+        'broccoli': {'calories': 55, 'protein': 3.7, 'carbs': 11.2, 'fat': 0.6},
+        'orange': {'calories': 62, 'protein': 1.2, 'carbs': 15.4, 'fat': 0.2},
+        'carrot': {'calories': 41, 'protein': 0.9, 'carbs': 9.6, 'fat': 0.2},
     }
     
     for detection in detections:
