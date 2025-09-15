@@ -19,7 +19,7 @@ class GroqDietReportService:
         """Initialize the GROQ service"""
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         self.base_url = "https://api.groq.com/openai/v1/chat/completions"
-        self.model = "llama3-70b-8192"  # Using Llama3-70B for better analysis
+        self.model = "llama-3.3-70b-versatile"  # Using Llama3-70B for better analysis
         
     def is_available(self) -> bool:
         """Check if GROQ API is available"""
