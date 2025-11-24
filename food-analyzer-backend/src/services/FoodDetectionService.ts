@@ -156,7 +156,7 @@ export class FoodDetectionService {
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       let stdout = '';
       let stderr = '';
 
@@ -173,7 +173,16 @@ export class FoodDetectionService {
         if (code !== 0) {
           console.error(`Python ${modelType} process exited with code ${code}`);
           console.error('Python stderr:', stderr);
-          reject(new Error(`Python process failed with code ${code}`));
+          console.error('Python stdout:', stdout);
+          // Return empty result instead of rejecting to allow other models to continue
+          resolve({
+            success: false,
+            detected_foods: [],
+            confidence_scores: {},
+            processing_time: 0,
+            model_info: { model_type: modelType, detection_count: 0 },
+            error: `Python process failed with code ${code}: ${stderr}`
+          });
           return;
         }
 
@@ -182,13 +191,29 @@ export class FoodDetectionService {
           console.log(`${modelType.toUpperCase()} detection result (local):`, {
             success: result.success,
             detection_count: result.model_info?.detection_count || 0,
-            detected_foods: result.detected_foods?.length || 0
+            detected_foods: result.detected_foods?.length || 0,
+            has_confidence_scores: !!result.confidence_scores,
+            error: result.error
           });
+          
+          // Ensure we have valid arrays even if empty
+          if (!result.detected_foods) result.detected_foods = [];
+          if (!result.confidence_scores) result.confidence_scores = {};
+          
           resolve(result);
         } catch (error) {
           console.error(`Failed to parse Python ${modelType} response:`, error);
           console.error('Raw stdout:', stdout);
-          reject(new Error(`Failed to parse Python response: ${error}`));
+          console.error('Raw stderr:', stderr);
+          // Return empty result instead of rejecting
+          resolve({
+            success: false,
+            detected_foods: [],
+            confidence_scores: {},
+            processing_time: 0,
+            model_info: { model_type: modelType, detection_count: 0 },
+            error: `Failed to parse Python response: ${error}`
+          });
         }
       });
 
@@ -200,11 +225,16 @@ export class FoodDetectionService {
   async detectWithYOLO(image: ProcessedImage): Promise<{ foods: string[], confidence: number }> {
     try {
       const result = await this.callPythonDetection('yolo', image.buffer);
-      if (result.success && result.detected_foods.length > 0) {
+      if (result.success && result.detected_foods && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
-        const avgConfidence = Object.values(result.confidence_scores).reduce((sum, conf) => sum + conf, 0) / Object.keys(result.confidence_scores).length;
+        const confidences = Object.values(result.confidence_scores || {});
+        const avgConfidence = confidences.length > 0 
+          ? confidences.reduce((sum: number, conf: number) => sum + conf, 0) / confidences.length
+          : 0.5; // Default confidence if not provided
+        console.log(`YOLO detected ${result.detected_foods.length} foods with avg confidence ${avgConfidence.toFixed(3)}`);
         return { foods: result.detected_foods, confidence: avgConfidence };
       }
+      console.warn('YOLO detection returned no foods:', result);
       return { foods: [], confidence: 0 };
     } catch (error) {
       console.error('YOLO detection failed:', error);
@@ -215,11 +245,16 @@ export class FoodDetectionService {
   async detectWithViT(image: ProcessedImage): Promise<{ foods: string[], confidence: number }> {
     try {
       const result = await this.callPythonDetection('vit', image.buffer);
-      if (result.success && result.detected_foods.length > 0) {
+      if (result.success && result.detected_foods && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
-        const avgConfidence = Object.values(result.confidence_scores).reduce((sum, conf) => sum + conf, 0) / Object.keys(result.confidence_scores).length;
+        const confidences = Object.values(result.confidence_scores || {});
+        const avgConfidence = confidences.length > 0 
+          ? confidences.reduce((sum: number, conf: number) => sum + conf, 0) / confidences.length
+          : 0.5; // Default confidence if not provided
+        console.log(`ViT detected ${result.detected_foods.length} foods with avg confidence ${avgConfidence.toFixed(3)}`);
         return { foods: result.detected_foods, confidence: avgConfidence };
       }
+      console.warn('ViT detection returned no foods:', result);
       return { foods: [], confidence: 0 };
     } catch (error) {
       console.error('ViT detection failed:', error);
@@ -230,11 +265,16 @@ export class FoodDetectionService {
   async detectWithSwin(image: ProcessedImage): Promise<{ foods: string[], confidence: number }> {
     try {
       const result = await this.callPythonDetection('swin', image.buffer);
-      if (result.success && result.detected_foods.length > 0) {
+      if (result.success && result.detected_foods && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
-        const avgConfidence = Object.values(result.confidence_scores).reduce((sum, conf) => sum + conf, 0) / Object.keys(result.confidence_scores).length;
+        const confidences = Object.values(result.confidence_scores || {});
+        const avgConfidence = confidences.length > 0 
+          ? confidences.reduce((sum: number, conf: number) => sum + conf, 0) / confidences.length
+          : 0.5; // Default confidence if not provided
+        console.log(`Swin detected ${result.detected_foods.length} foods with avg confidence ${avgConfidence.toFixed(3)}`);
         return { foods: result.detected_foods, confidence: avgConfidence };
       }
+      console.warn('Swin detection returned no foods:', result);
       return { foods: [], confidence: 0 };
     } catch (error) {
       console.error('Swin detection failed:', error);
@@ -245,11 +285,16 @@ export class FoodDetectionService {
   async detectWithBLIP(image: ProcessedImage): Promise<{ foods: string[], confidence: number }> {
     try {
       const result = await this.callPythonDetection('blip', image.buffer);
-      if (result.success && result.detected_foods.length > 0) {
+      if (result.success && result.detected_foods && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
-        const avgConfidence = Object.values(result.confidence_scores).reduce((sum, conf) => sum + conf, 0) / Object.keys(result.confidence_scores).length;
+        const confidences = Object.values(result.confidence_scores || {});
+        const avgConfidence = confidences.length > 0 
+          ? confidences.reduce((sum: number, conf: number) => sum + conf, 0) / confidences.length
+          : 0.5; // Default confidence if not provided
+        console.log(`BLIP detected ${result.detected_foods.length} foods with avg confidence ${avgConfidence.toFixed(3)}`);
         return { foods: result.detected_foods, confidence: avgConfidence };
       }
+      console.warn('BLIP detection returned no foods:', result);
       return { foods: [], confidence: 0 };
     } catch (error) {
       console.error('BLIP detection failed:', error);
@@ -260,11 +305,16 @@ export class FoodDetectionService {
   async detectWithCLIP(image: ProcessedImage): Promise<{ foods: string[], confidence: number }> {
     try {
       const result = await this.callPythonDetection('clip', image.buffer);
-      if (result.success && result.detected_foods.length > 0) {
+      if (result.success && result.detected_foods && result.detected_foods.length > 0) {
         // Calculate average confidence from all detected foods
-        const avgConfidence = Object.values(result.confidence_scores).reduce((sum, conf) => sum + conf, 0) / Object.keys(result.confidence_scores).length;
+        const confidences = Object.values(result.confidence_scores || {});
+        const avgConfidence = confidences.length > 0 
+          ? confidences.reduce((sum: number, conf: number) => sum + conf, 0) / confidences.length
+          : 0.5; // Default confidence if not provided
+        console.log(`CLIP detected ${result.detected_foods.length} foods with avg confidence ${avgConfidence.toFixed(3)}`);
         return { foods: result.detected_foods, confidence: avgConfidence };
       }
+      console.warn('CLIP detection returned no foods:', result);
       return { foods: [], confidence: 0 };
     } catch (error) {
       console.error('CLIP detection failed:', error);
@@ -333,8 +383,24 @@ export class FoodDetectionService {
             detection_count: foods.length
           };
 
+          // Log detailed detection info
+          console.log(`${modelName.toUpperCase()} detection result:`, {
+            model,
+            foodsCount: foods.length,
+            foods: foods,
+            avgConfidence: confidence
+          });
+
+          // Process each detected food
           foods.forEach(food => {
             const normalizedFood = food.toLowerCase().trim();
+            
+            // Skip empty or invalid food names
+            if (!normalizedFood || normalizedFood.length === 0) {
+              console.warn(`Skipping empty food name from ${modelName}`);
+              return;
+            }
+            
             if (!allDetections.has(normalizedFood)) {
               allDetections.set(normalizedFood, { count: 0, totalConfidence: 0, methods: [], modelDetails: [] });
             }
@@ -342,29 +408,52 @@ export class FoodDetectionService {
             const detection = allDetections.get(normalizedFood);
             if (detection) {
               detection.count++;
-              detection.totalConfidence += confidence;
-              detection.methods.push(model);
-              detection.modelDetails.push({ model, confidence, food });
+              // Use the model's confidence for this specific food, or fallback to average
+              const foodConfidence = confidence > 0 ? confidence : 0.1; // Minimum confidence if model didn't provide per-food
+              detection.totalConfidence += foodConfidence;
+              if (!detection.methods.includes(model)) {
+                detection.methods.push(model);
+              }
+              detection.modelDetails.push({ model, confidence: foodConfidence, food });
             }
           });
           
-          console.log(`${modelName.toUpperCase()} detected ${foods.length} items:`, foods);
+          console.log(`${modelName.toUpperCase()} processed ${foods.length} items, total unique detections now: ${allDetections.size}`);
         } else {
           modelPerformance[modelName] = {
             success: false,
             detection_count: 0,
             error: result.reason?.message || 'Unknown error'
           };
-          console.error(`${modelName.toUpperCase()} detection failed:`, result.reason);
+          console.error(`${modelName.toUpperCase()} detection failed:`, {
+            error: result.reason?.message || 'Unknown error',
+            stack: result.reason?.stack
+          });
         }
       });
+
+      console.log(`Total unique food items detected across all models: ${allDetections.size}`);
 
       // Apply expert filtering
       const filteredFoods = this.applyExpertFiltering(allDetections);
       
       console.log(`Expert filtering completed. Found ${filteredFoods.length} food items.`);
 
+      // Log detailed information about why no foods were detected
       if (filteredFoods.length === 0) {
+        const successfulModels = Object.keys(modelPerformance).filter(m => modelPerformance[m]?.success);
+        const failedModels = Object.keys(modelPerformance).filter(m => !modelPerformance[m]?.success);
+        const totalRawDetections = Object.values(modelPerformance).reduce((sum, perf) => sum + (perf.detection_count || 0), 0);
+        
+        console.error('No food items detected after filtering:', {
+          totalRawDetections,
+          allDetectionsSize: allDetections.size,
+          successfulModels,
+          failedModels,
+          modelPerformance,
+          filteredFoodsCount: filteredFoods.length
+        });
+
         return {
           success: false,
           sessionId,
@@ -372,16 +461,24 @@ export class FoodDetectionService {
           nutritionalData: null,
           totalNutrition: null,
           insights: [
-            "No food items detected with sufficient confidence by AI models.",
+            `No food items detected. ${successfulModels.length} models ran successfully but found ${totalRawDetections} total detections.`,
+            failedModels.length > 0 ? `${failedModels.length} models failed: ${failedModels.join(', ')}` : "All models ran but no food items were identified.",
             "Try uploading a clearer image with better lighting.",
             "Ensure the food items are clearly visible in the image.",
-            "Consider taking the photo from a different angle."
+            "Consider taking the photo from a different angle.",
+            "Check that Python models are properly installed and accessible."
           ],
-          detectionMethods: Object.keys(modelPerformance).filter(m => modelPerformance[m]?.success),
+          detectionMethods: successfulModels,
           processingTime: Date.now() - startTime,
           confidence: 0,
           model_used: 'expert_ensemble',
-          error: "No food items detected with sufficient confidence by AI models"
+          error: `No food items detected. Models: ${successfulModels.join(', ')} succeeded, ${failedModels.join(', ')} failed. Total raw detections: ${totalRawDetections}`,
+          model_info: {
+            detection_count: 0,
+            total_confidence: 0,
+            model_performance: modelPerformance,
+            detailed_detections: []
+          }
         };
       }
 
@@ -544,36 +641,46 @@ export class FoodDetectionService {
   }
   */
 
-  private applyExpertFiltering(allDetections: Map<string, { count: number, totalConfidence: number, methods: string[] }>): Array<{ name: string, confidence: number, methods: string[] }> {
-    const minConfidence = 0.08; // Much lower threshold for better detection
+  private applyExpertFiltering(allDetections: Map<string, { count: number, totalConfidence: number, methods: string[], modelDetails: any[] }>): Array<{ name: string, confidence: number, methods: string[] }> {
+    // Very low threshold to ensure we capture all real detections
+    const minConfidence = 0.01; // Extremely low threshold to catch all real detections
     const filteredFoods: Array<{ name: string, confidence: number, methods: string[] }> = [];
+
+    console.log(`Applying expert filtering on ${allDetections.size} unique detections`);
 
     for (const [foodName, detection] of allDetections) {
       let finalConfidence = detection.totalConfidence / detection.count;
 
       // Boost confidence for multi-model agreement
       if (detection.methods.length >= 3) {
-        finalConfidence = Math.min(0.95, finalConfidence * 1.4);
+        finalConfidence = Math.min(0.95, finalConfidence * 1.5);
       } else if (detection.methods.length >= 2) {
-        finalConfidence = Math.min(0.95, finalConfidence * 1.3);
+        finalConfidence = Math.min(0.95, finalConfidence * 1.4);
       }
 
-      // Ensure minimum confidence for single detections
-      finalConfidence = Math.max(finalConfidence, 0.15);
+      // Remove minimum confidence enforcement - accept any real detection
+      // Only ensure it's not negative
+      finalConfidence = Math.max(finalConfidence, 0.01);
 
+      // Accept any detection above the very low threshold
       if (finalConfidence >= minConfidence) {
         filteredFoods.push({
           name: foodName,
           confidence: finalConfidence,
           methods: detection.methods
         });
+        console.log(`Accepted detection: ${foodName} (confidence: ${finalConfidence.toFixed(3)}, methods: ${detection.methods.join(', ')})`);
+      } else {
+        console.log(`Rejected detection: ${foodName} (confidence: ${finalConfidence.toFixed(3)} below threshold ${minConfidence})`);
       }
     }
 
-    // Sort by confidence and return top results
+    console.log(`Expert filtering completed: ${filteredFoods.length} foods passed filtering`);
+
+    // Sort by confidence and return top results (increased limit)
     return filteredFoods
       .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 20); // Increased from 15 to 20 for more comprehensive results
+      .slice(0, 30); // Increased from 20 to 30 for more comprehensive results
   }
 
 
