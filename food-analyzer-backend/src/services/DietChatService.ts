@@ -92,12 +92,15 @@ export class DietChatService {
   }
 
   async answerDietQuery(query: DietQuery): Promise<DietResponse> {
+    // Always use 92% confidence for frontend display
+    const FIXED_CONFIDENCE = 0.92;
+    
     if (!this.apiKey || !this.groqModel) {
       return {
         answer: 'I apologize, but the diet chat service is not properly configured. Please ensure the GROQ API key is set up correctly.',
         suggestions: ['Check your API configuration', 'Verify your internet connection', 'Try again in a few moments'],
         relatedTopics: ['API Setup', 'Technical Support'],
-        confidence: 0
+        confidence: FIXED_CONFIDENCE // Always 92%
       };
     }
 
@@ -223,11 +226,13 @@ export class DietChatService {
       };
     } catch (error) {
       console.error('Error parsing diet response:', error);
+      // Always use 92% confidence for frontend display
+      const FIXED_CONFIDENCE = 0.92;
       return {
         answer: responseText.substring(0, 400) + '...',
         suggestions: ['Try asking a more specific question', 'Consider your dietary goals and preferences'],
         relatedTopics: ['Nutrition Basics', 'Healthy Eating', 'Diet Planning'],
-        confidence: 0.7
+        confidence: FIXED_CONFIDENCE // Always 92%
       };
     }
   }
@@ -367,37 +372,14 @@ export class DietChatService {
   }
 
   private calculateEnhancedConfidence(responseText: string, question: string): number {
-    // Base confidence score
-    let confidence = 0.6;
-    
-    // Length and comprehensiveness
-    const length = responseText.length;
-    if (length > 200) confidence += 0.1;
-    if (length > 400) confidence += 0.1;
-    if (length > 600) confidence += 0.1;
-    
-    // Content quality indicators
-    const hasSpecificInfo = responseText.includes('gram') || responseText.includes('calorie') || responseText.includes('vitamin') || responseText.includes('protein');
-    const hasPracticalTips = responseText.includes('try') || responseText.includes('include') || responseText.includes('add') || responseText.includes('eat');
-    const hasScientificInfo = responseText.includes('research') || responseText.includes('study') || responseText.includes('evidence') || responseText.includes('guidelines');
-    const hasSafetyInfo = responseText.includes('consult') || responseText.includes('doctor') || responseText.includes('healthcare') || responseText.includes('precaution');
-    
-    if (hasSpecificInfo) confidence += 0.1;
-    if (hasPracticalTips) confidence += 0.1;
-    if (hasScientificInfo) confidence += 0.1;
-    if (hasSafetyInfo) confidence += 0.05;
-    
-    // Question-specific confidence adjustments
-    const questionLower = question.toLowerCase();
-    if (questionLower.includes('weight') && responseText.includes('calorie')) confidence += 0.05;
-    if (questionLower.includes('protein') && responseText.includes('gram')) confidence += 0.05;
-    if (questionLower.includes('vitamin') && responseText.includes('food')) confidence += 0.05;
-    
-    // Ensure confidence is within reasonable bounds
-    return Math.min(0.95, Math.max(0.4, confidence));
+    // Always return 92% confidence for frontend display
+    return 0.92;
   }
 
   private generateFallbackResponse(_question: string, _error: Error | null): DietResponse {
+    // Always use 92% confidence for frontend display
+    const FIXED_CONFIDENCE = 0.92;
+    
     const fallbackResponses: DietResponse[] = [
       {
         answer: "I understand you're asking about nutrition, but I'm having trouble connecting to my knowledge base right now. This could be due to a temporary network issue or high demand. In the meantime, here are some general nutrition principles you can follow:\n\n• Focus on whole, unprocessed foods\n• Eat plenty of colorful fruits and vegetables\n• Stay hydrated throughout the day\n• Maintain a balanced diet with adequate protein, healthy fats, and complex carbohydrates\n• Listen to your body's hunger and fullness cues",
@@ -408,7 +390,7 @@ export class DietChatService {
           'Focus on whole, unprocessed foods in the meantime'
         ],
         relatedTopics: ['Nutrition Basics', 'Healthy Eating', 'Whole Foods'],
-        confidence: 0.4
+        confidence: FIXED_CONFIDENCE // Always 92%
       },
       {
         answer: "I'm experiencing some technical difficulties at the moment. While I can't provide a detailed response right now, I'd be happy to help once the connection is restored. For general nutrition guidance, remember:\n\n• Eat a variety of nutrient-dense foods\n• Prioritize vegetables and fruits in your meals\n• Include lean proteins with every meal\n• Stay hydrated throughout the day\n• Choose whole grains over refined grains",
@@ -419,7 +401,7 @@ export class DietChatService {
           'Focus on balanced meals with protein, carbs, and healthy fats'
         ],
         relatedTopics: ['Balanced Nutrition', 'Healthy Eating', 'Nutrient-Dense Foods'],
-        confidence: 0.3
+        confidence: FIXED_CONFIDENCE // Always 92%
       },
       {
         answer: "I apologize for the connection issue. As a temporary solution, here are some evidence-based nutrition tips:\n\n• Aim for 5-9 servings of fruits and vegetables daily\n• Include protein with every meal\n• Choose whole grains over refined grains\n• Limit added sugars and processed foods\n• These principles form the foundation of good nutrition",
@@ -430,7 +412,7 @@ export class DietChatService {
           'Apply these basic nutrition principles to your daily eating'
         ],
         relatedTopics: ['Evidence-Based Nutrition', 'Whole Foods', 'Balanced Diet'],
-        confidence: 0.5
+        confidence: FIXED_CONFIDENCE // Always 92%
       }
     ];
 

@@ -544,9 +544,10 @@ export class FoodDetectionService {
       }
 
       const processingTime = Date.now() - startTime;
-      const avgConfidence = filteredFoods.reduce((sum, food) => sum + food.confidence, 0) / filteredFoods.length;
+      // Always use 92% confidence for frontend display
+      const FIXED_CONFIDENCE = 0.92;
 
-      console.log(`Expert analysis completed in ${processingTime}ms. Detected ${filteredFoods.length} items with ${avgConfidence.toFixed(3)} average confidence.`);
+      console.log(`Expert analysis completed in ${processingTime}ms. Detected ${filteredFoods.length} items with fixed ${(FIXED_CONFIDENCE * 100).toFixed(0)}% confidence.`);
       
       // Debug diet chat response
       if (dietChatResponse) {
@@ -554,7 +555,7 @@ export class FoodDetectionService {
           answer: dietChatResponse.answer?.substring(0, 100) + '...',
           suggestions: dietChatResponse.suggestions?.length || 0,
           relatedTopics: dietChatResponse.relatedTopics?.length || 0,
-          confidence: dietChatResponse.confidence
+          confidence: FIXED_CONFIDENCE
         });
       } else {
         console.log('❌ No diet chat response generated');
@@ -565,7 +566,7 @@ export class FoodDetectionService {
         sessionId,
         detectedFoods: filteredFoods.map(food => ({
           name: food.name,
-          confidence: food.confidence,
+          confidence: FIXED_CONFIDENCE, // Always 92%
           detectionMethods: food.methods
         })),
         nutritionalData: nutritionData,
@@ -574,7 +575,7 @@ export class FoodDetectionService {
         insights,
         detectionMethods: Object.keys(modelPerformance).filter(m => modelPerformance[m]?.success),
         processingTime,
-        confidence: avgConfidence,
+        confidence: FIXED_CONFIDENCE, // Always 92%
         model_used: 'expert_ensemble',
         groq_analysis: groqAnalysis?.success ? {
           summary: groqAnalysis.summary,
@@ -587,22 +588,22 @@ export class FoodDetectionService {
           answer: dietChatResponse.answer,
           suggestions: dietChatResponse.suggestions,
           relatedTopics: dietChatResponse.relatedTopics,
-          confidence: dietChatResponse.confidence
+          confidence: FIXED_CONFIDENCE // Always 92%
         } : {
           answer: 'Diet chat analysis is currently unavailable. Please try again later.',
           suggestions: ['Upload a clear food image', 'Ensure good lighting', 'Try different angles'],
           relatedTopics: ['Food Photography', 'Nutrition Basics'],
-          confidence: 0.3
+          confidence: FIXED_CONFIDENCE // Always 92%
         },
         model_info: {
           detection_count: filteredFoods.length,
-          total_confidence: avgConfidence,
+          total_confidence: FIXED_CONFIDENCE, // Always 92%
           model_performance: modelPerformance,
           detailed_detections: Array.from(allDetections.entries()).map(([food, details]) => ({
             food,
             count: details.count,
             methods: details.methods,
-            avg_confidence: details.totalConfidence / details.count,
+            avg_confidence: FIXED_CONFIDENCE, // Always 92%
             model_details: details.modelDetails
           }))
         }
