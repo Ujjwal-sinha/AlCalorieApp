@@ -371,7 +371,7 @@ export class DietChatService {
     return topics.slice(0, 5);
   }
 
-  private calculateEnhancedConfidence(responseText: string, question: string): number {
+  private calculateEnhancedConfidence(_responseText: string, _question: string): number {
     // Always return 92% confidence for frontend display
     return 0.92;
   }
