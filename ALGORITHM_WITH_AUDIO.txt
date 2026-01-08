@@ -84,9 +84,17 @@ STEP 4A — IMAGE UNDERSTANDING (ENCODER/DECODER CAPTIONING)
   
   4A.3 Go to STEP 5 (Food Description Fusion)
 
-STEP 4B — SKIP CAPTIONING (TEXT/AUDIO PATH)
-  4B.1 caption ← cleaned_text  (direct user description)
-  4B.2 Go to STEP 5 (Food Description Fusion)
+STEP 4B — TEXT/AUDIO DECODER (DIRECT TEXT PATH)
+  4B.1 TEXT PATH DECODER:
+       - cleaned_text → direct food description (no generation needed)
+  
+  4B.2 AUDIO PATH DECODER:
+       - transcribed_text → post-processing layer
+       - Grammar correction and context refinement
+       - Output: food description from audio
+  
+  4B.3 caption ← cleaned_text (direct user description)
+  4B.4 Go to STEP 5 (Food Description Fusion)
 
 STEP 5 — FOOD DESCRIPTION FUSION (PROMPT/CONTEXT MERGE)
   5.1 combined_description ← LangChain Prompt Manager / Prompt Merger(caption, user context)
