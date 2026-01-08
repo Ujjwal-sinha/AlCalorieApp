@@ -84,10 +84,9 @@ flowchart TB
   %% ========================================
   subgraph BLOCK1["⬛ BLOCK 1: INPUT LAYER"]
     direction TB
-    INPUT1["🖼️ Food Image<br/>JPG/PNG"]
-    INPUT2["📝 Text Input<br/>Typed Description"]
-    INPUT3["🎤 Audio Input<br/>Voice Recording"]
-    AUTH["🔐 User Authentication<br/>Clerk Auth"]
+    INPUT1["🖼️ Food Image<br/>JPG/PNG<br/>Resolution: Variable"]
+    INPUT2["📝 Text Input<br/>Typed Description<br/>Natural Language"]
+    INPUT3["🎤 Audio Input<br/>Voice Recording<br/>WAV/MP3 Format"]
   end
 
   BLOCK1 --> BLOCK2
@@ -109,9 +108,33 @@ flowchart TB
   %% ========================================
   subgraph BLOCK3["⬛ BLOCK 3: ENCODER"]
     direction TB
-    ENC1["Vision Encoder<br/>ViT-L/14<br/>Visual Transformer"]
-    ENC2["Text Encoder<br/>Token Embeddings"]
-    ENC3["Speech-to-Text ASR<br/>Whisper Model<br/>Audio → Text Transcription"]
+    subgraph ENC1_SUB["Vision Encoder - ViT-L/14"]
+      direction TB
+      E1_1["Patch Embedding Layer<br/>Image → 16x16 Patches"]
+      E1_2["Position Embedding<br/>Spatial Information"]
+      E1_3["Transformer Blocks x24<br/>Multi-Head Self-Attention"]
+      E1_4["Hidden Layer: 1024 dims<br/>Layer Normalization"]
+      E1_5["Visual Feature Vector<br/>Output: 1024-d"]
+      E1_1 --> E1_2 --> E1_3 --> E1_4 --> E1_5
+    end
+    
+    subgraph ENC2_SUB["Text Encoder"]
+      direction TB
+      E2_1["Tokenization Layer<br/>WordPiece/BPE"]
+      E2_2["Embedding Layer<br/>Token → Vector"]
+      E2_3["Hidden Layer: 768 dims<br/>Contextual Embeddings"]
+      E2_1 --> E2_2 --> E2_3
+    end
+    
+    subgraph ENC3_SUB["Audio Encoder - Whisper ASR"]
+      direction TB
+      E3_1["Mel Spectrogram<br/>Audio → Frequency Features"]
+      E3_2["Conv Layers x2<br/>Feature Extraction"]
+      E3_3["Transformer Encoder<br/>Self-Attention Layers"]
+      E3_4["Hidden Layer: 512 dims<br/>Audio Context Vector"]
+      E3_5["Text Transcription Output"]
+      E3_1 --> E3_2 --> E3_3 --> E3_4 --> E3_5
+    end
   end
 
   BLOCK3 --> BLOCK4
