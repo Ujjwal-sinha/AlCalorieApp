@@ -97,15 +97,40 @@ STEP 4B — TEXT/AUDIO DECODER (DIRECT TEXT PATH)
   4B.4 Go to STEP 5 (Food Description Fusion)
 
 STEP 5 — FOOD DESCRIPTION FUSION (PROMPT/CONTEXT MERGE)
-  5.1 combined_description ← LangChain Prompt Manager / Prompt Merger(caption, user context)
-      - Optionally include: meal time, portion sizes, cuisine, user preferences, allergies
+  5.1 LangChain Prompt Manager:
+      - Input: caption from STEP 4A/4B
+      - Context enrichment:
+        * Meal time (breakfast/lunch/dinner/snack)
+        * Estimated portion sizes
+        * Cuisine type
+        * User dietary preferences
+        * Allergy information
+        * Previous meal history
+  
+  5.2 Prompt Template Construction:
+      - Structured prompt format for nutrition estimation
+      - Include relevant context tokens
+      - combined_description ← Merged and formatted description
 
-STEP 6 — NUTRITIONAL ESTIMATION (LLM + RAG)
-  6.1 Retrieve relevant nutrition references via RAG:
-      - Vector store: FAISS or Chroma
-  6.2 nutrition_json ← LLaMA-3 (8B) via Groq(combined_description + retrieved context)
-      - Extract calories + macronutrients (protein, carbs, fat)
-      - Store structured output as JSON
+STEP 6 — NUTRITIONAL ESTIMATION (RAG + LLM)
+  6.1 RAG (Retrieval-Augmented Generation):
+      - Vector Store: FAISS or Chroma
+      - Embed combined_description into vector space
+      - Retrieve top-k similar nutrition references from database
+      - Context: food composition data, USDA database, nutrition facts
+  
+  6.2 LLM INFERENCE (LLaMA-3 8B via Groq):
+      - Input: combined_description + retrieved_context
+      - Model: LLaMA-3 8B parameters
+      - Temperature: 0.3 (for consistent outputs)
+      - Max tokens: 1024
+      - Prompt engineering: structured nutrition extraction
+  
+  6.3 OUTPUT PROCESSING:
+      - Extract: calories, protein, carbohydrates, fat
+      - Optional: fiber, sodium, vitamins, minerals
+      - Confidence scores for each estimate
+      - nutrition_json ← Structured JSON output
 
 STEP 7 — DAILY TRACKING + STORAGE
   7.1 Update PostgreSQL:
