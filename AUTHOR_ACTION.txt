@@ -1,0 +1,78 @@
+Reviewer # 1, Concern # 3: Expand Multimodal Capabilities
+- Enhance the system to allow users to upload an image and provide additional textual details (e.g., "grilled chicken cooked in olive oil") to refine the nutritional analysis. This would make the system truly multimodal and improve its accuracy for complex meals.
+- Consider incorporating audio input (e.g., voice commands) for users who prefer speaking over typing or uploading images.
+- Integrate metadata such as restaurant menus, recipes, or user preferences to provide more context for nutritional analysis.
+
+Author action:
+We updated the manuscript by redesigning the system architecture to incorporate a fully multimodal pipeline that integrates image, text, and audio inputs. Specifically, we have implemented the following:
+1. Refined Multimodal Fusion: We introduced a "Food Description Fusion" stage (Step 5 in the algorithm; Block 4 in the architecture) using a LangChain Prompt Manager. This layer merges visual captions generated from images with supplemental textual descriptions provided by the user (e.g., "grilled chicken cooked in olive oil"), creating an enriched "Combined Food Description."
+2. Audio Input Integration: We added a dedicated audio processing pipeline (Step 3C and Block 3) that utilizes Whisper ASR (Speech-to-Text) to transcribe voice commands into text, which is then processed alongside image and typed inputs.
+3. Metadata and Contextual Enrichment: The system now integrates user-specific metadata, including dietary preferences, meal history, and allergy information (Step 5.1). Furthermore, we implemented a Retrieval-Augmented Generation (RAG) system (Step 6.1) that retrieves context from nutritional databases (e.g., USDA) to refine the LLM's nutritional estimation.
+
+These updates are reflected in the revised "Total System Architecture" (Figure 1) and the "Multi-Modal Food Intake Algorithm" (Section 3.2), ensuring the system can accurately process complex, context-dependent meal descriptions.
+
+Reviewer # 1, Concern # 5: Improve Explainability Features
+- While Grad-CAM, LIME, and SHAP are excellent tools for explainability, the document could provide more examples of how these techniques directly benefit end users. For instance:
+• Show how Grad-CAM highlights specific food items in an image to explain calorie estimation.
+• Use LIME to demonstrate how text-based inputs are processed and how specific words influence predictions.
+• Consider simplifying the visualizations for non-technical users, as some of the explainability outputs (e.g., heatmaps) may be difficult for laypersons to interpret.
+
+Author action:
+We updated the manuscript by enhancing the explainability module to bridge the gap between technical outputs and user-centric insights. Specifically, we have:
+1. Integrated Semantic Explanations: In addition to technical heatmaps, the system now generates automated textual summaries of the explainability results. For example, alongside a Grad-CAM visualization, the system provides a label stating, "The AI model is primarily focusing on the region containing the identified food item to calculate its volume and calorie density."
+2. Text-Based Sensitivity Analysis: We implemented a word-level LIME analysis for text and audio inputs. This feature highlights specific keywords in the user's description (e.g., "grilled," "fried," or "large portion") and displays their relative impact on the final nutritional estimate, making it clear how qualitative descriptions influence quantitative results.
+3. User-Friendly Visual Overlays: To assist non-technical users, we introduced a "Simplified View" mode that translates complex SHAP and Grad-CAM heatmaps into intuitive overlays, such as bounding boxes with confidence scores and color-coded icons (green for healthy associations, amber for high-calorie density).
+4. Comparative Analysis Examples: We added a new section in the Appendix showcasing case studies where these explainability tools were used to correct user misconceptions about portion sizes and cooking methods.
+
+Reviewer # 1, Concern # 8: Address Limitations
+- Acknowledge the system's reliance on high-quality images and pre-configured food databases. Suggest future improvements, such as:
+• Using machine learning models trained on noisy or occluded images to improve robustness in real-world scenarios
+• Expanding the food database to include more diverse and complex meals.
+• Discuss how the system could handle multi-object applications or meals with overlapping food items.
+
+Author action:
+We updated the manuscript by adding a dedicated "Limitations and Robustness" section (Section 5.1). Specifically:
+1. Handling Image Noise/Occlusion: We updated the Image Preprocessing (Step 3A) to include noise reduction filters and center-cropping to handle variable aspect ratios. We also added a discussion on future work involving synthetic data generation to train models on occluded food items.
+2. Database Expansion: We documented our strategy for expanding the RAG knowledge base (Step 6.1) to include international cuisines and complex mixed-ingredient meals, moving beyond standard USDA datasets.
+3. Multi-Object Analysis: We clarified that the current system handles overlapping items by combining visual features with user text/audio descriptions (Step 5), and we proposed the integration of instance segmentation models in the next iteration for explicit multi-object detection.
+
+Reviewer # 1, Concern # 12: Future Directions
+- Expand the "Future Directions" section to include more specific plans for scaling the system, such as:
+• Federated learning for privacy-preserving data collection.
+• Mobile app development for wider accessibility.
+• Integration with healthcare systems for clinical-grade deployment.
+
+Author action:
+We updated the manuscript by expanding the "Future Directions" (Section 6) to include:
+1. Privacy-Preserving Learning: A proposal for a federated learning framework that allows the system to refine its nutritional models using local user data without compromising individual privacy.
+2. Cross-Platform Accessibility: Detailed plans for migrating the current Streamlit-based implementation to a native mobile application (iOS/Android) for real-time meal tracking.
+3. Clinical Integration: A roadmap for integrating the system with Electronic Health Records (EHR) via secure APIs, enabling dietitians to monitor patient progress in clinical settings.
+
+Reviewer # 2, Concern # 8: Architecture and Technical Clarity
+- The system architecture in Figure 2 presents an encoder-decoder framework with latent variables, LSTM iterations, and multiple loss functions, which does not align with the use of BLIP/BLIP-2 for image captioning and LLaMA-3 for nutritional inference. The paper does not clearly explain how these components are integrated in practice or which parts are actually trained versus queried.
+- Lacks essential technical details: training procedure, dataset splits, optimization settings, or loss functions for BLIP-2 fine-tuning.
+- Evaluation is unclear: classification metrics vs nutritional estimation. No quantitative validation for calories.
+- Key components (RAG knowledge base, LLaMA-generated recommendations) are mentioned but not described or evaluated.
+
+Author action:
+We updated the manuscript by performing a comprehensive technical overhaul:
+1. Corrected Architecture: We replaced the outdated Figure 2 with a new, detailed system architecture (matching Figure 1 in the revised manuscript) that explicitly shows the BLIP-2 GPT-2 decoder (Block 4) and the Groq LLaMA-3 8B inference engine (Block 5).
+2. Implementation Details: We added a "Technical Specification" section (Section 4.1) detailing the fine-tuning of the BLIP-2 Q-Former, including dataset splits (80/10/10), the use of the AdamW optimizer, and the specific cross-entropy loss functions used during training.
+3. Metric Clarification: We separated our evaluation into two tables: Table 2 for food recognition (Precision, Recall, F1) and a new Table 3 for nutritional estimation accuracy, reporting Mean Absolute Error (MAE) and Root Mean Square Error (RMSE) for calorie counts.
+4. RAG and Advice Engine: We added Sections 3.4 and 3.5 describing the RAG vector store implementation (FAISS) and the advice engine logic, including how LLaMA-3 performs gap analysis based on user goals (Step 9).
+
+Reviewer # 2, Concern # 9: Presentation and Completeness
+- Key aspects described only at high level (XAI integration, RAG retrieval).
+- Mathematical formulations not tied to actual implementation.
+- Organization reduces clarity (results before system explanation).
+- Missing details: portion size estimation, mixed foods, computational cost, validation of nutrition knowledge base.
+
+Author action:
+We updated the manuscript by restructuring the narrative flow and adding technical depth:
+1. Improved Organization: We moved the "System Methodology" (Section 3) before the "Experimental Results" (Section 4) to ensure a logical progression.
+2. Technical Deep-Dive: We added mathematical formulations for the RAG similarity search and the cross-attention mechanisms in the vision encoder (Section 3.2).
+3. Addressing Missing Details:
+- Portion Size: Added Section 3.2.1 explaining how portion sizes are estimated using reference object comparison and user textual input.
+- Computational Cost: Added a table in Section 4.3 documenting inference latency (ms) for each block and the total GPU/CPU resource utilization.
+- Mixed Foods: Detailed how the LangChain Prompt Merger (Step 5) deconstructs complex meal descriptions into constituent ingredients for more accurate database retrieval.
+4. XAI Integration: Clarified how Grad-CAM and LIME are triggered within the inference pipeline to provide real-time feedback (Section 3.6).
