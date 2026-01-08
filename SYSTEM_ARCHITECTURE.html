@@ -82,11 +82,11 @@ flowchart TB
   %% ========================================
   %% BLOCK 1: INPUT LAYER
   %% ========================================
-  subgraph BLOCK1["⬛ BLOCK 1: INPUT LAYER"]
+  subgraph BLOCK1["BLOCK 1: INPUT LAYER"]
     direction TB
-    INPUT1["🖼️ Food Image<br/>JPG/PNG<br/>Resolution: Variable"]
-    INPUT2["📝 Text Input<br/>Typed Description<br/>Natural Language"]
-    INPUT3["🎤 Audio Input<br/>Voice Recording<br/>WAV/MP3 Format"]
+    INPUT1["Food Image<br/>JPG/PNG<br/>Resolution: Variable"]
+    INPUT2["Text Input<br/>Typed Description<br/>Natural Language"]
+    INPUT3["Audio Input<br/>Voice Recording<br/>WAV/MP3 Format"]
   end
 
   BLOCK1 --> BLOCK2
@@ -94,7 +94,7 @@ flowchart TB
   %% ========================================
   %% BLOCK 2: PREPROCESSING
   %% ========================================
-  subgraph BLOCK2["⬛ BLOCK 2: PREPROCESSING"]
+  subgraph BLOCK2["BLOCK 2: PREPROCESSING"]
     direction TB
     PREP1["Image Preprocessing<br/>• Resize 224x224<br/>• RGB Conversion<br/>• Tensor Transform"]
     PREP2["Text Preprocessing<br/>• Token Normalization<br/>• Spell Correction<br/>• POS Tagging"]
@@ -106,7 +106,7 @@ flowchart TB
   %% ========================================
   %% BLOCK 3: ENCODER
   %% ========================================
-  subgraph BLOCK3["⬛ BLOCK 3: ENCODER"]
+  subgraph BLOCK3["BLOCK 3: ENCODER"]
     direction TB
     subgraph ENC1_SUB["Vision Encoder - ViT-L/14"]
       direction TB
@@ -142,7 +142,7 @@ flowchart TB
   %% ========================================
   %% BLOCK 4: DECODER
   %% ========================================
-  subgraph BLOCK4["⬛ BLOCK 4: DECODER"]
+  subgraph BLOCK4["BLOCK 4: DECODER"]
     direction TB
     subgraph DEC1_SUB["BLIP-2 GPT-2 Decoder - Image Path"]
       direction TB
@@ -181,7 +181,7 @@ flowchart TB
   %% ========================================
   %% BLOCK 5: RAG + LLM NUTRITION ESTIMATION
   %% ========================================
-  subgraph BLOCK5["⬛ BLOCK 5: NUTRITION ESTIMATION"]
+  subgraph BLOCK5["BLOCK 5: NUTRITION ESTIMATION"]
     direction TB
     RAG["RAG System<br/>Vector Store: FAISS/Chroma<br/>Nutrition Database Retrieval"]
     LLM["Groq LLaMA-3 8B<br/>LLM Inference"]
@@ -194,7 +194,7 @@ flowchart TB
   %% ========================================
   %% BLOCK 6: STORAGE + TRACKING
   %% ========================================
-  subgraph BLOCK6["⬛ BLOCK 6: STORAGE & TRACKING"]
+  subgraph BLOCK6["BLOCK 6: STORAGE & TRACKING"]
     direction TB
     DB[("PostgreSQL Database<br/>• Food Logs<br/>• User Profiles<br/>• Daily Totals")]
     GOALS["User Goals Comparison<br/>• Calorie Targets<br/>• Macro Goals<br/>• Progress Tracking"]
