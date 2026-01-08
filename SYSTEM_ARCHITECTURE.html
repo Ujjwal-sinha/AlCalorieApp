@@ -144,13 +144,36 @@ flowchart TB
   %% ========================================
   subgraph BLOCK4["⬛ BLOCK 4: DECODER"]
     direction TB
-    DEC1["BLIP-2 GPT-2 Decoder<br/>Image Caption Generation"]
-    DEC2["Direct Text Output<br/>Cleaned Description"]
-    DEC3["Transcribed Text<br/>Speech to Description"]
-    MERGE["LangChain Prompt Merger<br/>Combined Food Description"]
-    DEC1 --> MERGE
-    DEC2 --> MERGE
-    DEC3 --> MERGE
+    subgraph DEC1_SUB["BLIP-2 GPT-2 Decoder - Image Path"]
+      direction TB
+      D1_1["Cross-Attention Layer<br/>Visual Features → Text"]
+      D1_2["Transformer Decoder x12<br/>Causal Self-Attention"]
+      D1_3["Hidden Layer: 768 dims<br/>Language Model States"]
+      D1_4["Feed-Forward Network<br/>2048 → 768 dims"]
+      D1_5["Output Layer<br/>Vocabulary Projection"]
+      D1_6["Caption Generation<br/>Food Description Text"]
+      D1_1 --> D1_2 --> D1_3 --> D1_4 --> D1_5 --> D1_6
+    end
+    
+    subgraph DEC2_SUB["Text Path - Direct"]
+      direction TB
+      D2_1["Cleaned Text<br/>Preprocessed Input"]
+      D2_2["Food Description<br/>Ready for Fusion"]
+      D2_1 --> D2_2
+    end
+    
+    subgraph DEC3_SUB["Audio Path - ASR Output"]
+      direction TB
+      D3_1["Transcribed Text<br/>Speech → Text"]
+      D3_2["Post-Processing<br/>Grammar + Context"]
+      D3_3["Food Description<br/>From Audio"]
+      D3_1 --> D3_2 --> D3_3
+    end
+    
+    MERGE["LangChain Prompt Merger<br/>Context Fusion Layer<br/>Combined Food Description"]
+    D1_6 --> MERGE
+    D2_2 --> MERGE
+    D3_3 --> MERGE
   end
 
   BLOCK4 --> BLOCK5
