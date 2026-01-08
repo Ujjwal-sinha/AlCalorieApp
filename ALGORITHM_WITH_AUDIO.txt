@@ -46,12 +46,25 @@ STEP 3B — TEXT PREPROCESSING + ENCODING (TEXT PATH)
   3B.6 Go to STEP 4B (Direct Text → Description)
 
 STEP 3C — AUDIO PREPROCESSING + SPEECH-TO-TEXT (AUDIO PATH)
-  3C.1 (Optional) Normalize audio (sample rate, mono), trim silence, denoise
-  3C.2 transcript_raw ← Speech-to-Text(audio)
-       - Example model choices: Whisper / cloud ASR provider
-  3C.3 Apply TEXT PREPROCESSING to transcript_raw (same as STEP 3B)
-  3C.4 cleaned_text ← preprocessed transcript
-  3C.5 Go to STEP 4B (Direct Text → Description)
+  3C.1 Audio preprocessing:
+       - Normalize audio (sample rate to 16kHz, convert to mono)
+       - Trim silence, apply denoising (optional)
+  
+  3C.2 AUDIO ENCODER (Whisper ASR):
+       - Mel Spectrogram Conversion: Audio → frequency features
+       - Convolutional Layers (2 layers): Feature extraction
+       - Transformer Encoder: Self-Attention layers
+       - Hidden Layer: 512 dimensions (audio context vector)
+       - Decoder: Generate text transcription
+  
+  3C.3 transcript_raw ← Speech-to-Text output
+  
+  3C.4 Apply TEXT PREPROCESSING to transcript_raw:
+       - Token normalization, spell correction, POS tagging
+       - TEXT ENCODER (same as STEP 3B.4)
+  
+  3C.5 cleaned_text ← preprocessed transcript
+  3C.6 Go to STEP 4B (Direct Text → Description)
 
 STEP 4A — IMAGE UNDERSTANDING (ENCODER/DECODER CAPTIONING)
   4A.1 IMAGE ENCODER (ViT-L/14):
