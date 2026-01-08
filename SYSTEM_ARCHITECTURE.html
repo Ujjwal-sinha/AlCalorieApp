@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AlCalorieApp — System Architecture (Mermaid)</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --card: #f8f9fa;
+        --text: #1a1a1a;
+        --muted: #6b7280;
+        --border: #d1d5db;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+          "Segoe UI Emoji";
+        background: var(--bg);
+        color: var(--text);
+      }
+      header {
+        padding: 28px 20px 12px;
+        max-width: 1400px;
+        margin: 0 auto;
+        border-bottom: 2px solid var(--border);
+      }
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: 0.2px;
+        color: #111827;
+      }
+      p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.6;
+        font-size: 14px;
+      }
+      .wrap {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 24px 20px 40px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        overflow: auto;
+      }
+      .hint {
+        margin-top: 16px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      code {
+        background: #e5e7eb;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>AlCalorieApp — Total System Architecture</h1>
+      <p>
+        <b>8-Block Multi-Modal System:</b> Image, Text, and Audio inputs → Preprocessing → Encoder (ViT-L/14) → 
+        Decoder (GPT-2/ASR) → RAG + Groq LLaMA-3 Nutrition Estimation → PostgreSQL Tracking → 
+        Visualization & AI Advice → PDF Export & Download
+      </p>
+    </header>
+
+    <div class="wrap">
+      <div class="card">
+        <pre class="mermaid">
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#dbeafe','primaryTextColor':'#1e3a8a','primaryBorderColor':'#3b82f6','lineColor':'#3b82f6','secondaryColor':'#e0f2fe','tertiaryColor':'#fef3c7'}}}%%
+flowchart TB
+  START(["START<br/>User Opens App"]) --> BLOCK1
+
+  %% ========================================
+  %% BLOCK 1: INPUT LAYER
+  %% ========================================
+  subgraph BLOCK1["⬛ BLOCK 1: INPUT LAYER"]
+    direction TB
+    INPUT1["🖼️ Food Image<br/>JPG/PNG"]
+    INPUT2["📝 Text Input<br/>Typed Description"]
+    INPUT3["🎤 Audio Input<br/>Voice Recording"]
+    AUTH["🔐 User Authentication<br/>Clerk Auth"]
+  end
+
+  BLOCK1 --> BLOCK2
+
+  %% ========================================
+  %% BLOCK 2: PREPROCESSING
+  %% ========================================
+  subgraph BLOCK2["⬛ BLOCK 2: PREPROCESSING"]
+    direction TB
+    PREP1["Image Preprocessing<br/>• Resize 224x224<br/>• RGB Conversion<br/>• Tensor Transform"]
+    PREP2["Text Preprocessing<br/>• Token Normalization<br/>• Spell Correction<br/>• POS Tagging"]
+    PREP3["Audio Preprocessing<br/>• Sample Rate Normalization<br/>• Mono Conversion<br/>• Denoise + Trim Silence"]
+  end
+
+  BLOCK2 --> BLOCK3
+
+  %% ========================================
+  %% BLOCK 3: ENCODER
+  %% ========================================
+  subgraph BLOCK3["⬛ BLOCK 3: ENCODER"]
+    direction TB
+    ENC1["Vision Encoder<br/>ViT-L/14<br/>Visual Transformer"]
+    ENC2["Text Encoder<br/>Token Embeddings"]
+    ENC3["Speech-to-Text ASR<br/>Whisper Model<br/>Audio → Text Transcription"]
+  end
+
+  BLOCK3 --> BLOCK4
+
+  %% ========================================
+  %% BLOCK 4: DECODER
+  %% ========================================
+  subgraph BLOCK4["⬛ BLOCK 4: DECODER"]
+    direction TB
+    DEC1["BLIP-2 GPT-2 Decoder<br/>Image Caption Generation"]
+    DEC2["Direct Text Output<br/>Cleaned Description"]
+    DEC3["Transcribed Text<br/>Speech to Description"]
+    MERGE["LangChain Prompt Merger<br/>Combined Food Description"]
+    DEC1 --> MERGE
+    DEC2 --> MERGE
+    DEC3 --> MERGE
+  end
+
+  BLOCK4 --> BLOCK5
+
+  %% ========================================
+  %% BLOCK 5: RAG + LLM NUTRITION ESTIMATION
+  %% ========================================
+  subgraph BLOCK5["⬛ BLOCK 5: NUTRITION ESTIMATION"]
+    direction TB
+    RAG["RAG System<br/>Vector Store: FAISS/Chroma<br/>Nutrition Database Retrieval"]
+    LLM["Groq LLaMA-3 8B<br/>LLM Inference"]
+    JSON["Nutrition JSON Output<br/>• Calories<br/>• Protein/Carbs/Fat<br/>• Micronutrients"]
+    RAG --> LLM --> JSON
+  end
+
+  BLOCK5 --> BLOCK6
+
+  %% ========================================
+  %% BLOCK 6: STORAGE + TRACKING
+  %% ========================================
+  subgraph BLOCK6["⬛ BLOCK 6: STORAGE & TRACKING"]
+    direction TB
+    DB[("PostgreSQL Database<br/>• Food Logs<br/>• User Profiles<br/>• Daily Totals")]
+    GOALS["User Goals Comparison<br/>• Calorie Targets<br/>• Macro Goals<br/>• Progress Tracking"]
+    DB --> GOALS
+  end
+
+  BLOCK6 --> BLOCK7
+
+  %% ========================================
+  %% BLOCK 7: VISUALIZATION + ADVICE
+  %% ========================================
+  subgraph BLOCK7["⬛ BLOCK 7: VISUALIZATION & ADVICE"]
+    direction TB
+    VIZ["Data Visualization<br/>Matplotlib/Plotly<br/>• Calorie Charts<br/>• Macro Pie Charts"]
+    ADVICE["AI Advice Engine<br/>LangChain + LLaMA<br/>• Gap Analysis<br/>• Personalized Suggestions"]
+    VIZ -.-> ADVICE
+  end
+
+  BLOCK7 --> BLOCK8
+
+  %% ========================================
+  %% BLOCK 8: OUTPUT & DELIVERY
+  %% ========================================
+  subgraph BLOCK8["⬛ BLOCK 8: OUTPUT & DELIVERY"]
+    direction TB
+    PDF["PDF Report Generator<br/>FPDF/ReportLab<br/>• Food Logs<br/>• Charts<br/>• Advice"]
+    DOWNLOAD["Download Options<br/>💾 Save Locally<br/>📧 Email<br/>☁️ Cloud Storage"]
+    PDF --> DOWNLOAD
+  end
+
+  BLOCK8 --> END
+
+  END(["END<br/>User Receives Report"])
+
+  %% STYLING
+  classDef inputStyle fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a
+  classDef processStyle fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#166534
+  classDef encoderStyle fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#92400e
+  classDef decoderStyle fill:#fed7aa,stroke:#ea580c,stroke-width:2px,color:#7c2d12
+  classDef llmStyle fill:#e9d5ff,stroke:#a855f7,stroke-width:2px,color:#6b21a8
+  classDef storageStyle fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#3730a3
+  classDef vizStyle fill:#fce7f3,stroke:#ec4899,stroke-width:2px,color:#9f1239
+  classDef outputStyle fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#065f46
+
+  class BLOCK1 inputStyle
+  class BLOCK2 processStyle
+  class BLOCK3 encoderStyle
+  class BLOCK4 decoderStyle
+  class BLOCK5 llmStyle
+  class BLOCK6 storageStyle
+  class BLOCK7 vizStyle
+  class BLOCK8 outputStyle
+        </pre>
+      </div>
+
+      <div class="hint">
+        <strong>Architecture Overview:</strong> This diagram shows the complete system divided into 8 functional blocks, 
+        with separate Encoder and Decoder stages for multi-modal processing. Open this file in any modern browser to view 
+        the interactive flowchart. Each block is color-coded for easy identification.
+      </div>
+    </div>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "default",
+        flowchart: { 
+          curve: "linear",
+          padding: 20
+        },
+        securityLevel: "loose",
+      });
+    </script>
+  </body>
+</html>
+
+
