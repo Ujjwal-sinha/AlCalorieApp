@@ -32,12 +32,18 @@ STEP 3A — IMAGE PREPROCESSING (IMAGE PATH)
   3A.3 Transform image into tensor
   3A.4 Go to STEP 4A (Image Encoder/Decoder Captioning)
 
-STEP 3B — TEXT PREPROCESSING (TEXT PATH)
+STEP 3B — TEXT PREPROCESSING + ENCODING (TEXT PATH)
   3B.1 Apply token normalization
   3B.2 Perform spell correction
   3B.3 Execute POS tagging (optional, for richer parsing)
-  3B.4 cleaned_text ← preprocessed text
-  3B.5 Go to STEP 4B (Direct Text → Description)
+  
+  3B.4 TEXT ENCODER:
+       - Tokenization Layer: WordPiece/BPE tokenization
+       - Embedding Layer: Convert tokens to vectors
+       - Hidden Layer: 768 dimensions (contextual embeddings)
+  
+  3B.5 cleaned_text ← preprocessed and encoded text
+  3B.6 Go to STEP 4B (Direct Text → Description)
 
 STEP 3C — AUDIO PREPROCESSING + SPEECH-TO-TEXT (AUDIO PATH)
   3C.1 (Optional) Normalize audio (sample rate, mono), trim silence, denoise
@@ -48,10 +54,21 @@ STEP 3C — AUDIO PREPROCESSING + SPEECH-TO-TEXT (AUDIO PATH)
   3C.5 Go to STEP 4B (Direct Text → Description)
 
 STEP 4A — IMAGE UNDERSTANDING (ENCODER/DECODER CAPTIONING)
-  4A.1 Use fine-tuned BLIP-2 for food captioning:
-       - Encoder: ViT-L/14
-       - Decoder: GPT-2
-  4A.2 caption ← generated food description
+  4A.1 IMAGE ENCODER (ViT-L/14):
+       - Patch Embedding Layer: Split image into 16×16 patches
+       - Position Embedding: Add spatial information
+       - Transformer Blocks (24 layers): Multi-Head Self-Attention
+       - Hidden Layer: 1024 dimensions with Layer Normalization
+       - Output: 1024-dimensional visual feature vector
+  
+  4A.2 IMAGE DECODER (BLIP-2 GPT-2):
+       - Cross-Attention Layer: Map visual features to text space
+       - Transformer Decoder (12 layers): Causal Self-Attention
+       - Hidden Layer: 768 dimensions (language model states)
+       - Feed-Forward Network: 2048 → 768 dimensions
+       - Output Layer: Vocabulary projection
+       - caption ← Generated food description
+  
   4A.3 Go to STEP 5 (Food Description Fusion)
 
 STEP 4B — SKIP CAPTIONING (TEXT/AUDIO PATH)
