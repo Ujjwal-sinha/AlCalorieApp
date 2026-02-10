@@ -1,7 +1,7 @@
-AlCalorieApp — Decoder Math (Block 4)
-====================================
+BLOCK-4: DECODER — Math for BLIP-2 GPT-2 Decoder—Image Path / Text Path-Direct / Audio Path-AST Output (Frozen Weights) / Fusion Module Confidence-Weight LongChain Prompt Manager Context Fusion Layer Combined Food Descripter
+====================================================================================================================================================================================================================================
 
-Scope: BLIP-2 GPT-2 decoder (Image Path), Text Path (Direct), Audio Path (ASR Output), and LangChain Prompt Merger / Context Fusion.
+Scope: BLIP-2 GPT-2 Decoder—Image Path, Text Path-Direct, Audio Path-AST Output (Frozen Weights), and Fusion Module Confidence-Weight LongChain Prompt Manager Context Fusion Layer Combined Food Descripter.
 
 ------------------------------------------------------------
 0. Notation
@@ -149,7 +149,7 @@ Greedy decoding:
 The sequence (y_1, …, y_T) is converted back to text to form the **Image Path caption**.
 
 ------------------------------------------------------------
-7. Text Path — Direct (Cleaned Text → Description)
+7. Text Path - Direct (Cleaned Text → Description)
 ------------------------------------------------------------
 Let the cleaned input text tokens be:
 
@@ -170,7 +170,7 @@ Optional pooled text representation (for downstream fusion):
 The token sequence itself represents the **Text Path description**, and f_txt can be used as a summary vector.
 
 ------------------------------------------------------------
-8. Audio Path — ASR Output (Speech → Text → Description)
+8. Audio Path-AST Output (Frozen Weights) (Speech → Text → Description)
 ------------------------------------------------------------
 1) Audio to mel-spectrogram:
 
@@ -180,7 +180,7 @@ The token sequence itself represents the **Text Path description**, and f_txt ca
 
    yielding S ∈ ℝ^{F × T_aud}, with F mel bands and T_aud time frames.
 
-2) Whisper ASR encoder-decoder (high-level):
+2) Whisper ASR encoder-decoder (frozen weights, high-level):
 
    Encoder:
      h_enc = Encoder(S)
@@ -203,12 +203,12 @@ The token sequence itself represents the **Text Path description**, and f_txt ca
 The transcript tokens (u_1, …, u_{T_asr}) form the **Audio Path description**, and f_asr is its summary vector.
 
 ------------------------------------------------------------
-9. LangChain Prompt Merger — Context Fusion Layer
+9. Fusion Module Confidence-Weight LongChain Prompt Manager Context Fusion Layer Combined Food Descripter
 ------------------------------------------------------------
 Let:
-  - c_img   : caption text from Image Path (BLIP-2 GPT-2 decoder)
-  - c_txt   : cleaned direct text description
-  - c_asr   : ASR transcript-based description
+  - c_img   : caption text from BLIP-2 GPT-2 Decoder—Image Path
+  - c_txt   : cleaned Text Path-Direct description
+  - c_asr   : Audio Path-AST Output (ASR transcript-based description, frozen weights)
   - c_user  : optional current user goal / query text
   - c_hist  : optional conversation or log history text
 
