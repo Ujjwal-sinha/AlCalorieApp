@@ -140,37 +140,37 @@ flowchart TB
   BLOCK3 --> BLOCK4
 
   %% ========================================
-  %% BLOCK 4: DECODER
+  %% BLOCK 4: DECODER (Notation: d=768, d_v, L_v, T, H, d_h=d/H; ⊙ Hadamard, ⊕ concat)
   %% ========================================
-  subgraph BLOCK4["BLOCK 4: DECODER"]
+  subgraph BLOCK4["BLOCK 4: DECODER<br/>V∈ℝ^{L_v×d_v}, H^(ℓ)∈ℝ^{T×d}; c_img=Dec_img(V), c_txt=CleanText(x_txt), c_asr=ASR(a)"]
     direction TB
-    subgraph DEC1_SUB["BLIP-2 GPT-2 Decoder - Image Path"]
+    subgraph DEC1_SUB["BLIP-2 GPT-2 Decoder - Image Path<br/>H_v = V W_v + 1_{L_v} b_v^⊤ ∈ ℝ^{L_v×d}"]
       direction TB
-      D1_1["Cross-Attention Layer<br/>Visual Features → Text"]
-      D1_2["Transformer Decoder x12<br/>Causal Self-Attention"]
-      D1_3["Hidden Layer: 768 dims<br/>Language Model States"]
-      D1_4["Feed-Forward Network<br/>2048 → 768 dims"]
-      D1_5["Output Layer<br/>Vocabulary Projection"]
-      D1_6["Caption Generation<br/>Food Description Text"]
+      D1_1["Cross-Attention Layer<br/>Visual Features → Text<br/>Q=H_in W^Q,c, K=H_v W^K,c, V=H_v W^V,c<br/>A=softmax(QK^⊤/√d_h), O=AV; H_cross=LN(H_in+O)"]
+      D1_2["Transformer Decoder x12<br/>Causal Self-Attention<br/>M_ij=0 if j≤i else −∞<br/>A=softmax((QK^⊤+M)/√d_h), O_self=Concat(O_h)W^O,s"]
+      D1_3["Hidden Layer: 768 dims<br/>Language Model States<br/>H_self = LN(H_cross + O_self) ∈ ℝ^{T×768}"]
+      D1_4["Feed-Forward Network<br/>2048 → 768 dims<br/>u=hW_1+b_1, a=GELU(u), v=aW_2+b_2<br/>h'=LN(h+v); d_ff=2048"]
+      D1_5["Output Layer<br/>Vocabulary Projection<br/>z_t = H_out[t] W^V + b^V<br/>p(y_t|y_{<t})=softmax(z_t)_k"]
+      D1_6["Caption Generation<br/>Food Description Text<br/>y_t = argmax_k p(y_t=k|y_{<t}, inputs)"]
       D1_1 --> D1_2 --> D1_3 --> D1_4 --> D1_5 --> D1_6
     end
     
-    subgraph DEC2_SUB["Text Path - Direct"]
+    subgraph DEC2_SUB["Text Path - Direct<br/>e_t = E[w_t] + p_t; f_txt = (1/T_txt)∑e_t"]
       direction TB
-      D2_1["Cleaned Text<br/>Preprocessed Input"]
-      D2_2["Food Description<br/>Ready for Fusion"]
+      D2_1["Cleaned Text<br/>Preprocessed Input<br/>Tokens (w_1,…,w_{T_txt}); e_t = E[w_t] + p_t"]
+      D2_2["Food Description<br/>Ready for Fusion<br/>f_txt = (1/T_txt) ∑_{t=1}^{T_txt} e_t (pooled)"]
       D2_1 --> D2_2
     end
     
-    subgraph DEC3_SUB["Audio Path - ASR Output"]
+    subgraph DEC3_SUB["Audio Path - ASR Output (Frozen)<br/>S=MelSpectrogram(a); h_enc=Encoder(S)"]
       direction TB
-      D3_1["Transcribed Text<br/>Speech → Text"]
-      D3_2["Post-Processing<br/>Grammar + Context"]
-      D3_3["Food Description<br/>From Audio"]
+      D3_1["Transcribed Text<br/>Speech → Text<br/>S∈ℝ^{F×T_aud}; p(y_t|y_{<t},h_enc)=softmax(g(h_enc,y_{<t}))"]
+      D3_2["Post-Processing<br/>Grammar + Context<br/>Decoder autoregressive until <eos>"]
+      D3_3["Food Description<br/>From Audio<br/>e_t^{asr}=E[u_t]+p_t; f_asr=(1/T_asr)∑e_t^{asr}"]
       D3_1 --> D3_2 --> D3_3
     end
     
-    MERGE["LangChain Prompt Merger<br/>Context Fusion Layer<br/>Combined Food Description"]
+    MERGE["LangChain Prompt Merger<br/>Context Fusion Layer<br/>P_total = [IMG]⊕c_img ⊕ [TXT]⊕c_txt ⊕ [AUDIO]⊕c_asr<br/>f_fused = (w_img·f_img + w_txt·f_txt + w_asr·f_asr)/(w_img+w_txt+w_asr)"]
     D1_6 --> MERGE
     D2_2 --> MERGE
     D3_3 --> MERGE
