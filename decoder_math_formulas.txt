@@ -51,7 +51,7 @@ where:
   ε > 0 is a small constant for numerical stability.
 
 ------------------------------------------------------------
-3. Multi-Head Cross-Attention (Image → Text, BLIP-2 GPT-2 Decoder)
+3. Cross-Attention Layer — Visual Features → Text (BLIP-2 GPT-2 Decoder—Image Path)
 ------------------------------------------------------------
 Input:
   - Decoder hidden states from previous sub-layer:
@@ -78,7 +78,7 @@ Residual + LayerNorm:
   H_cross = LN( H_in + O )
 
 ------------------------------------------------------------
-4. Causal Self-Attention (GPT-2 Decoder, Text-Only)
+4. Transformer Decoder x12 — Causal Self-Attention
 ------------------------------------------------------------
 Input:
   H_cross ∈ ℝ^{T × d}
@@ -100,12 +100,12 @@ Concatenate heads and project:
 
   O_self = Concat_{h=1}^{H}(O_h) W^{O,s}   with W^{O,s} ∈ ℝ^{d × d}
 
-Residual + LayerNorm:
+Residual + LayerNorm (Hidden Layer: 768 dims — Language Model States):
 
-  H_self = LN( H_cross + O_self )
+  H_self = LN( H_cross + O_self )       where H_self ∈ ℝ^{T × 768}
 
 ------------------------------------------------------------
-5. Feed-Forward Network (FFN, 2048 → 768 dims)
+5. Feed-Forward Network — 2048 → 768 dims
 ------------------------------------------------------------
 For each position t (1 ≤ t ≤ T), with input h_t ∈ ℝ^{d}:
 
@@ -126,7 +126,7 @@ Stacking across all positions gives:
   H_FFN = LN( H_self + FFN(H_self) )   where FFN is applied rowwise.
 
 ------------------------------------------------------------
-6. Vocabulary Projection and Caption Generation
+6. Output Layer — Vocabulary Projection and Caption Generation — Food Description Text
 ------------------------------------------------------------
 Let H_out ∈ ℝ^{T × d} be the final decoder hidden states after L layers.
 
