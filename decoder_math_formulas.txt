@@ -1,0 +1,252 @@
+AlCalorieApp — Decoder Math (Block 4)
+====================================
+
+Scope: BLIP-2 GPT-2 decoder (Image Path), Text Path (Direct), Audio Path (ASR Output), and LangChain Prompt Merger / Context Fusion.
+
+------------------------------------------------------------
+0. Notation
+------------------------------------------------------------
+- d_v  : visual feature dimension from ViT-L/14
+- d    : language model hidden size (GPT-2, here 768)
+- L_v  : number of visual tokens
+- T    : number of text tokens in the caption/sequence
+- H    : number of attention heads
+- d_h  : per-head dimension, d_h = d / H
+- ⊙    : elementwise (Hadamard) product
+- ⊕    : string concatenation (for prompts)
+
+Visual features from the encoder:
+  V ∈ ℝ^{L_v × d_v}
+
+Decoder hidden states at layer ℓ:
+  H^{(ℓ)} ∈ ℝ^{T × d}
+
+------------------------------------------------------------
+1. Visual Feature Projection into GPT-2 Space (BLIP-2 style)
+------------------------------------------------------------
+The ViT-L/14 visual features are projected into the GPT-2 hidden space:
+
+  H_v = V W_v + 1_{L_v} b_v^⊤
+
+where:
+  W_v ∈ ℝ^{d_v × d}
+  b_v ∈ ℝ^{d}
+  1_{L_v} ∈ ℝ^{L_v} is a vector of ones (to broadcast the bias).
+
+Result:
+  H_v ∈ ℝ^{L_v × d}  (visual tokens aligned to GPT-2 dimension)
+
+------------------------------------------------------------
+2. Layer Normalization (used throughout decoder)
+------------------------------------------------------------
+For any hidden vector x ∈ ℝ^{d}, layer normalization is:
+
+  μ = (1 / d) ∑_{i=1}^{d} x_i
+  σ² = (1 / d) ∑_{i=1}^{d} (x_i − μ)²
+
+  LN(x)_i = γ_i · (x_i − μ) / √(σ² + ε) + β_i
+
+where:
+  γ, β ∈ ℝ^{d} are learned scale and bias,
+  ε > 0 is a small constant for numerical stability.
+
+------------------------------------------------------------
+3. Multi-Head Cross-Attention (Image → Text, BLIP-2 GPT-2 Decoder)
+------------------------------------------------------------
+Input:
+  - Decoder hidden states from previous sub-layer:
+        H_in ∈ ℝ^{T × d}
+  - Projected visual tokens:
+        H_v ∈ ℝ^{L_v × d}
+
+For head h (1 ≤ h ≤ H):
+
+  Q_h = H_in W_h^{Q,c}            with  W_h^{Q,c} ∈ ℝ^{d × d_h}
+  K_h = H_v   W_h^{K,c}           with  W_h^{K,c} ∈ ℝ^{d × d_h}
+  V_h = H_v   W_h^{V,c}           with  W_h^{V,c} ∈ ℝ^{d × d_h}
+
+  A_h = softmax( Q_h K_h^⊤ / √d_h )   where A_h ∈ ℝ^{T × L_v}
+
+  O_h = A_h V_h                        where O_h ∈ ℝ^{T × d_h}
+
+Concatenate all heads and apply output projection:
+
+  O = Concat_{h=1}^{H}(O_h) W^{O,c}    with  W^{O,c} ∈ ℝ^{d × d}
+
+Residual + LayerNorm:
+
+  H_cross = LN( H_in + O )
+
+------------------------------------------------------------
+4. Causal Self-Attention (GPT-2 Decoder, Text-Only)
+------------------------------------------------------------
+Input:
+  H_cross ∈ ℝ^{T × d}
+
+For head h:
+
+  Q_h = H_cross W_h^{Q,s}         with  W_h^{Q,s} ∈ ℝ^{d × d_h}
+  K_h = H_cross W_h^{K,s}         with  W_h^{K,s} ∈ ℝ^{d × d_h}
+  V_h = H_cross W_h^{V,s}         with  W_h^{V,s} ∈ ℝ^{d × d_h}
+
+Use a causal mask M ∈ ℝ^{T × T}:
+  M_{ij} = 0      if j ≤ i
+           −∞     if j > i
+
+  A_h = softmax( (Q_h K_h^⊤ + M) / √d_h )
+  O_h = A_h V_h
+
+Concatenate heads and project:
+
+  O_self = Concat_{h=1}^{H}(O_h) W^{O,s}   with W^{O,s} ∈ ℝ^{d × d}
+
+Residual + LayerNorm:
+
+  H_self = LN( H_cross + O_self )
+
+------------------------------------------------------------
+5. Feed-Forward Network (FFN, 2048 → 768 dims)
+------------------------------------------------------------
+For each position t (1 ≤ t ≤ T), with input h_t ∈ ℝ^{d}:
+
+  u_t = h_t W_1 + b_1              where W_1 ∈ ℝ^{d × d_ff}, b_1 ∈ ℝ^{d_ff}
+  a_t = GELU(u_t)                  (applied elementwise)
+  v_t = a_t W_2 + b_2              where W_2 ∈ ℝ^{d_ff × d}, b_2 ∈ ℝ^{d}
+
+Typically:
+  d     = 768
+  d_ff  = 2048
+
+Residual + LayerNorm:
+
+  h_t' = LN( h_t + v_t )
+
+Stacking across all positions gives:
+
+  H_FFN = LN( H_self + FFN(H_self) )   where FFN is applied rowwise.
+
+------------------------------------------------------------
+6. Vocabulary Projection and Caption Generation
+------------------------------------------------------------
+Let H_out ∈ ℝ^{T × d} be the final decoder hidden states after L layers.
+
+For each token position t:
+
+  z_t = H_out[t] W^{V} + b^{V}
+
+where:
+  W^{V} ∈ ℝ^{d × |Vocab|}
+  b^{V} ∈ ℝ^{|Vocab|}
+
+Token distribution:
+
+  p(y_t = k | y_{<t}, inputs) = softmax(z_t)_k
+
+Greedy decoding:
+
+  y_t = argmax_k p(y_t = k | y_{<t}, inputs)
+
+The sequence (y_1, …, y_T) is converted back to text to form the **Image Path caption**.
+
+------------------------------------------------------------
+7. Text Path — Direct (Cleaned Text → Description)
+------------------------------------------------------------
+Let the cleaned input text tokens be:
+
+  (w_1, w_2, …, w_{T_txt})
+
+Embedding lookup with positional encodings:
+
+  e_t = E[w_t] + p_t               for 1 ≤ t ≤ T_txt
+
+where:
+  E ∈ ℝ^{|Vocab| × d} is the embedding matrix,
+  p_t ∈ ℝ^{d} is the positional encoding.
+
+Optional pooled text representation (for downstream fusion):
+
+  f_txt = (1 / T_txt) ∑_{t=1}^{T_txt} e_t
+
+The token sequence itself represents the **Text Path description**, and f_txt can be used as a summary vector.
+
+------------------------------------------------------------
+8. Audio Path — ASR Output (Speech → Text → Description)
+------------------------------------------------------------
+1) Audio to mel-spectrogram:
+
+   Given audio waveform a[n] with sample rate f_s:
+
+     S = MelSpectrogram(a)
+
+   yielding S ∈ ℝ^{F × T_aud}, with F mel bands and T_aud time frames.
+
+2) Whisper ASR encoder-decoder (high-level):
+
+   Encoder:
+     h_enc = Encoder(S)
+
+   Decoder (autoregressive):
+     p(y_t | y_{<t}, h_enc) = softmax( g(h_enc, y_{<t}) )
+
+   where g is the decoder network; tokens y_t are produced until an <eos> token.
+
+3) Text embedding of ASR transcript:
+
+   Let the ASR text tokens be (u_1, …, u_{T_asr}).
+
+   e_t^{asr} = E[u_t] + p_t         for 1 ≤ t ≤ T_asr
+
+   Pooled ASR representation:
+
+   f_asr = (1 / T_asr) ∑_{t=1}^{T_asr} e_t^{asr}
+
+The transcript tokens (u_1, …, u_{T_asr}) form the **Audio Path description**, and f_asr is its summary vector.
+
+------------------------------------------------------------
+9. LangChain Prompt Merger — Context Fusion Layer
+------------------------------------------------------------
+Let:
+  - c_img   : caption text from Image Path (BLIP-2 GPT-2 decoder)
+  - c_txt   : cleaned direct text description
+  - c_asr   : ASR transcript-based description
+  - c_user  : optional current user goal / query text
+  - c_hist  : optional conversation or log history text
+
+Prompt concatenation (string-level fusion):
+
+  P_total = "[IMG] " ⊕ c_img
+            ⊕ " [TXT] " ⊕ c_txt
+            ⊕ " [AUDIO] " ⊕ c_asr
+            ⊕ " [USER] " ⊕ c_user
+            ⊕ " [HIST] " ⊕ c_hist
+
+This P_total is the text prompt passed into the LangChain pipeline and ultimately to the LLM.
+
+Optional vector-level fusion for a combined food description embedding (if used):
+
+  f_fused = ( w_img  · f_img  + w_txt  · f_txt  + w_asr  · f_asr )
+            / ( w_img + w_txt + w_asr )
+
+where:
+  - f_img  : vector summary of the image caption (e.g., average of its token embeddings)
+  - f_txt  : vector summary of direct text (Section 7)
+  - f_asr  : vector summary of ASR transcript (Section 8)
+  - w_img, w_txt, w_asr ≥ 0 are scalar weights controlling the importance of each modality.
+
+The fused representation f_fused can be used for retrieval (e.g., in RAG) or as additional conditioning information.
+
+------------------------------------------------------------
+10. Overall Decoder Mapping (Summary)
+------------------------------------------------------------
+Conceptually, for each modality we define:
+
+  c_img  = Dec_img(V; θ_img)           (BLIP-2 GPT-2 decoder with cross-attention)
+  c_txt  = CleanText(x_txt; θ_txt)     (text preprocessing + normalization)
+  c_asr  = ASR(a; θ_asr)               (audio → text via Whisper)
+
+Fusion into a single textual prompt:
+
+  P_total = Merge( c_img, c_txt, c_asr, c_user, c_hist )
+
+where Merge is implemented as the concatenation scheme defined above, and Dec_img, CleanText, ASR are parameterized neural modules with parameters θ_img, θ_txt, θ_asr respectively.
+
