@@ -1,41 +1,38 @@
-BLOCK-4: DECODER — Math (one flow, equation-focused)
+BLOCK-4: DECODER — One important formula per block
 ================================================================================
 
-Notation: d=768, d_ff=2048. ⊕ = concat.
+Notation: d=768, d_ff=2048. ⊕ concat. LN = layer norm.
 
 --------------------------------------------------------------------------------
 ONE FLOW: Image path → Text path → Audio path → Fusion → Summary
 --------------------------------------------------------------------------------
 
 Visual Feature Projection into GPT-2 Space (BLIP-2 style)
-  VW + 1b^⊤  ∈  ℝ^(L×d)
+  VW + 1b^⊤ ∈ ℝ^(L×d)
 
 Layer Normalization (used throughout decoder)
-  LN(x) = γ(x−μ)/√(σ²+ε) + β   where  μ=(1/d)∑x_i,  σ²=(1/d)∑(x_i−μ)²
+  LN(x) = γ(x−μ)/√(σ²+ε) + β
 
 Cross-Attention Layer — Visual Features → Text (BLIP-2 GPT-2 Decoder—Image Path)
-  Attn(X,Y) = softmax(XW_Q (YW_K)^⊤/√d) (YW_V)   ;   out = LN(in + Concat_heads Attn(in,V))
+  Attn = softmax(QK^⊤/√d)V   ;   out = LN(in+O)
 
 Transformer Decoder x12 — Causal Self-Attention
-  M_ij = 0 if j≤i else −∞   ;   Attn_causal(X) = softmax((XW_Q)(XW_K)^⊤/√d + M)(XW_V)
-  out = LN(in + Concat_heads Attn_causal(in))
+  M_ij = 0 if j≤i else −∞   ;   out = LN(in+O_self)
 
 Feed-Forward Network — 2048 → 768 dims
-  FFN(x) = LN(x + W_2·GELU(xW_1+b_1)+b_2)   ;  W_1∈ℝ^(d×d_ff), W_2∈ℝ^(d_ff×d)
+  FFN(x) = LN(x + W_2·GELU(xW_1+b_1)+b_2)
 
 Output Layer — Vocabulary Projection and Caption Generation — Food Description Text
-  p(y_t|·) = softmax(x_t W+b)_k   ;   y_t = argmax_k p(y_t=k|·)   →  caption
+  p(y_t) = softmax(xW+b)   ;   y_t = argmax
 
 Text Path - Direct (Cleaned Text → Description)
-  e_t = Embed(w_t)+pos_t   ;   f = (1/n)∑e_t   →  description
+  e_t = Embed(w_t)+pos_t   ;   f = (1/n)∑e_t
 
 Audio Path-AST Output (Frozen Weights) (Speech → Text → Description)
-  S = Mel(a)   ;   p(y_t|y_<t,S) = softmax(Dec(S,y_<t))  until eos
-  e_t = Embed(u_t)+pos_t   ;   f = (1/n)∑e_t   →  description
+  S = Mel(a)   ;   p(y_t|·) = softmax(Dec(·))   ;   e_t = Embed(u_t)+pos_t   ;   f = (1/n)∑e_t
 
 Fusion Module Confidence-Weight LongChain Prompt Manager Context Fusion Layer Combined Food Descripter
-  P = [IMG]⊕c_img ⊕ [TXT]⊕c_txt ⊕ [AUDIO]⊕c_asr ⊕ [USER]⊕c_user ⊕ [HIST]⊕c_hist
-  f = (∑ w_i f_i)/(∑ w_i)  ,  w_i ≥ 0
+  P = ⊕c_img⊕c_txt⊕c_asr⊕…   ;   f = (∑w_i f_i)/(∑w_i)
 
 Overall Decoder Mapping (Summary)
-  c_img=Dec_img(V), c_txt=Clean(x_txt), c_asr=ASR(a)   ;   P = Merge(c_img,c_txt,c_asr,c_user,c_hist)
+  c_img = Dec_img(V), c_txt = Clean(·), c_asr = ASR(a)   ;   P = Merge(·)
