@@ -225,51 +225,65 @@ flowchart TB
 
       <h2 style="margin: 32px 0 12px; font-size: 18px; color: #111827;">BLOCK 4: DECODER — Formulas (all blocks)</h2>
       <p style="margin: 0 0 16px; color: var(--muted); font-size: 13px;">
-        d=768, d_v, L_v, T, d_h. V∈ℝ^(L_v×d_v), H^(ℓ)∈ℝ^(T×d). ⊕ concat.
+        d=768, d_ff=2048, d_h=d/H. V∈ℝ^(L_v×d_v), H^(ℓ)∈ℝ^(T×d). ⊕ concat.
       </p>
       <div class="card">
         <pre class="mermaid">
 flowchart TB
-  subgraph S10["§10 Overall Decoder Mapping — Summary"]
-    N10["Block: Overall Decoder Mapping<br/>c_img=Dec_img(V); c_txt=CleanText(x_txt); c_asr=ASR(a); P_total=Merge(c_img,c_txt,c_asr,c_user,c_hist)"]
+  subgraph S10["§10 Overall Decoder Mapping (Summary)"]
+    N10["c_img=Dec_img(V;θ_img); c_txt=CleanText(x_txt;θ_txt); c_asr=ASR(a;θ_asr)<br/>P_total = Merge(c_img, c_txt, c_asr, c_user, c_hist)"]
   end
 
-  subgraph S1_6["§1–§6 Image path — BLIP-2 GPT-2 Decoder"]
-    N1["§1 Visual Feature Projection into GPT-2 Space<br/>H_v = V W_v + 1 b_v^⊤ ∈ ℝ^(L_v×d)"]
-    N2["§2 Layer Normalization (throughout decoder)<br/>LN: γ·(x−μ)/√(σ²+ε)+β"]
-    N3["§3 Cross-Attention Layer — Visual Features to Text<br/>Q,K,V from H_in,H_v; A=softmax(QK^⊤/√d_h); H_cross=LN(H_in+O)"]
-    N4["§4 Transformer Decoder x12 — Causal Self-Attention<br/>M_ij=0 j≤i else −∞; H_self=LN(H_cross+O_self) ∈ ℝ^(T×768)"]
-    N5["§5 Feed-Forward Network — 2048 to 768 dims<br/>u=hW_1+b_1, a=GELU(u), v=aW_2+b_2; d_ff=2048"]
-    N6["§6 Output Layer — Vocabulary Projection and Caption Generation<br/>z_t=H_out(t)W^V+b^V; y_t=argmax_k softmax(z_t)_k → Food Description Text"]
-    N1 --> N2 --> N3 --> N4 --> N5 --> N6
+  subgraph S1["§1 Visual Feature Projection into GPT-2 Space (BLIP-2 style)"]
+    N1["H_v = V W_v + 1 b_v^⊤  ;  W_v∈ℝ^(d_v×d), b_v∈ℝ^d<br/>H_v ∈ ℝ^(L_v×d)"]
   end
 
-  subgraph S7["§7 Text Path — Direct (Cleaned Text to Description)"]
-    N7a["Block: Text Path Direct — Embedding<br/>e_t = E(w_t)+p_t"]
-    N7b["Block: Text Path Direct — Pooled for fusion<br/>f_txt = (1/T_txt)∑e_t"]
+  subgraph S2["§2 Layer Normalization (used throughout decoder)"]
+    N2["μ = (1/d)∑_i x_i  ;  σ² = (1/d)∑_i (x_i−μ)²<br/>LN(x)_i = γ_i(x_i−μ)/√(σ²+ε) + β_i  ;  γ,β∈ℝ^d"]
+  end
+
+  subgraph S3["§3 Cross-Attention Layer — Visual Features to Text (BLIP-2 GPT-2 Decoder—Image Path)"]
+    N3["Q_h=H_in W_h^Q,c, K_h=H_v W_h^K,c, V_h=H_v W_h^V,c  ;  A_h=softmax(Q_h K_h^⊤/√d_h)<br/>O_h=A_h V_h  ;  O=Concat_h O_h W^O,c  ;  H_cross=LN(H_in+O)"]
+  end
+
+  subgraph S4["§4 Transformer Decoder x12 — Causal Self-Attention"]
+    N4["Q_h,K_h,V_h from H_cross  ;  M_ij=0 if j≤i, −∞ if j&gt;i<br/>A_h=softmax((Q_h K_h^⊤+M)/√d_h)  ;  O_self=Concat_h O_h W^O,s<br/>H_self = LN(H_cross+O_self) ∈ ℝ^(T×768)"]
+  end
+
+  subgraph S5["§5 Feed-Forward Network — 2048 to 768 dims"]
+    N5["u = h W_1+b_1, a = GELU(u), v = a W_2+b_2  ;  W_1∈ℝ^(d×d_ff), W_2∈ℝ^(d_ff×d)<br/>h' = LN(h+v)  ;  H_FFN = LN(H_self + FFN(H_self))"]
+  end
+
+  subgraph S6["§6 Output Layer — Vocabulary Projection and Caption Generation — Food Description Text"]
+    N6["z_t = H_out(t) W^V + b^V  ;  W^V∈ℝ^(d×Vocab), b^V∈ℝ^Vocab<br/>p(y_t=k|y_&lt;t) = softmax(z_t)_k  ;  y_t = argmax_k p(y_t=k|y_&lt;t,inputs)"]
+  end
+
+  subgraph S7["§7 Text Path - Direct (Cleaned Text to Description)"]
+    N7a["(w_1,…,w_T_txt)  ;  e_t = E(w_t)+p_t  ;  E∈ℝ^(Vocab×d), p_t∈ℝ^d"]
+    N7b["f_txt = (1/T_txt) ∑_t e_t"]
     N7a --> N7b
   end
 
-  subgraph S8["§8 Audio Path — ASR Output Frozen (Speech to Text to Description)"]
-    N8a["Block: Audio Path — Mel and Encoder<br/>S=MelSpectrogram(a); h_enc=Encoder(S); p(y_t|y_&lt;t,h_enc)=softmax(g(·))"]
-    N8b["Block: Audio Path — ASR transcript embedding<br/>e_t^asr=E(u_t)+p_t; f_asr=(1/T_asr)∑e_t^asr"]
+  subgraph S8["§8 Audio Path-AST Output (Frozen Weights) (Speech to Text to Description)"]
+    N8a["S = MelSpectrogram(a), S∈ℝ^(F×T_aud)  ;  h_enc = Encoder(S)<br/>p(y_t|y_&lt;t,h_enc) = softmax(g(h_enc,y_&lt;t))  until &lt;eos&gt;"]
+    N8b["(u_1,…,u_T_asr)  ;  e_t^asr = E(u_t)+p_t  ;  f_asr = (1/T_asr)∑_t e_t^asr"]
     N8a --> N8b
   end
 
-  subgraph S9["§9 Fusion Module — LangChain Prompt Manager, Context Fusion Layer"]
-    N9["Block: Fusion — Confidence-Weight Combined Food Descripter<br/>P_total=IMG⊕c_img⊕TXT⊕c_txt⊕AUDIO⊕c_asr; f_fused=(w_img f_img+w_txt f_txt+w_asr f_asr)/(w_img+w_txt+w_asr)"]
+  subgraph S9["§9 Fusion Module Confidence-Weight LongChain Prompt Manager Context Fusion Layer Combined Food Descripter"]
+    N9["P_total = IMG⊕c_img ⊕ TXT⊕c_txt ⊕ AUDIO⊕c_asr ⊕ USER⊕c_user ⊕ HIST⊕c_hist<br/>f_fused = (w_img·f_img + w_txt·f_txt + w_asr·f_asr) / (w_img+w_txt+w_asr)  ;  w≥0"]
   end
 
-  N6 --> N9
+  N1 --> N2 --> N3 --> N4 --> N5 --> N6 --> N9
   N7b --> N9
   N8b --> N9
 
   classDef decStyle fill:#fed7aa,stroke:#ea580c,stroke-width:2px,color:#7c2d12
-  class S10,S1_6,S7,S8,S9 decStyle
+  class S1,S2,S3,S4,S5,S6,S7,S8,S9,S10 decStyle
         </pre>
       </div>
       <div class="hint">
-        Block names: §1 Visual Feature Projection into GPT-2 Space · §2 Layer Normalization · §3 Cross-Attention Layer · §4 Transformer Decoder (Causal Self-Attention) · §5 Feed-Forward Network · §6 Output Layer (Vocabulary Projection and Caption Generation) · §7 Text Path Direct · §8 Audio Path ASR Output (Frozen) · §9 Fusion Module (LangChain Prompt Manager, Context Fusion Layer) · §10 Overall Decoder Mapping (Summary).
+        Exact block names from decoder_math_formulas.txt. Flow: §1→§2→§3→§4→§5→§6 (Image path), §7 (Text path), §8 (Audio path), all → §9 Fusion; §10 Summary.
       </div>
     </div>
 
